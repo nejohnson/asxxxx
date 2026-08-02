@@ -1,0 +1,63 @@
+ASxxxx Assembler V06.00  (Signetics 8x300)                              Page 1
+Hexadecimal [16-Bits]                                 Mon Mar  9 21:48:19 2026
+as8x300 Relocation With Globals
+
+
+                              1 	.title	as8x300 Relocation With Globals
+                              2 
+                              3 	.area	RELOC
+                              4 
+                              5 	.globl	va, vb
+                              6 
+   0100 E1 00         [ 1]    7 lbl1:	jmp	lbl1
+   0101 E1 00         [ 1]    8 	jmp	lbl1 + va
+   0102 E1 02         [ 1]    9 	jmp	lbl1 + va + vb
+   0103 E1 03         [ 1]   10 1$:	jmp	1$
+   0104 E1 04         [ 1]   11 	jmp	.
+   0105 E1 05         [ 1]   12 2$:	jmp	2$ + va
+   0106 E1 06         [ 1]   13 	jmp	. + va
+   0107 E1 09         [ 1]   14 3$:	jmp	3$ + va + vb
+   0108 E1 0A         [ 1]   15 	jmp	. + va + vb
+                             16 
+                             17 
+ASxxxx Assembler V06.00  (Signetics 8x300)                              Page 2
+Hexadecimal [16-Bits]                                 Mon Mar  9 21:48:19 2026
+as8x300 Relocation With Globals
+Symbol Table
+
+    .__.$$$.       =   2710 L   |     .__.ABS.       =   0000 G
+    .__.CPU.       =   0000 L   |     .__.H$L.       =   0001 L
+    AUX                0000     |     IVL                0007 
+    IVR                000F     |     OVF                0008 
+    R0                 0000     |     R1                 0001 
+    R10                0008     |     R11                0009 
+    R12                000A     |     R13                000B 
+    R14                000C     |     R15                000D 
+    R16                000E     |     R17                000F 
+    R2                 0002     |     R3                 0003 
+    R4                 0004     |     R5                 0005 
+    R6                 0006     |     R7                 0007 
+    aux                0000     |     ivl                0007 
+    ivr                000F     |   2 lbl1               0000 R
+    ovf                0008     |     r0                 0000 
+    r1                 0001     |     r10                0008 
+    r11                0009     |     r12                000A 
+    r13                000B     |     r14                000C 
+    r15                000D     |     r16                000E 
+    r17                000F     |     r2                 0002 
+    r3                 0003     |     r4                 0004 
+    r5                 0005     |     r6                 0006 
+    r7                 0007     |     va                 **** GX
+    vb                 **** GX
+
+ASxxxx Assembler V06.00  (Signetics 8x300)                              Page 3
+Hexadecimal [16-Bits]                                 Mon Mar  9 21:48:19 2026
+as8x300 Relocation With Globals
+Area Table
+
+[_CSEG]
+   0 _CODE            size    0   flags C081
+   2 RELOC            size    9   flags  101
+[_DSEG]
+   1 _DATA            size    0   flags C0C0
+

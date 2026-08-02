@@ -1,0 +1,13 @@
+# Symantec SC++ generated .dpd file. V: 7200
+..\build\scmpadr.OBJ: \
+	..\..\..\asscmp\scmpadr.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASSCMP\scmp.h 
+..\build\scmpmch.OBJ: \
+	..\..\..\asscmp\scmpmch.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASSCMP\scmp.h 
+..\build\scmppst.OBJ: \
+	..\..\..\asscmp\scmppst.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASSCMP\scmp.h 

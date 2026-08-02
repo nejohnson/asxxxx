@@ -1,0 +1,13 @@
+# Symantec SC++ generated .dpd file. V: 7200
+..\build\gbadr.OBJ: \
+	..\..\..\asgb\gbadr.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASGB\gb.h 
+..\build\gbmch.OBJ: \
+	..\..\..\asgb\gbmch.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASGB\gb.h 
+..\build\gbpst.OBJ: \
+	..\..\..\asgb\gbpst.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASGB\gb.h 

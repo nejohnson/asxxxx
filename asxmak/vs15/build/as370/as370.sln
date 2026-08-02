@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{66540DA4-0006-4C24-9C54-1C2FD9E01EE9}") = "as370", "as370.vcxproj", "{A499D67C-5B6E-4D93-85E2-4F8A6C3510C7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C123FD50-76E1-4796-A374-315ADE0AADD7}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C123FD50-76E1-4796-A374-315ADE0AADD7}.Debug|Win32.Build.0 = Debug|Win32
+		{C123FD50-76E1-4796-A374-315ADE0AADD7}.Release|Win32.ActiveCfg = Release|Win32
+		{C123FD50-76E1-4796-A374-315ADE0AADD7}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

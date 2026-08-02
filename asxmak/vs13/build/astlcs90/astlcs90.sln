@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{1463BCE1-5BF8-40D3-9030-C2346033867E}") = "astlcs90", "astlcs90.vcxproj", "{0909BFFB-7B04-4660-898B-B28ACB627B73}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{20BDCB52-BE3C-48FD-B90A-FB9F5E98ABAF}.Debug|Win32.ActiveCfg = Debug|Win32
+		{3E781C3F-4B89-4CCD-AF8F-30CD8A3D8DA7}.Debug|Win32.Build.0 = Debug|Win32
+		{1463BCE1-5BF8-40D3-9030-C2346033867E}.Release|Win32.ActiveCfg = Release|Win32
+		{747C5A8A-0AA0-4A56-828E-AC975BA1D7FD}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

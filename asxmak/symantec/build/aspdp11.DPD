@@ -1,0 +1,21 @@
+# Symantec SC++ generated .dpd file. V: 7200
+..\build\pdp11adr.OBJ: \
+	..\..\..\aspdp11\pdp11adr.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASPDP11\pdp11.h 
+..\build\pdp11cyc.OBJ: \
+	..\..\..\aspdp11\pdp11cyc.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASPDP11\pdp11.h 
+..\build\pdp11fpp.OBJ: \
+	..\..\..\aspdp11\pdp11fpp.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASPDP11\pdp11.h 
+..\build\pdp11mch.OBJ: \
+	..\..\..\aspdp11\pdp11mch.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASPDP11\pdp11.h 
+..\build\pdp11pst.OBJ: \
+	..\..\..\aspdp11\pdp11pst.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASPDP11\pdp11.h 

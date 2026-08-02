@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{632A3960-D7D4-4407-AEC3-48448D8DD2E5}") = "astlcs90", "astlcs90.vcproj", "{D4A49B88-C9A6-4AE8-84D4-77CA68E79D63}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D4A49B88-C9A6-4AE8-84D4-77CA68E79D63}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D4A49B88-C9A6-4AE8-84D4-77CA68E79D63}.Debug|Win32.Build.0 = Debug|Win32
+		{D4A49B88-C9A6-4AE8-84D4-77CA68E79D63}.Release|Win32.ActiveCfg = Release|Win32
+		{D4A49B88-C9A6-4AE8-84D4-77CA68E79D63}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

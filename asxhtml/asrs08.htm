@@ -1,0 +1,339 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+<HTML lang="en-US">
+<HEAD>
+<TITLE>ASRS08  Assembler</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+</HEAD>
+<BODY BGCOLOR="#C0C0C0">
+
+<A href="../home.htm">
+<IMG width="343" height="58" border="0" SRC="welcom.gif" ALT="Welcome"></A>
+
+<H2>ASRS08  Assembler</H2>
+
+<A NAME = "TOP"> </A> 
+
+<IMG width="576" height="5" border="0" SRC="rnbow.gif" alt="rainbow">
+
+<H4><B><PRE>
+     The  ASRS08 assembler supports the RS08 series of micropro-
+cessors.  Processor specific definition files are  included  for
+the  KA2(KA1),  KA8(KA4),  KB8( KB2, KB4, and KB6), LA8, and LE4
+variations of peripheral options with the RS08 core.  
+
+RS08 REGISTER SET 
+
+The following is a list of the RS08 registers used by ASRS08:  
+
+        a       - the accumulator
+        x       - the index register
+
+
+RS08 ARGUMENT SYNTAX 
+
+        a       8 bit accumulator register
+        x       8 bit index register
+
+        #opr8i  8 bit immediate value
+
+        (#)n    3 bit data
+
+        M       is a memory address
+
+        opr16a  16 bit address
+        opr8a   8 bit address
+        opr5a   5 bit address   (0 &lt;= opra5 &lt;= 31)
+        opra4   4 bit address   (0 &lt;= opra4 &lt;= 15)
+
+        Force the opr8a address form using the * prefix
+        Force the opr5a or opr4a form using the &lt;* prefix
+
+        rel     -128 to +127 relative address
+
+        ,x      indexed addressing
+        D[X]    indexed addressing
+
+The  terms opr8i, n, opr16a, opr8a, opra5, opra4, and rel may be
+expressions.  
+
+   Note  that  not all addressing modes are valid with every in-
+struction.  Refer to the RS08 reference manual for more details.
+ 
+</PRE></B></H4>
+
+<IMG width="576" height="5" border="0" SRC="rnbow.gif" alt="rainbow">
+
+<H4><B><PRE>
+RS08 INSTRUCTIONS 
+
+
+   The  following tables list the mnemonics and arguments recog-
+nized by the ASRS08 assembler.  
+
+  The operational description of the instructions may
+contain one or more of the following forms:
+
+        A is a register
+        X is a register
+        C is the Carry Bit
+
+        n is a 3 Bit Value
+
+        # is an immediate value
+
+        (arg) - 'The Contents Of' arg
+
+        (Mx)  - 'The Contents Of M Addressed By (x)'
+
+
+    Load and Store Instructions
+
+        lda     #opr8i          A &lt;- #
+        lda     opr8a           A &lt;- (M)
+        lda     opra5           A &lt;- (M)
+        lda     ,x              A &lt;- (Mx)
+        lda     D[X]            A &lt;- (Mx)
+
+        ldx     #opr8i          X &lt;- #
+        ldx     opr8a           X &lt;- (M)
+        ldx     ,x              X &lt;- (Mx)
+        ldx     D[X]            X &lt;- (Mx)
+
+        sta     opr8a           (M) &lt;- (A)
+        sta     opr5a           (M) &lt;- (A)
+        sta     ,x              (Mx) &lt;- (A)
+        sta     D[X]            (Mx) &lt;- (A)
+
+        stx     opr8a           (M) &lt;- (X)
+
+        tax                     X &lt;- (A)
+        txa                     A &lt;- (X)
+
+
+    BSET, BCLR, and Move Instructions
+
+        bclr    n,opr8a         Bit n of (M) &lt;- 0
+        bclr    n,x             Bit n of (Mx) &lt;- 0
+        bclr    n,D[X]          Bit n of (Mx) &lt;- 0
+
+        bset    n,opr8a         Bit n of (M) &lt;- 1
+        bset    n,x             Bit n of (Mx) &lt;- 1
+        bset    n,D[X]          Bit n of (Mx) &lt;- 1
+
+        mov     opr8a,opr8a     (M)dst &lt;- (M)src
+        mov     #opr8i,opr8a    (M) &lt;- #
+        mov     ,x,opr8a        (M) &lt;- (Mx)
+        mov     D[X],opr8a      (M) &lt;- (Mx)
+        mov     opr8a,D[X]      (Mx) &lt;- (M)
+        mov     #opr8i,D[X]     (Mx) &lt;- #
+
+    
+    Add and Subtract Instructions
+
+        adc     #opr8i          A &lt;- (A) + (C) + #
+        adc     opr8a           A &lt;- (A) + (C) + (M)
+        adc     ,x              A &lt;- (A) + (C) + (Mx)
+        adc     D[X]            A &lt;- (A) + (C) + (Mx)
+        adc     x               A &lt;- (A) + (C) + (x)
+        adcx                    A &lt;- (A) + (C) + (x)
+
+        add     #opr8i          A &lt;- (A) + #
+        add     opr8a           A &lt;- (A) + (M)
+        add     opr4a           A &lt;- (A) + (M)
+        add     ,x              A &lt;- (A) + (Mx)
+        add     D[X]            A &lt;- (A) + (Mx)
+        add     x               A &lt;- (A) + (x)
+        addx                    A &lt;- (A) + (x)
+
+        sbc     #opr8i          A &lt;- (A) - (C) - #
+        sbc     opr8a           A &lt;- (A) - (C) - (M)
+        sbc     ,x              A &lt;- (A) - (C) - (Mx)
+        sbc     D[X]            A &lt;- (A) - (C) - (Mx)
+        sbc     x               A &lt;- (A) - (C) - (x)
+        sbcx                    A &lt;- (A) - (C) - (x)
+
+        sub     #opr8i          A &lt;- (A) - #
+        sub     opr8a           A &lt;- (A) - (M)
+        sub     opr4a           A &lt;- (A) - (M)
+        sub     ,x              A &lt;- (A) - (Mx)
+        sub     D[X]            A &lt;- (A) - (Mx)
+        sub     x               A &lt;- (A) - (x)
+        subx                    A &lt;- (A) - (x)
+
+
+    Other Arithmetic Instructions
+
+        inc     opr8a           (M) &lt;- (M) + 1
+        inc     opr4a           (M) &lt;- (M) + 1
+        inc     ,x              (Mx) &lt;- (Mx) + 1
+        inc     D[X]            (Mx) &lt;- (Mx) + 1
+        inc     a               A &lt;- (A) + 1
+        inc     x               X &lt;- (X) + 1
+        inca                    A &lt;- (A) + 1
+        incx                    X &lt;- (X) + 1
+
+        dec     opr8a           (M) &lt;- (M) - 1
+        dec     opr4a           (M) &lt;- (M) - 1
+        dec     ,x              (Mx) &lt;- (Mx) - 1
+        dec     D[X]            (Mx) &lt;- (Mx) - 1
+        dec     a               A &lt;- (A) - 1
+        dec     x               X &lt;- (X) - 1
+        deca                    A &lt;- (A) - 1
+        decx                    X &lt;- (X) - 1
+
+        clr     opr8a           (M) &lt;- 0
+        clr     opr4a           (M) &lt;- 0
+        clr     ,x              (Mx) &lt;- 0
+        clr     D[X]            (Mx) &lt;- 0
+        clr     a               A &lt;- 0
+        clr     x               X &lt;- 0
+        clra                    A &lt;- 0
+        clrx                    X &lt;- 0
+
+        cmp     #opr8i          (A) - #
+        cmp     opr8a           (A) - (M)
+        cmp     ,x              (A) - (Mx)
+        cmp     D[X]            (A) - (Mx)
+        cmp     x               (A) - (X)
+        cmpx                    (A) - (X)
+
+        tst     opr8a           (M) - 0
+        tst     ,x              (Mx) - 0
+        tst     D[X]            (Mx) - 0
+        tst     a               (A) - 0
+        tst     x               (X) - 0
+        tsta                    (A) - 0
+        tstx                    (X) - 0
+
+
+    Logical Operation Instructions
+
+        and     #opr8i          A &lt;- (A) &amp; #
+        and     opr8a           A &lt;- (A) &amp; (M)
+        and     ,x              A &lt;- (A) &amp; (Mx)
+        and     D[X]            A &lt;- (A) &amp; (Mx)
+        and     x               A &lt;- (A) &amp; (X)
+        andx                    A &lt;- (A) &amp; (X)
+
+        ora     #opr8i          A &lt;- (A) | #
+        ora     opr8a           A &lt;- (A) | (M)
+        ora     ,x              A &lt;- (A) | (Mx)
+        ora     D[X]            A &lt;- (A) | (Mx)
+        ora     x               A &lt;- (A) | (X)
+        orax                    A &lt;- (A) | (X)
+
+        eor     #opr8i          A &lt;- (A) ^ #
+        eor     opr8a           A &lt;- (A) ^ (M)
+        eor     ,x              A &lt;- (A) ^ (Mx)
+        eor     D[X]            A &lt;- (A) ^ (Mx)
+        eor     x               A &lt;- (A) ^ (X)
+        eorx                    A &lt;- (A) ^ (X)
+
+        com     a               A &lt;- ~(A)
+        coma                    A &lt;- ~(A)
+
+
+    Shift and Rotate Instructions
+
+        asl     a               C &lt;- (A7) Left Shift (A0) &lt;- 0
+        asla                    C &lt;- (A7) Left Shift (A0) &lt;- 0
+
+        lsl     a               C &lt;- (A7) Left Shift (A0) &lt;- 0
+        lsla                    C &lt;- (A7) Left Shift (A0) &lt;- 0
+
+        lsr     a               0 -&gt; (A7) Right Shift (A0) -&gt; C
+        lsra                    0 -&gt; (A7) Right Shift (A0) -&gt; C
+
+        rol     a               C &lt;- (A7) Left Rotate (A0) &lt;- C
+        rola                    C &lt;- (A7) Left Rotate (A0) &lt;- C
+
+        ror     a               C -&gt; (A7) Right Rotate (A0) -&gt; C
+        rora                    C -&gt; (A7) Right Rotate (A0) -&gt; C
+
+
+    Jump and Branch Instructions
+
+        jmp     opr16a          PC &lt;- Adrress
+
+        bcc     rel             Branch if Carry Bit Clear
+        bcs     rel             Branch if Carry Bit Set (blo)
+        beq     rel             Branch if Zero Bit Set
+        bhs     rel             Branch if Higher or Same (bcc)
+        blo     rel             Branch if Lower (bcs)
+        bne     rel             Branh if Zero Bit Clear
+        bra     rel             Branch Always
+        brn     rel             Branch Never
+
+
+    Bit Branches and Loop Control Instructions
+
+        brclr   n,opr8a,rel     Branch if Bit n of (M) is Clear
+        brclr   n,D[X],rel      Branch if Bit n of (Mx) is Clear
+        brclr   n,x,rel         Branch if Bit n of (x) is Clear
+
+        brset   n,opr8a,rel     Branch if Bit n of (M) is Set
+        brset   n,D[X],rel      Branch if Bit n of (Mx) is Set
+        brset   n,x,rel         Branch if Bit n of (x) is Set
+
+        cbeqa   #opr8i,rel      Branch if (A) = #
+        cbeq    a,#opr8i,rel    Branch if (A) = #
+        cbeq    opr8a,rel       Branch if (M) = 0
+        cbeq    ,x,rel          Branch if (Mx) = 0
+        cbeq    D[X],rel        Branch if (Mx) = 0
+        cbeqx   rel             Branch if (X) = 0
+        cbeq    x,rel           Branch if (X) = 0
+
+        dbnz    opr8a,rel     (M) &lt;- (M) - 1, Branch if (M) != 0
+        dbnz    ,x,rel     (Mx) &lt;- (Mx) - 1, Branch if (Mx) != 0
+        dbnz    D[X],rel   (Mx) &lt;- (Mx) - 1, Branch if (Mx) != 0
+        dbnz    a,rel           A &lt;- (A) - 1, Branch if (A) != 0
+        dbnza   rel             A &lt;- (A) - 1, Branch if (A) != 0
+        dbnz    x,rel           X &lt;- (X) - 1, Branch if (X) != 0
+        dbnzx   rel             X &lt;- (X) - 1, Branch if (X) != 0
+
+
+    Subroutine Related Instructions
+
+        bsr     rel             Branch to Subroutine
+
+        jsr     opr16a          Jump to Subroutine
+
+        rts                     Return from Subroutine
+
+        sha                     (A) &lt;--&gt; Shadow PC High
+        sla                     (A) &lt;--&gt; Shadow PC Low
+
+
+    Miscellaneous Instructions
+
+        nop                     No Operation
+
+        sec                     (C) &lt;- 1
+        clc                     (C) &lt;- 0
+
+        bgnd                    Background
+        wait                    Put MCU into wait mode
+        stop                    Put MCU into stop mode
+
+</PRE></B></H4>
+<H5><A HREF="asxdoc.htm#TOP"> Go to the Documentation Index</A></H5>
+
+<IMG width="576" height="5" border="0" SRC="rnbow.gif" alt="rainbow">
+
+<P>
+<A HREF="asxxxx.htm#JUMP">
+<IMG width="32" height="32" border="0" SRC="spcshp.gif" ALIGN="bottom" alt="spaceship"></A>
+<B>...  Exit the ASxxxx Documentation</B>
+</P>
+
+<P>
+<A href="../home.htm">
+<IMG width="32" height="32" border="0" SRC="home.gif" ALIGN="bottom" alt="home"></A>
+<B>...  Home Page</B>
+</P>
+
+<H6><B>Last Updated: March 2025</B></H6>
+</BODY> 
+</HTML>
+

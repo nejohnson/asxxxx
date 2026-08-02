@@ -1,0 +1,30 @@
+82569
+R:\asxv6pxx\asxmak\symantec\build\astlcs90.prj
+astlcs90.OPN
+novcs
+astlcs90.DEF
+6
+1768685701
+0 0 0 0 0 "..\..\..\ASXXSRC\asdata.c"
+0 0 0 0 0 "..\..\..\ASXXSRC\asdbg.c"
+0 0 0 0 0 "..\..\..\ASXXSRC\asexpr.c"
+0 0 0 0 0 "..\..\..\ASXXSRC\aslex.c"
+0 0 0 0 0 "..\..\..\ASXXSRC\aslist.c"
+0 0 0 0 0 "..\..\..\ASXXSRC\asmain.c"
+0 0 0 0 0 "..\..\..\ASXXSRC\asmcro.c"
+0 0 0 0 0 "..\..\..\ASXXSRC\asout.c"
+0 0 0 0 0 "..\..\..\ASXXSRC\assubr.c"
+0 0 0 0 0 "..\..\..\ASXXSRC\assym.c"
+0 0 0 0 0 "..\..\..\ASTLCS90\t90adr.c"
+0 0 0 0 0 "..\..\..\ASTLCS90\t90mch.c"
+0 0 0 0 0 "..\..\..\ASTLCS90\t90pst.c"
+0 0 0 0 0 "astlcs90.DEF"
+0 -1 0 0 0 "..\..\..\ASTLCS90\t90.h"
+0 -1 0 0 0 "C:\SC\INCLUDE\limits.h"
+0 -1 0 0 0 "..\..\..\ASXXSRC\asxxxx.h"
+0 -1 0 0 0 "C:\SC\INCLUDE\stdlib.h"
+0 -1 0 0 0 "C:\SC\INCLUDE\stdio.h"
+0 -1 0 0 0 "C:\SC\INCLUDE\setjmp.h"
+0 -1 0 0 0 "C:\SC\INCLUDE\string.h"
+0 -1 0 0 0 "C:\SC\INCLUDE\time.h"
+0 -1 0 0 0 "..\..\..\..\asxv5pxx\asxxsrc\asxxxx.h"

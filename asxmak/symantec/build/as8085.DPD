@@ -1,0 +1,9 @@
+# Symantec SC++ generated .dpd file. V: 7200
+..\build\i85mch.OBJ: \
+	..\..\..\as8085\i85mch.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\AS8085\i8085.h 
+..\build\i85pst.OBJ: \
+	..\..\..\as8085\i85pst.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\AS8085\i8085.h 

@@ -1,0 +1,13 @@
+# Symantec SC++ generated .dpd file. V: 7200
+..\build\r78ksadr.OBJ: \
+	..\..\..\as78k0s\r78ksadr.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\AS78K0S\r78ks.h 
+..\build\r78ksmch.OBJ: \
+	..\..\..\as78k0s\r78ksmch.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\AS78K0S\r78ks.h 
+..\build\r78kspst.OBJ: \
+	..\..\..\as78k0s\r78kspst.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\AS78K0S\r78ks.h 

@@ -1,0 +1,36 @@
+ASxxxx Linker V06.00                                                                Page 1
+Hexadecimal [16-Bits]                                 Mon Mar  9 21:48:19 2026
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+.  .ABS.                   0000        0000 =           0. bytes (ABS,OVR,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global   
+   -----  ------      -----  ------      -----  ------      -----  ------   
+    0000  va       |   0000  .__.ABS. |   0002  vb      
+ASxxxx Linker V06.00                                                                Page 2
+Hexadecimal [16-Bits]                                 Mon Mar  9 21:48:19 2026
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+RELOC                      0100        0012 =          18. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global   
+   -----  ------      -----  ------      -----  ------      -----  ------   
+ASxxxx Linker V06.00                                                                Page 3
+Hexadecimal [16-Bits]                                 Mon Mar  9 21:48:19 2026
+
+Files Linked                              [ module(s) ]
+
+rl_8x300                                  [  ]
+xtrnab                                    [  ]
+
+ASxxxx Linker V06.00                                                                Page 4
+Hexadecimal [16-Bits]                                 Mon Mar  9 21:48:19 2026
+
+User Area Base Address Definitions
+
+RELOC=0x0100
+
+
+

@@ -1,0 +1,13 @@
+# Symantec SC++ generated .dpd file. V: 7200
+..\build\m01adr.OBJ: \
+	..\..\..\as6801\m01adr.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\AS6801\m6801.h 
+..\build\m01mch.OBJ: \
+	..\..\..\as6801\m01mch.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\AS6801\m6801.h 
+..\build\m01pst.OBJ: \
+	..\..\..\as6801\m01pst.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\AS6801\m6801.h 

@@ -1,0 +1,42 @@
+ASxxxx Assembler V06.00  (ASxxxx Test Assembler)                        Page 1
+Hexadecimal [16-Bits]                                 Tue Apr 28 10:35:50 2026
+Radix Tests
+
+
+                              1 	.title	Radix Tests
+                              2 
+                              3 	.globl	D, X, Q, B
+                              4 
+   0000 00 04                 5 	.word	^B(100)
+   0002 00 20                 6 	.word	^Q(40)
+   0004 00 40                 7 	.word	^X(40)
+   0006 00 60                 8 	.word	^Q(^X(40) + 40)
+   0008 00 64                 9 	.word	^B(^Q(^X(40) + 40) + 100)
+   000A 00 00                10 	.word	^D(^B(^Q(^X(40) + 40) + 100) - 100)
+                             11 
+   000Cs00r00                12 	.word	^B(B)
+   000Es00r00                13 	.word	^Q(Q)
+   0010s00r00                14 	.word	^X(X)
+   0012s00r00                15 	.word	^Q(^X(X) + Q)
+   0014s00r00                16 	.word	^B(^Q(^X(X) + Q) + B)
+   0016s00r00                17 	.word	^D(^B(^Q(^X(X) + Q) + B) - D)
+ASxxxx Assembler V06.00  (ASxxxx Test Assembler)                        Page 2
+Hexadecimal [16-Bits]                                 Tue Apr 28 10:35:50 2026
+Radix Tests
+Symbol Table
+
+    .__.$$$.       =   2710 L   |     .__.ABS.       =   0000 G
+    .__.CPU.       =   0000 L   |     .__.H$L.       =   0001 L
+    B                  **** GX  |     D                  **** GX
+    Q                  **** GX  |     X                  **** GX
+
+ASxxxx Assembler V06.00  (ASxxxx Test Assembler)                        Page 3
+Hexadecimal [16-Bits]                                 Tue Apr 28 10:35:50 2026
+Radix Tests
+Area Table
+
+[_CSEG]
+   0 _CODE            size   18   flags C180
+[_DSEG]
+   1 _DATA            size    0   flags C0C0
+

@@ -1,0 +1,13 @@
+# Symantec SC++ generated .dpd file. V: 7200
+..\build\chkadr.OBJ: \
+	..\..\..\ascheck\chkadr.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASCHECK\chk.h 
+..\build\chkmch.OBJ: \
+	..\..\..\ascheck\chkmch.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASCHECK\chk.h 
+..\build\chkpst.OBJ: \
+	..\..\..\ascheck\chkpst.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASCHECK\chk.h 

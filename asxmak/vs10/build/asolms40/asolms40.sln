@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual C++ Express 2010
+Project("{01DB420A-8877-4F6A-9813-19F17C96717B}") = "asolms40", "asolms40.vcxproj", "{B452F23C-DE29-4B00-8330-D631F452E5F6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2836601A-3F0B-4C0C-90B9-3EECA03C41F7}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2836601A-3F0B-4C0C-90B9-3EECA03C41F7}.Debug|Win32.Build.0 = Debug|Win32
+		{2836601A-3F0B-4C0C-90B9-3EECA03C41F7}.Release|Win32.ActiveCfg = Release|Win32
+		{2836601A-3F0B-4C0C-90B9-3EECA03C41F7}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

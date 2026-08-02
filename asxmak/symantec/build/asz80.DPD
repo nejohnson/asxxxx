@@ -1,0 +1,13 @@
+# Symantec SC++ generated .dpd file. V: 7200
+..\build\z80adr.OBJ: \
+	..\..\..\asz80\z80adr.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASZ80\z80.h 
+..\build\z80mch.OBJ: \
+	..\..\..\asz80\z80mch.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASZ80\z80.h 
+..\build\z80pst.OBJ: \
+	..\..\..\asz80\z80pst.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASZ80\z80.h 

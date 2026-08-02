@@ -1,0 +1,13 @@
+# Symantec SC++ generated .dpd file. V: 7200
+..\build\cop8adr.OBJ: \
+	..\..\..\ascop8\cop8adr.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASCOP8\cop8.h 
+..\build\cop8mch.OBJ: \
+	..\..\..\ascop8\cop8mch.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASCOP8\cop8.h 
+..\build\cop8pst.OBJ: \
+	..\..\..\ascop8\cop8pst.c \
+	..\..\..\asxxsrc\asxxxx.h \
+	..\..\..\ASCOP8\cop8.h 
