@@ -728,7 +728,7 @@ loop:	if (asmc == NULL) return(0);
 		break;
 
 	case T_ASM:
-		if (fgets(ib, NINPUT, asmc->fp) == NULL) {
+		if (fgets(ib, NINPUT*2, asmc->fp) == NULL) {
 			if (trcflags & TRC_ASM) {
 				if ((pass == 2) && (lfp != NULL)) {
 					fprintf(lfp, ";A<< %s\n", asmc->afs);
@@ -768,7 +768,7 @@ loop:	if (asmc == NULL) return(0);
 		break;
 
 	case T_INCL:
-		if (fgets(ib, NINPUT, asmc->fp) == NULL) {
+		if (fgets(ib, NINPUT*2, asmc->fp) == NULL) {
 			if (trcflags & TRC_INC) {
 				if ((pass == 2) && (lfp != NULL)) {
 					fprintf(lfp, ";I<< (%d) %s\n", incfil, asmc->afs);
@@ -820,7 +820,7 @@ loop:	if (asmc == NULL) return(0);
 		break;
 
 	case T_MACRO:
-		if (fgetm(ib, NINPUT, asmc->fp) == NULL) {
+		if (fgetm(ib, NINPUT*2, asmc->fp) == NULL) {
 			nfp = (struct macrofp *) asmc->fp;
 			np = nfp->np;
 			if (trcflags & TRC_MCR) {
