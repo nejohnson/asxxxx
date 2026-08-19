@@ -45,7 +45,8 @@ FILE		*outfp;		/* Output File Handle		*/
 
 int		ofarg;		/* Output File Argv Number	*/
 
-char		ib[NINPUT*2];	/* Input text line		*/
+char		ibuf[NINPUT*2];	/* Input text line		*/
+char		*ib = ibuf;	/* Input text line pointer	*/
 char		*ip;		/* String Pointer		*/
 
 int		lincnt;		/* Input Line Counter		*/

@@ -1204,9 +1204,13 @@ extern	int	exmode;		/*	expanded error code mode
 extern	char	*ip;		/*	pointer into the assembler-source
 				 *	text line in ib[]
 				 */
-extern	char	ib[NINPUT*2];	/*	assembler-source text line for processing
+extern	char	*ib;		/*	assembler-source text line for processing
+				 *	dynamically sized, ibsize bytes
 				 */
-extern	char	ic[NINPUT*2];	/*	assembler-source text line for listing
+extern	char	*ic;		/*	assembler-source text line for listing
+				 *	dynamically sized, ibsize bytes
+				 */
+extern	int	ibsize;		/*	current allocated size of ib[]/ic[]
 				 */
 extern	char	*il;		/*	pointer to the assembler-source
 				 *	text line to be listed
@@ -1329,6 +1333,7 @@ extern	void		popmstk(struct mcrdef *np);
 extern	void		chopcrlf(char *str);
 extern	int		comma(int flag);
 extern	char		endline(void);
+extern	char *		fgetline(FILE *fp);
 extern	int		get(void);
 extern	int		getdlm(void);
 extern	void		getdstr(char *str, int slen);
