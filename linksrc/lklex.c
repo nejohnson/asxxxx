@@ -35,6 +35,7 @@
  *		int	get()
  *		void	getfid()
  *		void	getid()
+ *		void	getsymid()
  *		int	getmap()
  *		int	getnb()
  *		int	more()
@@ -98,6 +99,73 @@ getid(char *id, int c)
 		if (p < &id[NCPS-1])
 			*p++ = c;
 	} while (ctype[c=get()] & (LETTER|DIGIT));
+	unget(c);
+	*p++ = 0;
+}
+
+/*)Function	void	getsymid(id, c)
+ *
+ *		char *	id		a pointer to a string of
+ *					maximum length NCPS-1
+ *		int	c		mode flag
+ *					>=0	this is first character to
+ *						copy to the string buffer
+ *					<0	skip white space
+ *
+ *	The function getsymid() is identical to getid() except that
+ *	it also accepts '-' (BINOP) as a symbol-name character, in
+ *	addition to LETTER | DIGIT.  It is used only where a symbol's
+ *	own name is being read as originally defined - e.g. by newsym()
+ *	in lksym.c, reading the name off a .rel file 'S' record - never
+ *	where an identifier is being scanned as an operand within an
+ *	arithmetic expression (see term() in lkeval.c, which continues
+ *	to use getid() so that plain '-' unambiguously ends a symbol
+ *	reference and begins a subtraction, exactly as before).
+ *
+ *	The assembler may construct a symbol name by combining the
+ *	source module's file name with a suffix (e.g. an auxiliary
+ *	relocation-expression symbol named "<filename>_1"), and a
+ *	source file name may legitimately contain a '-' (a dash is a
+ *	common, unremarkable character in a file name).  The assembler
+ *	writes such a name to the .rel file verbatim, without ever
+ *	re-scanning it as assembler-source syntax, so it has no
+ *	trouble producing it - only the linker's own re-parsing of the
+ *	name it wrote needs to tolerate it too.
+ *
+ *	local variables:
+ *		char *	p		pointer to external string buffer
+ *		int	c		current character value
+ *
+ *	global variables:
+ *		char	ctype[]		a character array which defines the
+ *					type of character being processed.
+ *					This index is the character
+ *					being processed.
+ *
+ *	called functions:
+ *		int	get()		lklex.c
+ *		int	getnb()		lklex.c
+ *		void	unget()		lklex.c
+ *
+ *	side effects:
+ *		use of getnb(), get(), and unget() updates the
+ *		global pointer ip the position in the current
+ *		input text line.
+ */
+
+void
+getsymid(char *id, int c)
+{
+	char *p;
+
+	if (c < 0) {
+		c = getnb();
+	}
+	p = id;
+	do {
+		if (p < &id[NCPS-1])
+			*p++ = c;
+	} while ((ctype[c=get()] & (LETTER|DIGIT)) || (c == '-'));
 	unget(c);
 	*p++ = 0;
 }

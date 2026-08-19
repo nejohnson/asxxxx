@@ -152,9 +152,11 @@ newsym(void)
 		lkexit(ER_FATAL);
 	}
 	/*
-	 * Create symbol entry
+	 * Create symbol entry.  Use getsymid(), not getid(), since the
+	 * assembler may legitimately construct this name from a source
+	 * file name containing a '-' (see getsymid() in lklex.c).
 	 */
-	getid(id, -1);
+	getsymid(id, -1);
 	tsp = lkpsym(id, 1);
 	c1 = getnb(); c2 = get(); c3 = get();
 	if (c1 == 'R') {
