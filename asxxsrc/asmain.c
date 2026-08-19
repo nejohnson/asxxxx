@@ -218,6 +218,18 @@ main(int argc, char *argv[])
 	relfil = "";
 	relext = "rel";
 
+	/*
+	 * Allocate the initial assembler-source text line buffers.
+	 * ib[]/ic[] are grown (see fgetline() in aslex.c) as needed
+	 * to accomodate source lines longer than this starting size.
+	 */
+	ibsize = NINPUT*2;
+	if (((ib = malloc(ibsize)) == NULL) ||
+	    ((ic = malloc(ibsize)) == NULL)) {
+		fprintf(stderr, "?ASxxxx-Error-Cannot allocate memory for input line buffer.\n\n");
+		exit(ER_FATAL);
+	}
+
 	asmc = NULL;
 	asmp = NULL;
 	for (i=1; i<argc; ++i) {

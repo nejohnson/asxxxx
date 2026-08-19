@@ -388,9 +388,13 @@ char	*ex[NERR];	/*	array of error string pointers
 char	*ip;		/*	pointer into the assembler-source
 			 *	text line in ib[]
 			 */
-char	ib[NINPUT*2];	/*	assembler-source text line for processing
+char	*ib;		/*	assembler-source text line for processing
+			 *	dynamically sized, ibsize bytes
 			 */
-char	ic[NINPUT*2];	/*	assembler-source text line for listing
+char	*ic;		/*	assembler-source text line for listing
+			 *	dynamically sized, ibsize bytes
+			 */
+int	ibsize;		/*	current allocated size of ib[]/ic[]
 			 */
 char	*il;		/*	pointer to the assembler-source
 			 *	text line to be listed

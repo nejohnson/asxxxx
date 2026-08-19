@@ -672,6 +672,78 @@ int skpcomma(void)
  *
  */
 
+/*)Function	char *	fgetline(FILE *fp)
+ *
+ *	The function fgetline() reads one complete line of text from
+ *	the file fp into the global buffer ib[], growing ib[] (and
+ *	the parallel listing-copy buffer ic[]) as needed so that no
+ *	source line length limit is imposed here beyond available
+ *	memory.  A line that does not fit in the current ib[]/ic[]
+ *	allocation causes both to be doubled in size (updating ibsize)
+ *	and reading to continue where the previous fgets() left off,
+ *	repeating until the line's terminating newline (or end of
+ *	file) is read.
+ *
+ *	fgetline() returns a pointer to ib[] after a successful read,
+ *	or a NULL pointer at end of file.
+ *
+ *	local variables:
+ *		int	len	length of the partial line read so far
+ *		char *	nib	realloc()'d ib[] pointer
+ *		char *	nic	realloc()'d ic[] pointer
+ *
+ *	global variables:
+ *		char *	ib	assembler-source text line buffer
+ *		char *	ic	assembler-source text line buffer (listing copy)
+ *		int	ibsize	current allocated size of ib[]/ic[]
+ *		char *	il	pointer to whichever of ib[]/ic[] is used
+ *				for listing (selected by -b(b), bflag)
+ *		int	bflag	-b(b) listing mode flag
+ *
+ *	functions called:
+ *		void	asexit()	asmain.c
+ *		char *	fgets()		c_library
+ *		void *	realloc()	c_library
+ *		int	strlen()	c_library
+ *
+ *	side effects:
+ *		ib[], ic[], and ibsize may grow to accomodate a source
+ *		line longer than any seen so far.  main() sets il to
+ *		point at ib[] or ic[] once, before the pass loop starts,
+ *		so il is refreshed here whenever ib[]/ic[] are moved by
+ *		realloc() to keep it from going stale.
+ */
+
+char *
+fgetline(FILE *fp)
+{
+	int len;
+	char *nib, *nic;
+
+	if (fgets(ib, ibsize, fp) == NULL) {
+		return NULL;
+	}
+	len = strlen(ib);
+	while ((len == (ibsize - 1)) && (ib[len-1] != '\n')) {
+		nib = realloc(ib, ibsize * 2);
+		nic = realloc(ic, ibsize * 2);
+		if ((nib == NULL) || (nic == NULL)) {
+			fprintf(stderr, "?ASxxxx-Error-Cannot allocate memory for a long input line.\n\n");
+			asexit(ER_FATAL);
+		}
+		ib = nib;
+		ic = nic;
+		ibsize *= 2;
+		il = bflag ? ib : ic;
+		if (fgets(ib + len, ibsize - len, fp) == NULL) {
+			break;
+		}
+		len = strlen(ib);
+	}
+	return ib;
+}
+
+
 int
 nxtline(void)
 {
@@ -728,7 +800,7 @@ loop:	if (asmc == NULL) return(0);
 		break;
 
 	case T_ASM:
-		if (fgets(ib, NINPUT*2, asmc->fp) == NULL) {
+		if (fgetline(asmc->fp) == NULL) {
 			if (trcflags & TRC_ASM) {
 				if ((pass == 2) && (lfp != NULL)) {
 					fprintf(lfp, ";A<< %s\n", asmc->afs);
@@ -768,7 +840,7 @@ loop:	if (asmc == NULL) return(0);
 		break;
 
 	case T_INCL:
-		if (fgets(ib, NINPUT*2, asmc->fp) == NULL) {
+		if (fgetline(asmc->fp) == NULL) {
 			if (trcflags & TRC_INC) {
 				if ((pass == 2) && (lfp != NULL)) {
 					fprintf(lfp, ";I<< (%d) %s\n", incfil, asmc->afs);
@@ -820,7 +892,7 @@ loop:	if (asmc == NULL) return(0);
 		break;
 
 	case T_MACRO:
-		if (fgetm(ib, NINPUT*2, asmc->fp) == NULL) {
+		if (fgetm(ib, ibsize, asmc->fp) == NULL) {
 			nfp = (struct macrofp *) asmc->fp;
 			np = nfp->np;
 			if (trcflags & TRC_MCR) {
