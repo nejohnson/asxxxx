@@ -175,7 +175,30 @@
  * relocatable binary file.
  */
 
-#define NCPS		80	/* characters per symbol */
+/*
+ * NCPS must match the assemblers' NCPS in asxxsrc/asxxxx.h.  Both
+ * getid() in lklex.c and getid() in aslex.c silently truncate an
+ * identifier at NCPS-1 characters; if the linker's limit is the
+ * smaller of the two it will truncate names the assembler wrote
+ * out in full, and two distinct symbols sharing a long prefix
+ * then collapse into one.
+ */
+#define NCPS		256	/* characters per symbol */
+
+/*
+ * Buffer size for a linker-generated symbol name derived from an
+ * area name, as built by lnkarea()/lnksect() in lkarea.c:
+ *
+ *	"a_<area>"  "l_<area>"  "m_<area>_<n>"  "s_<area>_<n>"
+ *
+ * NCPS covers the area name itself (up to NCPS-1 characters plus
+ * its terminating NUL, as bounded by getid() in lklex.c).  The
+ * remaining 16 characters cover the 2-character prefix, the '_'
+ * separator and the decimal section index, which is at most 10
+ * digits for a 32-bit unsigned value.
+ */
+#define	NGSYM	    (NCPS + 16)	/* generated symbol name length */
+
 #define	NINPUT		512	/* Input buffer size */
 #define	NHASH	     (1 << 6)	/* Buckets in hash table */
 #define	HMASK	    (NHASH - 1)	/* Hash mask */
