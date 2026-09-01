@@ -9,7 +9,7 @@
 | Consumer | SDCC, via the in-progress ASxxxx-into-SDCC port replacing `sdas`/`sdld` |
 | Date | 2026-09-01 (rev. 2 — SDCC identified as the client) |
 | Verdict | **Feasible and worth doing. The object format already carries everything needed, and with SDCC as the consumer the granularity question is answered. The remaining work is bounded.** |
-| Already actioned | The `aslink -y` hang found during this study (§7.4) is fixed on `master` — commit `5356e4c`, merged as `883f305`. |
+| Already actioned | Three defects found during this study are fixed on `master`: the `aslink -y` hang (§7.4, `5356e4c`), a stack-buffer overflow in `lnksect()` (§6.7, `5c1a749`), and the `NCPS` symbol-name truncation mismatch (§6.7/§7.6, `d5e2177`). |
 
 ---
 
@@ -307,13 +307,31 @@ Removing sections changes every subsequent address. On 8-bit targets that is not
 
 The outcome is **sound but suboptimal**: a module extracted to satisfy a reference that later dies will have all of its own sections collected, so it contributes nothing to the image — but the file I/O and symbol-table growth already happened, and it may transitively have pulled in further modules (also dead, also wasted). GNU `ld` has the identical phase ordering. Iterating extraction and marking to a fixed point is possible but is a significant restructuring of `search()`; not worth it for a first version.
 
-### 6.7 Name length: 80 characters, and `-` is not a name character
+### 6.7 ✅ Name length and generated-name buffers — *fixed on `master`*
 
-`NCPS` is **80** in the linker (`aslink.h:178`) but **256** in the assembler (`asxxsrc/asxxxx.h:134`). `getid()` (`linksrc/lklex.c:90-104`) truncates silently at 79 characters. Auto-generated area names of the form `_CODE.<module>.<function>` will collide once truncated — and truncation-induced area merging is exactly the failure that GC turns from "harmless" into "wrong code".
+`NCPS` was **80** in the linker (`aslink.h`) but **256** in the assembler (`asxxsrc/asxxxx.h:134`), and both `getid()` implementations truncate silently at `NCPS-1`. The assembler therefore wrote names up to 255 characters into the `.rel` file and the linker read back only the first 79 of each, collapsing any two names that shared a long prefix.
+
+Both outcomes were reproduced:
+
+- **Benign** — two globals differing only after their 92nd character produce a spurious `?ASlink-Error-Multiple definition of …`.
+- **Silent and damaging** — where the colliding names are a *definition* in one module and a *reference* in another, the truncated reference matches the truncated definition, `symdef()`'s undefined-symbol check never fires, and the call binds to a different function. Two modules, one defining `<92-char prefix>alpha` and the other calling `<92-char prefix>beta` which nothing defines: the linker exited **0 with no diagnostic** and emitted `CD 03 00` — a call to `…alpha`.
+
+Fixed by raising the linker's `NCPS` to 256 (`d5e2177`). The undefined symbol is now correctly reported by its full name.
+
+Investigating that turned up a second, independent defect in the same code. `lnkarea()`/`lnksect()` build their generated names with `sprintf(temp, "m_%s_%u", tap->a_id, i)` into `char temp[NCPS+2]` — 82 bytes, sized for a prefix plus an area name but not for the `_<n>` section index appended after it. A single `.area` directive with a maximum-length name overflows it. Confirmed under AddressSanitizer:
+
+```
+ERROR: AddressSanitizer: stack-buffer-overflow
+WRITE of size 84 at 0x7e6a36100e72
+  #3 in lnksect linksrc/lkarea.c:560
+'temp' (line 519) <== Memory access at offset 114 overflows this variable
+```
+
+Fixed by introducing `NGSYM` (`NCPS + 16`, documented against the four format strings that write into it) and using it for both `temp[]` buffers and for `token1[]` in `DefineNoICE()`, which has the same append-after-`sscanf` shape (`5c1a749`).
+
+**Still open:** truncation itself is not diagnosable. A name beyond 255 characters is still silently clipped — identically by both tools now, so it no longer *diverges*, but two such names would still merge. A hard error on truncation remains worth adding.
 
 `.`, `$` and `_` are `LETTER` in the linker's `ctype[]` (`lkdata.c:604-615`) so they are safe in generated names. `-` is `BINOP` and is *not* — note `getsymid()` was added specifically so `S` records could carry `-`, but `getid()` (used for area names) still cannot.
-
-With SDCC generating area names mechanically this stops being an edge case and becomes routine — see §7.6, which upgrades it to a fix-first item.
 
 ### 6.8 Debug output consumers
 
@@ -408,13 +426,32 @@ The port will hit these regardless of GC, but each one also constrains the colle
 
 Good news on the naming front: `$`, `.` and `_` are all `LETTER` in the linker's character table (`lkdata.c:604-615`), so SDCC-style mangled names are safe inside generated *area* names. `-` is not.
 
-### 7.6 ⚠ The 80-character name limit stops being theoretical
+### 7.6 ✅ Name length — *mismatch fixed; is 256 enough?*
 
-§6.7 noted that `NCPS` is 80 in the linker versus 256 in the assembler, and that `getid()` truncates silently at 79. With hand-written assembly that is an unlikely edge case. With SDCC generating area names mechanically from a segment prefix plus a mangled function name — including file-scoped statics, which SDCC qualifies with the module name — it becomes a routine occurrence on any real codebase.
+§6.7 covers the defect and its fix. What remains is the sizing question: **is 256 the right number for an SDCC-driven toolchain?**
 
-Two truncated names collide into **one area**, and the linker will happily merge them. Without GC that merge is merely wrong layout; with GC it means one function's liveness silently keeps another function alive, or worse, a collected section takes a live one with it.
+**What ISO C actually requires.** The translation limits in §5.2.4.1 are *minimum capacities a conforming implementation must provide*, not caps on identifier length:
 
-**Raise `NCPS` in the linker to match the assembler, and add a hard error on area-name truncation rather than silent clipping.** This is cheap and it removes an entire class of silent-miscompile.
+| Standard | Internal identifiers / macro names | External identifiers |
+|---|---|---|
+| C89 / C90 | 31 significant characters | **6**, and case need not be significant |
+| C99 | 63 significant characters | **31** significant characters |
+| C11 / C17 | 63 | 31 |
+| C23 | 63 | 31 |
+
+So a strictly conforming program may not rely on more than **31 significant characters in an external identifier** — the only class that reaches a linker at all. Nothing in the standard sets an upper bound; implementations are free to make every character significant, and in practice GCC, Clang and SDCC all do. The numbers above are a floor, not a ceiling, and no real toolchain has treated them as a limit for decades.
+
+**Is 256 enough?** For C identifiers, comfortably — it is roughly 8× the external-identifier minimum, and longer than any hand-written C function name is likely to be.
+
+But C identifiers are not the binding constraint here. The names that will actually approach the limit are the ones the toolchain *generates*, where several components are concatenated:
+
+```
+<segment prefix> _ <module name> _ <function name>
+```
+
+A file-scoped static qualified with its module name, under a user-set `--codeseg`, in a banked build, is where the length accumulates. 256 still leaves generous headroom for that — a 32-character segment prefix, a 64-character module name and a 96-character function name together come to under 200 — but it is worth confirming against the port's actual mangling scheme rather than assuming, particularly if any scheme ever qualifies further (nested scopes, block indices, inlining suffixes).
+
+The residual risk is not the number, it is that overrunning it is **silent**. That is why the open item in §6.7 — a hard error on truncation — matters more than the choice between 256 and 512. With a diagnostic in place, an under-sized `NCPS` is a build failure someone fixes in a minute; without one, it is a call quietly bound to the wrong function.
 
 ### 7.7 What SDCC gives back: a real test harness
 
@@ -438,7 +475,9 @@ The SDCC project will not accept AI-assisted contributions, so this lives as a p
 | Work item | Files | Rough size |
 |---|---|---|
 | ~~**`-y` infinite loop** (§7.4)~~ | `lksdcdb.c` | ✅ **done** — `5356e4c` |
-| `NCPS` 80 → 256 + hard error on area-name truncation (§7.6) | `aslink.h`, `lklex.c` | ~30 lines |
+| ~~`NCPS` 80 → 256~~ (§6.7, §7.6) | `aslink.h` | ✅ **done** — `d5e2177` |
+| ~~`lnksect()` generated-name buffer overflow~~ (§6.7) | `aslink.h`, `lkarea.c`, `lknoice.c` | ✅ **done** — `5c1a749` |
+| Hard error on identifier truncation (still open, §7.6) | `lklex.c`, `aslex.c` | ~30 lines |
 | **`lstarea()` de-quadratication + compact map** (§6.3, §7.3) | `lklist.c` | ~200 lines |
 | `NHASH` enlargement + better hash | `lksym.c`, `aslink.h` | ~20 lines |
 | Reconcile `-a`/`-b` against the SDCC driver (§7.5) | `lkmain.c` or driver | small, but decide deliberately |
@@ -485,7 +524,7 @@ Sequence it so that each stage is independently useful and none of them is waste
 
 - **Stage 0 — the `-y` hang.** ✅ **Done** — `5356e4c`, merged as `883f305` (§7.4). One line. It blocked the SDCC port outright and had nothing to do with GC.
 
-- **Stage 1 — make the linker fit for SDCC.** `NCPS` and truncation errors (§7.6), the `lstarea()` quadratic and compact map (§6.3), `NHASH`, and the `-a`/`-b` reconciliation (§7.5). All of it is needed by the port whether or not GC ever ships, and the map quadratic is on the critical path for *every SDCC debug build* because `.cdb` generation runs inside `lstarea()` (§7.3). None of this commits you to the feature.
+- **Stage 1 — make the linker fit for SDCC.** `NCPS` ✅ and the generated-name buffer overflow ✅ are done (`d5e2177`, `5c1a749`); what remains is a hard error on truncation (§7.6), the `lstarea()` quadratic and compact map (§6.3), `NHASH`, and the `-a`/`-b` reconciliation (§7.5). All of it is needed by the port whether or not GC ever ships, and the map quadratic is on the critical path for *every SDCC debug build* because `.cdb` generation runs inside `lstarea()` (§7.3). None of this commits you to the feature.
 
 - **Stage 2 — get the port running and inherit the test suite.** SDCC's regression suite becomes the golden-file linker harness that §6.10 says does not exist, covering banking, overlays, debug output and `--code-loc` far better than anything hand-written (§7.7). This is the single biggest risk reduction available, and it costs nothing extra.
 
