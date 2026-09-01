@@ -263,6 +263,7 @@ char *errors[] = {
 	"<e> .error/.assume programmed error",
 	"<i> .include/.incbin file error or an .if/.endif mismatch",
 	"<k> numerical conversion error",
+	"<l> identifier too long, name truncated",
 	"<m> multiple definitions error or macro recursion error",
 	"<n> .endm, .mexit, or .narg outside of a macro",
 	"<o> .org in REL area or directive / mnemonic error",

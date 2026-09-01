@@ -86,21 +86,60 @@
  *		input text line.
  */
 
+/*)Function	void	iderr(id)
+ *
+ *		char *	id		the truncated identifier
+ *
+ *	The function iderr() reports an identifier that was too
+ *	long to be scanned in full by getid() or getsymid().  The
+ *	name the linker retains is not the name the assembler
+ *	wrote, so it may collide with an unrelated identifier
+ *	sharing the same first NCPS-1 characters - binding a
+ *	reference to the wrong symbol, or merging two areas.
+ *	Neither outcome is detectable later, so the truncation
+ *	itself has to be reported here.
+ *
+ *	global variables:
+ *		int	lkerr		error flag
+ *
+ *	functions called:
+ *		int	fprintf()	c_library
+ *
+ *	side effects:
+ *		The error is reported and the error flag is set.
+ */
+
+static void
+iderr(char *id)
+{
+	fprintf(stderr,
+		"?ASlink-Error-Identifier longer than %d characters, truncated to %s\n",
+		NCPS-1, id);
+	lkerr++;
+}
+
 void
 getid(char *id, int c)
 {
 	char *p;
+	int trunc;
 
 	if (c < 0) {
 		c = getnb();
 	}
 	p = id;
+	trunc = 0;
 	do {
-		if (p < &id[NCPS-1])
+		if (p < &id[NCPS-1]) {
 			*p++ = c;
+		} else {
+			trunc = 1;
+		}
 	} while (ctype[c=get()] & (LETTER|DIGIT));
 	unget(c);
 	*p++ = 0;
+	if (trunc)
+		iderr(id);
 }
 
 /*)Function	void	getsymid(id, c)
@@ -157,17 +196,24 @@ void
 getsymid(char *id, int c)
 {
 	char *p;
+	int trunc;
 
 	if (c < 0) {
 		c = getnb();
 	}
 	p = id;
+	trunc = 0;
 	do {
-		if (p < &id[NCPS-1])
+		if (p < &id[NCPS-1]) {
 			*p++ = c;
+		} else {
+			trunc = 1;
+		}
 	} while ((ctype[c=get()] & (LETTER|DIGIT)) || (c == '-'));
 	unget(c);
 	*p++ = 0;
+	if (trunc)
+		iderr(id);
 }
 
 /*)Function	void	getfid(str, c)
