@@ -98,6 +98,7 @@ void
 getid(char *id, int c)
 {
 	char *p;
+	int trunc;
 
 	if (c < 0) {
 		c = getnb();
@@ -105,12 +106,18 @@ getid(char *id, int c)
 			qerr();
 	}
 	p = id;
+	trunc = 0;
 	do {
-		if (p < &id[NCPS-1])
+		if (p < &id[NCPS-1]) {
 			*p++ = c;
+		} else {
+			trunc = 1;
+		}
 	} while (ctype[c=get()] & (LETTER|DIGIT));
 	unget(c);
 	*p++ = 0;
+	if (trunc)
+		err('l');
 }
 
 /*)Function	void	getst(id, c)
@@ -160,6 +167,7 @@ void
 getst(char *id, int c)
 {
 	char *p;
+	int trunc;
 
 	if (c < 0) {
 		c = getnb();
@@ -167,12 +175,18 @@ getst(char *id, int c)
 			qerr();
 	}
 	p = id;
+	trunc = 0;
 	do {
-		if (p < &id[NCPS-1])
+		if (p < &id[NCPS-1]) {
 			*p++ = c;
+		} else {
+			trunc = 1;
+		}
 	} while (ctype[c=get()] & ~(SPACE|ILL) & 0xFF);
 	unget(c);
 	*p++ = 0;
+	if (trunc)
+		err('l');
 }
 
 /*)Function	int	getdstr(str, slen)
