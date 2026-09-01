@@ -163,6 +163,7 @@ void DefineSDCDB(char *name, a_uint value)
 	j = 0;
 	p1 = name;
 	while ((p1 = strchr(p1, '$')) != NULL) {
+		p1 += 1;
 		j += 1;
 	}
 
