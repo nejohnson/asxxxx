@@ -424,7 +424,7 @@ lnkarea(void)
 {
 	a_uint rloc;
 	int bytes;
-	char temp[NCPS+2];
+	char temp[NGSYM];
 	struct sym *sp;
 
 	for (bp = bankp; bp != NULL; bp = bp->b_bp) {
@@ -516,7 +516,7 @@ lnksect(struct area *tap)
 	a_uint size, addr;
 	struct areax *taxp;
 	a_uint bofst, i;
-	char temp[NCPS+2];
+	char temp[NGSYM];
 	struct sym *sp;
 
 	size = 0;

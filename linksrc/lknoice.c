@@ -240,7 +240,7 @@ NoICEmagic(void)
 void
 DefineNoICE( char *name, a_uint value, struct bank *yp )
 {
-	char token1[NCPS];			/* parse for file.function.symbol */
+	char token1[NGSYM];			/* parse for file.function.symbol */
 	char token2[NCPS];
 	char token3[NCPS];
 	char sep1, sep2;
