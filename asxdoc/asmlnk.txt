@@ -3972,6 +3972,10 @@
               <i>   Caused  by  an  .include file error or an .if/.endif
                     mismatch.  
 
+              <k>   Numerical conversion error:  invalid digit.  
+
+              <l>   Identifier too long:  the name has been truncated.  
+
               <m>   Multiple  definitions  of  the  same label, multiple
                     .module directives, multiple conflicting  attributes
                     in  an  .area or .bank directive or the use of .hilo
@@ -3999,17 +4003,19 @@
 
               <u>   Undefined symbol encountered during assembly.  
 
-              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  
-
-
-           Most  assemblers  now include more descriptive error messages
-        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to
 
 
         THE ASSEMBLER                                          PAGE 1-68
         ERRORS
 
 
+              <v>   Value out of range:  signed or unsigned argument.  
+
+              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  
+
+
+           Most  assemblers  now include more descriptive error messages
+        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to
         provide the expanded error messages will show three lines on the
         stdout device as shown by this error:  
 
@@ -4052,18 +4058,18 @@
              1.  Error field (first two characters of line) 
 
              2.  Current location counter 
+
+
+        THE ASSEMBLER                                          PAGE 1-69
+        LISTING FILE
+
+
 
              3.  Generated code in byte format 
 
              4.  Opcode cycles count 
 
              5.  Source text line number 
-
-
-
-        THE ASSEMBLER                                          PAGE 1-69
-        LISTING FILE
-
 
              6.  Source text 
 
@@ -4107,17 +4113,17 @@
 
              1.  *   paged relocation 
 
-             2.  u   low  byte of unsigned word or unsigned byte 
-
-             3.  v   high byte of unsigned word 
-
-             4.  p   PCR low  byte of word relocation or PCR byte 
-
 
 
         THE ASSEMBLER                                          PAGE 1-70
         LISTING FILE
 
+
+             2.  u   low  byte of unsigned word or unsigned byte 
+
+             3.  v   high byte of unsigned word 
+
+             4.  p   PCR low  byte of word relocation or PCR byte 
 
              5.  q   PCR high byte of word relocation 
 
