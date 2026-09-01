@@ -463,10 +463,10 @@ Once the port is working, that suite becomes exactly the golden-file linker harn
 
 ### 7.8 Fork maintenance, stated plainly
 
-The SDCC project will not accept AI-assisted contributions, so this lives as a private fork. Two practical consequences worth planning around, neither of them a reason not to proceed:
+This work lives as a fork rather than an upstream contribution. Two practical consequences worth planning around, neither of them a reason not to proceed:
 
 - Divergence between the fork and upstream SDCC accumulates in exactly the files most likely to change — the per-port code emitters and the driver's link-command assembly.
-- The ASxxxx-side changes (the `-y` fix, `NCPS`, the `lstarea()` rewrite) are genuine bug fixes with no AI-specific character to them. They are separable from the GC feature and could be upstreamed to ASxxxx on their own merits if desired.
+- The ASxxxx-side changes (the `-y` fix, `NCPS`, the `lstarea()` rewrite) are ordinary bug fixes, separable both from the GC feature and from SDCC. They stand on their own merits and can go to ASxxxx upstream regardless of what becomes of the rest of this.
 
 ---
 
