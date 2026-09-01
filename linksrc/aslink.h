@@ -175,7 +175,15 @@
  * relocatable binary file.
  */
 
-#define NCPS		80	/* characters per symbol */
+/*
+ * NCPS must match the assemblers' NCPS in asxxsrc/asxxxx.h.  Both
+ * getid() in lklex.c and getid() in aslex.c silently truncate an
+ * identifier at NCPS-1 characters; if the linker's limit is the
+ * smaller of the two it will truncate names the assembler wrote
+ * out in full, and two distinct symbols sharing a long prefix
+ * then collapse into one.
+ */
+#define NCPS		256	/* characters per symbol */
 
 /*
  * Buffer size for a linker-generated symbol name derived from an
