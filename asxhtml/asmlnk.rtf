@@ -3974,6 +3974,10 @@
               <i>   Caused  by  an  .include file error or an .if/.endif\par
                     mismatch.  \par
 \par
+              <k>   Numerical conversion error:  invalid digit.  \par
+\par
+              <l>   Identifier too long:  the name has been truncated.  \par
+\par
               <m>   Multiple  definitions  of  the  same label, multiple\par
                     .module directives, multiple conflicting  attributes\par
                     in  an  .area or .bank directive or the use of .hilo\par
@@ -4001,17 +4005,19 @@
 \par
               <u>   Undefined symbol encountered during assembly.  \par
 \par
-              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  \par
-\par
-\par
-           Most  assemblers  now include more descriptive error messages\par
-        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to\par
 \page\par
 \par
         THE ASSEMBLER                                          PAGE 1-68\par
         ERRORS\par
 \par
 \par
+              <v>   Value out of range:  signed or unsigned argument.  \par
+\par
+              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  \par
+\par
+\par
+           Most  assemblers  now include more descriptive error messages\par
+        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to\par
         provide the expanded error messages will show three lines on the\par
         stdout device as shown by this error:  \par
 \par
@@ -4054,18 +4060,18 @@
              1.  Error field (first two characters of line) \par
 \par
              2.  Current location counter \par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-69\par
+        LISTING FILE\par
+\par
+\par
 \par
              3.  Generated code in byte format \par
 \par
              4.  Opcode cycles count \par
 \par
              5.  Source text line number \par
-\par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-69\par
-        LISTING FILE\par
-\par
 \par
              6.  Source text \par
 \par
@@ -4109,17 +4115,17 @@
 \par
              1.  *   paged relocation \par
 \par
-             2.  u   low  byte of unsigned word or unsigned byte \par
-\par
-             3.  v   high byte of unsigned word \par
-\par
-             4.  p   PCR low  byte of word relocation or PCR byte \par
-\par
 \page\par
 \par
         THE ASSEMBLER                                          PAGE 1-70\par
         LISTING FILE\par
 \par
+\par
+             2.  u   low  byte of unsigned word or unsigned byte \par
+\par
+             3.  v   high byte of unsigned word \par
+\par
+             4.  p   PCR low  byte of word relocation or PCR byte \par
 \par
              5.  q   PCR high byte of word relocation \par
 \par
