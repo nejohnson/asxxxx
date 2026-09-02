@@ -9,7 +9,7 @@
 | Consumer | SDCC, via the in-progress ASxxxx-into-SDCC port replacing `sdas`/`sdld` |
 | Date | 2026-09-01 (rev. 2 — SDCC identified as the client) |
 | Verdict | **Feasible and worth doing. The object format already carries everything needed, and with SDCC as the consumer the granularity question is answered. The remaining work is bounded.** |
-| Already actioned | Four defects found during this study are fixed on `master`: the `aslink -y` hang (§7.4, `5356e4c`), a stack-buffer overflow in `lnksect()` (§6.7, `5c1a749`), the `NCPS` symbol-name truncation mismatch (§6.7/§7.6, `d5e2177`), and silent identifier truncation in both tools (§6.7, `d150ace`). |
+| Already actioned | Fixed on `master` during this study: the `aslink -y` hang (§7.4, `5356e4c`), a stack-buffer overflow in `lnksect()` (§6.7, `5c1a749`), the `NCPS` truncation mismatch (§6.7/§7.6, `d5e2177`), silent identifier truncation in both tools (§6.7, `d150ace`), the manual's missing error codes (`baf7fcd`), and the map-generation quadratic plus a compact map format (§6.3/§7.3, `198f405`). |
 
 ---
 
@@ -23,14 +23,14 @@ The reason is a single structural fact, confirmed empirically below: **ASxxxx's 
 
 What is *not* free:
 
-1. **The linker does not scale to per-function sections today.** Measured: 10,000 sections takes **10.7 s** to link versus 0.034 s for the same 10,000 symbols in one section — a ~315× regression, of which ~10 s is map-file generation alone (`lstarea()` is O(areas × symbols) executed twice per area, plus a bubble sort). This is a pre-existing quadratic that per-function sections detonate. With SDCC it is worse than it looks: `.cdb` debug output is emitted *from inside* `lstarea()` and `-y` forces map generation on, so **every SDCC debug build rides this path** (§7.3).
+1. ~~**The linker does not scale to per-function sections today.**~~ **Fixed** (`198f405`). 10,000 sections took **10.4 s** to link versus 0.02 s for the same 10,000 symbols in one section, ~90% of it map generation — and `-y` forces map generation on, so every SDCC debug build paid it (§7.3). Indexing symbols by areax once and replacing the bubble sort with `qsort` brings that to **0.76 s**, of which only 0.05 s is the map. The residual is a *different* quadratic, `lkparea()`, which is not on the critical path (§6.3).
 2. **There is a silent-corruption trap in area attribute inheritance** that anything splitting functions into areas will hit, demonstrated in §4.3: sections that omit the parent's bank attributes land in a different bank and are laid out at overlapping addresses with no diagnostic.
 3. **The classic crt0 pattern defeats naive liveness**, demonstrated in §6.1: `_INIT`-style data areas are reached only through linker-generated `a_<area>` / `l_<area>` symbols, which have no areax back-link. A GC that does not special-case these will silently delete initialised data. This is precisely SDCC's `_INITIALIZER`/`_INITIALIZED` idiom, so it is guaranteed to be hit, not merely possible.
 4. **SDCC's `_GSINIT` chain is a fallthrough structure**, not a call graph (§7.2). It must be excluded from collection and from splitting, or global initialisers break silently.
 
 **Separately, and unrelated to GC: `aslink -y` hung forever on any SDCC symbol.** `DefineSDCDB()` never advanced its scan pointer, so the first symbol containing a `$` — which is every SDCC symbol — spun indefinitely. Found during this study, reproduced, and **fixed on `master` in commit `5356e4c`** (§7.4). It blocked the SDCC port outright, regardless of whether GC is ever built.
 
-Recommended shape: fix the map/`lstarea()` quadratic next, since the SDCC port needs it independently of GC; then build the collector behind an opt-in flag with SDCC emitting per-function areas.
+Recommended shape: the linker-side prerequisites are now done (§8.1); what remains is to get the SDCC port running, inherit its regression suite as the linker test coverage this tree lacks, and then build the collector behind an opt-in flag with SDCC emitting per-function areas.
 
 ---
 
@@ -173,20 +173,20 @@ _CODE                      0000        0003        ← overlaps _CODE.main
 
 Any per-function-section generator **must replicate the parent area's complete flag word and bank assignment**, and the linker should grow a diagnostic for same-named-prefix areas landing in different banks. Note also that `outarea()` (`asout.c:1505-1509`) only emits the `bank N` field when `A_BNK` is set, so the bank is genuinely absent from the object file, not merely defaulted.
 
-### 4.4 ⚠ Scaling: the linker does not survive per-function sections today
+### 4.4 ⚠ Scaling: the linker did not survive per-function sections
 
-Synthetic benchmark, 10 modules, Z80, `gcc -O2`:
+Synthetic benchmark, 10 modules, Z80, `gcc -O2`. "After" is with `198f405`:
 
-| Configuration | Link, no map | Link + `-m` map | Map size |
-|---|---|---|---|
-| 10,000 symbols in **1** area (baseline) | — | **0.034 s** | 3,057 lines |
-| 2,000 sections | 0.026 s | 0.30 s | 22,027 lines |
-| 10,000 sections | 0.68 s | **10.7 s** | 110,027 lines |
+| Configuration | Link, no map | Link + `-m` map | After (`-m`) | Map size |
+|---|---|---|---|---|
+| 10,000 symbols in **1** area (baseline) | — | **0.02 s** | 0.02 s | 3,057 lines |
+| 2,000 sections | 0.026 s | 0.30 s | **0.03 s** | 22,027 lines |
+| 10,000 sections | 0.68 s | **10.4 s** | **0.76 s** | 110,027 lines |
 
-Two separate quadratics:
+Two separate quadratics — the second is now fixed:
 
 - **Core linking**: 2,000 → 10,000 sections (5×) costs 0.026 s → 0.68 s (26×). `lkparea()` (`lkarea.c:301-334`) linearly scans the global area list for every `A` record.
-- **Map generation**: ~10 s of the 10.7 s. `lstarea()` (`linksrc/lklist.c:406-466`) scans the *entire* symbol hash table once per areax to count symbols, then **again** to collect them, then bubble-sorts. It also emits a full paginated page per area — 11 lines per section.
+- ~~**Map generation**~~ ✅ **fixed** (`198f405`): ~10 s of the 10.4 s. `lstarea()` scanned the *entire* symbol hash table once per areax to count symbols, then **again** to collect them, then bubble-sorted, and emitted a full paginated page per area. Now 0.05 s — see §6.3.
 
 Compounding this, the linker's symbol hash is only **64 buckets** (`aslink.h:180`) with a sum-of-characters hash (`lksym.c:555-574`) — pathological for machine-generated names sharing long prefixes. And `lnkarea()`/`lnksect()` synthesise **four** extra symbols per section (`a_`, `l_`, `m_`, `s_`), so 10,000 sections adds 40,000 symbols into 64 buckets.
 
@@ -277,9 +277,20 @@ For completeness, the alternatives that were on the table and are now secondary:
 
 §7 covers what taking SDCC as the client actually costs and requires.
 
-### 6.3 ⚠⚠ Map file generation is unusable at section scale
+### 6.3 ✅ Map file generation at section scale — *fixed on `master`*
 
-Measured in §4.4: 10 s of a 10.7 s link, and a 110,000-line map. `lstarea()` needs an index (areax → symbol list) built once instead of two full hash-table sweeps per area, the bubble sort needs to become `qsort`, and the map needs a compact mode that does not paginate one page per section. Non-negotiable if per-function sections are the target.
+As measured in §4.4, map generation was 10 s of a 10.4 s link and produced a 110,000-line, 10,002-page map. `lstarea()` scanned the whole symbol hash table once per *section* to count symbols and again to collect them, then bubble-sorted the result.
+
+Fixed in `198f405`: `lkasym()` walks the hash table once and links each symbol onto a list rooted at its defining areax, so `lstarea()` touches only its own symbols; the bubble sort becomes `qsort` over a small record carrying the address and the collection index, the index breaking ties so the ordering stays exactly as before. A new `-mc` compact format lets areas share pages instead of each starting one.
+
+| 10,000 sections | before | after |
+|---|---|---|
+| link with `-m` | 10.36 s | **0.76 s** |
+| of which map generation | ~9.7 s | **0.05 s** |
+| map pages (`-m` → `-mc`) | 10,002 | 2,002 |
+| map lines (`-m` → `-mc`) | 110,027 | 94,028 |
+
+**Still open, and now the larger cost:** the remaining 0.71 s is `lkparea()` (`lkarea.c:301-334`), which scans the global area list for every `A` record — a second, independent quadratic. At a realistic few thousand functions it stays under a second, so it is not on the critical path, but it is what to attack next if section counts grow.
 
 ### 6.4 ⚠ Fallthrough and reachability that the linker cannot see
 
@@ -388,11 +399,11 @@ This breaks both halves of the feature at once:
 
 **Mitigation:** the init areas must be excluded from splitting *and* hard-rooted, not left to the general root heuristic. This is the strongest argument for building the `KEEP` area attribute (§5.5) as part of Stage 1 rather than deferring it — SDCC can mark these areas at emission time and the question disappears. The same applies to any other area SDCC relies on the linker concatenating in emission order.
 
-### 7.3 ⚠⚠ Debug output rides the map-file quadratic
+### 7.3 ✅ Debug output rode the map-file quadratic — *fixed*
 
 `DefineSDCDB()` and `DefineNoICE()` are both called from inside `lstarea()` (`linksrc/lklist.c:591,598`) — the O(areas × symbols) function measured at ~10 s for 10,000 sections in §4.4. Worse, `SDCDBfopen()` **forces `mflag = 1`**, so requesting `.cdb` debug output turns map generation on whether or not the user wanted a map.
 
-Consequence: with SDCC, **every debug build pays the quadratic**, and per-function sections make it the dominant cost of linking. §6.3 was already non-negotiable; this makes it a prerequisite for the SDCC port on its own merits, independent of whether GC is ever implemented.
+Consequence: with SDCC, **every debug build paid the quadratic**, and per-function sections made it the dominant cost of linking — which is why §6.3 was a prerequisite for the port on its own merits, independent of GC. Both are fixed in `198f405`; `.cdb` and `.noi` output are unchanged, verified byte-for-byte.
 
 ### 7.4 ✅ `aslink -y` hung on every SDCC symbol — *found here, fixed on `master`*
 
@@ -481,7 +492,8 @@ This work lives as a fork rather than an upstream contribution. Two practical co
 | ~~`lnksect()` generated-name buffer overflow~~ (§6.7) | `aslink.h`, `lkarea.c`, `lknoice.c` | ✅ **done** — `5c1a749` |
 | ~~Hard error on identifier truncation~~ (§6.7, §7.6) | `lklex.c`, `aslex.c`, `assubr.c` | ✅ **done** — `d150ace` |
 | Add `<l>` (and the missing `<k>`, `<v>`) to the manual's error list | `asxdoc/asmlnk.rtf` | doc-only |
-| **`lstarea()` de-quadratication + compact map** (§6.3, §7.3) | `lklist.c` | ~200 lines |
+| ~~**`lstarea()` de-quadratication + compact map**~~ (§6.3, §7.3) | `lklist.c`, `lksym.c`, `lkmain.c` | ✅ **done** — `198f405` |
+| `lkparea()` area-list scan, the remaining quadratic (§6.3) | `lkarea.c` | not yet needed |
 | `NHASH` enlargement + better hash | `lksym.c`, `aslink.h` | ~20 lines |
 | Reconcile `-a`/`-b` against the SDCC driver (§7.5) | `lkmain.c` or driver | small, but decide deliberately |
 
@@ -527,7 +539,7 @@ Sequence it so that each stage is independently useful and none of them is waste
 
 - **Stage 0 — the `-y` hang.** ✅ **Done** — `5356e4c`, merged as `883f305` (§7.4). One line. It blocked the SDCC port outright and had nothing to do with GC.
 
-- **Stage 1 — make the linker fit for SDCC.** `NCPS` ✅, the generated-name buffer overflow ✅ and the truncation diagnostic ✅ are done (`d5e2177`, `5c1a749`, `d150ace`); what remains is the `lstarea()` quadratic and compact map (§6.3), `NHASH`, and the `-a`/`-b` reconciliation (§7.5). All of it is needed by the port whether or not GC ever ships, and the map quadratic is on the critical path for *every SDCC debug build* because `.cdb` generation runs inside `lstarea()` (§7.3). None of this commits you to the feature.
+- **Stage 1 — make the linker fit for SDCC.** ✅ **Essentially done.** `NCPS` (`d5e2177`), the generated-name buffer overflow (`5c1a749`), the truncation diagnostic (`d150ace`) and the map quadratic plus compact format (`198f405`) are all on `master`. What remains is small and optional: `NHASH`, and the `-a`/`-b` reconciliation against the SDCC driver (§7.5). None of it commits you to the feature.
 
 - **Stage 2 — get the port running and inherit the test suite.** SDCC's regression suite becomes the golden-file linker harness that §6.10 says does not exist, covering banking, overlays, debug output and `--code-loc` far better than anything hand-written (§7.7). This is the single biggest risk reduction available, and it costs nothing extra.
 
