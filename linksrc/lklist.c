@@ -39,6 +39,7 @@
  *
  *	lklist.c contains the following functions:
  *		void	newpag()
+ *		void	lstahdr()
  *		void	slew()
  *		int	dgt()
  *		void	lstarea()
@@ -54,6 +55,17 @@
  *		void	hlrelist()
  *		void	gethlr()
  */
+
+/*
+ *	The bank whose name is currently displayed.  A new page
+ *	always reprints it, so newpag() clears this;  lstahdr()
+ *	then prints the bank line only when the bank is not the one
+ *	already shown.  In the default format every area starts a
+ *	new page and the name is therefore always printed, exactly
+ *	as before;  in compact format consecutive areas of one bank
+ *	share the single heading.
+ */
+static struct bank *ahdrbnk;
 
 /*)Function	void	newpag(fp)
  *
@@ -129,6 +141,7 @@ newpag(FILE *fp)
 	 */
 	fprintf(fp, "%s%*s%s\n", tp, n, " ", np);
 	lop = 3;
+	ahdrbnk = NULL;
 }
 
 /*)Function	int	dgt(rdx, str, n)
@@ -164,6 +177,16 @@ dgt(int rdx, char *str, int n)
 	}
 	return(1);
 }
+
+/*
+ *	The height in lines of the area heading block emitted by
+ *	lstahdr():  the bank name, a blank line, two lines of area
+ *	column headings, the area line itself, a possible paging
+ *	error line, a blank line and two lines of symbol column
+ *	headings, plus one line of symbols to make starting the
+ *	area on this page worthwhile.
+ */
+#define	NAHDR	12
 
 /*
  *	The map symbol reference used to sort an area's symbols into
@@ -214,15 +237,22 @@ msymcmp(const void *p1, const void *p2)
 	return (0);
 }
 
-/*)Function	void	slew(xp, yp)
+/*)Function	void	lstahdr(xp, yp)
  *
  *		area *	xp		pointer to an area structure
  *		bank *	yp		pointer to a  bank structure
  *
- *	The function slew() increments the page line counter.
- *	If the number of lines exceeds the maximum number of
- *	lines per page then a page skip and a page header are
- *	output.
+ *	The function lstahdr() outputs the map heading block for an
+ *	area:  the bank name (when the bank is named), the area name
+ *	with its address, size and attributes, any paging error, and
+ *	the column headings for the symbol list that follows.
+ *
+ *	The block is emitted at the top of every page of an area's
+ *	map entry, so that a continuation page identifies the area it
+ *	belongs to, and by lstarea() at the start of each area.  It
+ *	does not itself begin a new page;  that is the caller's
+ *	decision, which is what lets lstarea() place an area either
+ *	on a page of its own or directly below the previous one.
  *
  *	local variables:
  *		a_uint	ai		temporary
@@ -235,173 +265,206 @@ msymcmp(const void *p1, const void *p2)
  *
  *	global variables:
  *		int	a_bytes		T line address bytes
- *		int	a_mask		addressing mask
+ *		a_uint	a_mask		addressing mask
  *		int	lop		current line number on page
- *		FILE	*mfp		Map output file handle
+ *		FILE *	mfp		Map output file handle
  *		int	wflag		Wide format listing
  *		int	xflag		Map file radix type flag
  *
  *	functions called:
  *		int	fprintf()	c_library
- *		void	newpag()	lklist.c
  *		char	putc()		c_library
  *
  *	side effects:
- *		The page line and the page count may be updated.
+ *		Map output generated, the line counter is updated.
  */
 
-void
-slew(struct area *xp, struct bank *yp)
+static void
+lstahdr(struct area *xp, struct bank *yp)
 {
 	int i, n;
 	char *frmta, *frmtb, *ptr;
  	a_uint	ai, aj;
 
+	if (*yp->b_id && (yp != ahdrbnk)) {
+		fprintf(mfp, "[ Bank == %s ]\n", yp->b_id);
+		lop += 1;
+	}
+	ahdrbnk = yp;
+	fprintf(mfp, "\n");
+	fprintf(mfp,
+		"Area                       Addr   ");
+	fprintf(mfp,
+		"     Size        Decimal Bytes (Attributes)\n");
+	fprintf(mfp,
+		"--------------------       ----   ");
+	fprintf(mfp,
+		"     ----        ------- ----- ------------\n");
+
+	ai = xp->a_addr & a_mask;
+	aj = ((1 + (A4_WLMSK & xp->a_flag)) * xp->a_size) & a_mask;
+
+	/*
+	 * Output Area Header
+	 */
+	ptr = &xp->a_id[0];
+	fprintf(mfp, "%-19.19s", ptr);
+#ifdef	LONGINT
+	switch(a_bytes) {
+	default:
+	case 2:
+		switch(xflag) {
+		default:
+		case 0: frmta = "        %04lX        %04lX"; break;
+		case 1: frmta = "      %06lo      %06lo"; break;
+		case 2: frmta = "       %05lu       %05lu"; break;
+		}
+		frmtb = " =      %6lu. bytes "; break;
+	case 3:
+		switch(xflag) {
+		default:
+		case 0: frmta = "      %06lX      %06lX"; break;
+		case 1: frmta = "    %08lo    %08lo"; break;
+		case 2: frmta = "    %08lu    %08lu"; break;
+		}
+		frmtb = " =    %8lu. bytes "; break;
+	case 4:
+		switch(xflag) {
+		default:
+		case 0: frmta = "    %08lX    %08lX"; break;
+		case 1: frmta = " %011lo %011lo"; break;
+		case 2: frmta = "  %010lu  %010lu"; break;
+		}
+		frmtb = " =  %10lu. bytes "; break;
+	}
+#else
+	switch(a_bytes) {
+	default:
+	case 2:
+		switch(xflag) {
+		default:
+		case 0: frmta = "        %04X        %04X"; break;
+		case 1: frmta = "      %06o      %06o"; break;
+		case 2: frmta = "       %05u       %05u"; break;
+		}
+		frmtb = " =      %6u. bytes "; break;
+	case 3:
+		switch(xflag) {
+		default:
+		case 0: frmta = "      %06X      %06X"; break;
+		case 1: frmta = "    %08o    %08o"; break;
+		case 2: frmta = "    %08u    %08u"; break;
+		}
+		frmtb = " =    %8u. bytes "; break;
+	case 4:
+		switch(xflag) {
+		default:
+		case 0: frmta = "    %08X    %08X"; break;
+		case 1: frmta = " %011o %011o"; break;
+		case 2: frmta = "  %010u  %010u"; break;
+		}
+		frmtb = " =  %10u. bytes "; break;
+	}
+#endif
+	fprintf(mfp, frmta, ai, aj);
+	fprintf(mfp, frmtb, aj);
+
+	if ((xp->a_flag & A4_ABS) == A4_ABS) {
+		fprintf(mfp, "(ABS");
+	} else {
+		fprintf(mfp, "(REL");
+	}
+	if ((xp->a_flag & A4_OVR) == A4_OVR) {
+		fprintf(mfp, ",OVR");
+	} else {
+		fprintf(mfp, ",CON");
+	}
+	if ((xp->a_flag & A4_PAG) == A4_PAG) {
+		fprintf(mfp, ",PAG");
+	}
+	if ((xp->a_flag & A4_DSEG) == A4_DSEG) {
+		fprintf(mfp, ",DSEG");
+	} else {
+		fprintf(mfp, ",CSEG");
+	}
+	fprintf(mfp, ")\n");
+
+	if ((xp->a_flag & A4_PAG) == A4_PAG) {
+		ai = (ai & 0xFF);
+		aj = (aj > 256);
+		if (ai || aj) { fprintf(mfp, "  "); lop += 1; }
+		if (ai)       { fprintf(mfp, " Boundary"); }
+		if (ai & aj)  { fprintf(mfp, " /"); }
+		if (aj)       { fprintf(mfp, " Length"); }
+		if (ai || aj) { fprintf(mfp, " Error\n"); }
+	}
+
+	if (wflag) {
+		putc('\n', mfp);
+		fprintf(mfp,
+		"         Value  Global                          ");
+		fprintf(mfp,
+		"   Global Defined In Module\n");
+		fprintf(mfp,
+		"         -----  --------------------------------");
+		fprintf(mfp,
+		"   ------------------------\n");
+	} else {
+		switch(a_bytes) {
+		default:
+		case 2:	frmta = "   Value  Global   ";
+			frmtb = "   -----  ------   ";
+			n = 4; break;
+		case 3:
+		case 4:	frmta = "        Value  Global    ";
+			frmtb = "        -----  ------    ";
+			n = 3; break;
+		}
+		putc('\n', mfp);
+		for(i=0;i<n;++i)
+			fprintf(mfp, "%s", frmta);
+		putc('\n', mfp);
+		for(i=0;i<n;++i)
+			fprintf(mfp, "%s", frmtb);
+		putc('\n', mfp);
+	}
+
+	lop += 9;
+}
+
+/*)Function	void	slew(xp, yp)
+ *
+ *		area *	xp		pointer to an area structure
+ *		bank *	yp		pointer to a  bank structure
+ *
+ *	The function slew() increments the page line counter.
+ *	If the number of lines exceeds the maximum number of
+ *	lines per page then a page skip is output followed by
+ *	the area heading block from lstahdr(), so that the
+ *	continuation page identifies the area it belongs to.
+ *
+ *	local variables:
+ *		none
+ *
+ *	global variables:
+ *		int	lop		current line number on page
+ *		FILE *	mfp		Map output file handle
+ *
+ *	functions called:
+ *		void	lstahdr()	lklist.c
+ *		void	newpag()	lklist.c
+ *
+ *	side effects:
+ *		The page line counter is updated;  a page skip and
+ *		an area heading block may be output.
+ */
+
+void
+slew(struct area *xp, struct bank *yp)
+{
        	if (lop++ >= NLPP) {
 		newpag(mfp);
-		if (*yp->b_id) {
-			fprintf(mfp, "[ Bank == %s ]\n", yp->b_id);
-			lop += 1;
-		}
-		fprintf(mfp, "\n");
-		fprintf(mfp,
-			"Area                       Addr   ");
-		fprintf(mfp,
-			"     Size        Decimal Bytes (Attributes)\n");
-		fprintf(mfp,
-			"--------------------       ----   ");
-		fprintf(mfp,
-			"     ----        ------- ----- ------------\n");
-
-		ai = xp->a_addr & a_mask;
-		aj = ((1 + (A4_WLMSK & xp->a_flag)) * xp->a_size) & a_mask;
-
-		/*
-		 * Output Area Header
-		 */
-		ptr = &xp->a_id[0];
-		fprintf(mfp, "%-19.19s", ptr);
-#ifdef	LONGINT
-		switch(a_bytes) {
-		default:
-		case 2:
-			switch(xflag) {
-			default:
-			case 0: frmta = "        %04lX        %04lX"; break;
-			case 1: frmta = "      %06lo      %06lo"; break;
-			case 2: frmta = "       %05lu       %05lu"; break;
-			}
-			frmtb = " =      %6lu. bytes "; break;
-		case 3:
-			switch(xflag) {
-			default:
-			case 0: frmta = "      %06lX      %06lX"; break;
-			case 1: frmta = "    %08lo    %08lo"; break;
-			case 2: frmta = "    %08lu    %08lu"; break;
-			}
-			frmtb = " =    %8lu. bytes "; break;
-		case 4:
-			switch(xflag) {
-			default:
-			case 0: frmta = "    %08lX    %08lX"; break;
-			case 1: frmta = " %011lo %011lo"; break;
-			case 2: frmta = "  %010lu  %010lu"; break;
-			}
-			frmtb = " =  %10lu. bytes "; break;
-		}
-#else
-		switch(a_bytes) {
-		default:
-		case 2:
-			switch(xflag) {
-			default:
-			case 0: frmta = "        %04X        %04X"; break;
-			case 1: frmta = "      %06o      %06o"; break;
-			case 2: frmta = "       %05u       %05u"; break;
-			}
-			frmtb = " =      %6u. bytes "; break;
-		case 3:
-			switch(xflag) {
-			default:
-			case 0: frmta = "      %06X      %06X"; break;
-			case 1: frmta = "    %08o    %08o"; break;
-			case 2: frmta = "    %08u    %08u"; break;
-			}
-			frmtb = " =    %8u. bytes "; break;
-		case 4:
-			switch(xflag) {
-			default:
-			case 0: frmta = "    %08X    %08X"; break;
-			case 1: frmta = " %011o %011o"; break;
-			case 2: frmta = "  %010u  %010u"; break;
-			}
-			frmtb = " =  %10u. bytes "; break;
-		}
-#endif
-		fprintf(mfp, frmta, ai, aj);
-		fprintf(mfp, frmtb, aj);
-
-		if ((xp->a_flag & A4_ABS) == A4_ABS) {
-			fprintf(mfp, "(ABS");
-		} else {
-			fprintf(mfp, "(REL");
-		}
-		if ((xp->a_flag & A4_OVR) == A4_OVR) {
-			fprintf(mfp, ",OVR");
-		} else {
-			fprintf(mfp, ",CON");
-		}
-		if ((xp->a_flag & A4_PAG) == A4_PAG) {
-			fprintf(mfp, ",PAG");
-		}
-		if ((xp->a_flag & A4_DSEG) == A4_DSEG) {
-			fprintf(mfp, ",DSEG");
-		} else {
-			fprintf(mfp, ",CSEG");
-		}
-		fprintf(mfp, ")\n");
-
-		if ((xp->a_flag & A4_PAG) == A4_PAG) {
-			ai = (ai & 0xFF);
-			aj = (aj > 256);
-			if (ai || aj) { fprintf(mfp, "  "); lop += 1; }
-			if (ai)       { fprintf(mfp, " Boundary"); }
-			if (ai & aj)  { fprintf(mfp, " /"); }
-			if (aj)       { fprintf(mfp, " Length"); }
-			if (ai || aj) { fprintf(mfp, " Error\n"); }
-		}
-
-		if (wflag) {
-			putc('\n', mfp);
-			fprintf(mfp,
-			"         Value  Global                          ");
-			fprintf(mfp,
-			"   Global Defined In Module\n");
-			fprintf(mfp,
-			"         -----  --------------------------------");
-			fprintf(mfp,
-			"   ------------------------\n");
-		} else {
-			switch(a_bytes) {
-			default:
-			case 2:	frmta = "   Value  Global   ";
-				frmtb = "   -----  ------   ";
-				n = 4; break;
-			case 3:
-			case 4:	frmta = "        Value  Global    ";
-				frmtb = "        -----  ------    ";
-				n = 3; break;
-			}
-			putc('\n', mfp);
-			for(i=0;i<n;++i)
-				fprintf(mfp, "%s", frmta);
-			putc('\n', mfp);
-			for(i=0;i<n;++i)
-				fprintf(mfp, "%s", frmtb);
-			putc('\n', mfp);
-		}
-
-		lop += 9;
+		lstahdr(xp, yp);
 	}
 }
 
@@ -482,8 +545,20 @@ lstarea(struct area *xp, struct bank *yp)
 		return;
 	}
 
-	lop = NLPP;
-	slew(xp, yp);
+	/*
+	 * Area heading.  Normally every area starts a new page.
+	 * In compact format (-mc) an area follows the previous one
+	 * down the page, breaking only when the heading and at
+	 * least one line of symbols will not fit.
+	 */
+	if (mcflag && (lop != 0) && ((lop + NAHDR) <= NLPP)) {
+		putc('\n', mfp);
+		lop += 1;
+		lstahdr(xp, yp);
+	} else {
+		lop = NLPP;
+		slew(xp, yp);
+	}
 
 	if (nmsym == 0) {
 		return;

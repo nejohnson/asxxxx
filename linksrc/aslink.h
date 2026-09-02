@@ -992,6 +992,9 @@ extern	int	mflag;		/*	Map output flag
 extern	int	m1flag;		/*	Include linker generated
 				 *	symbols in map file
 				 */
+extern	int	mcflag;		/*	Compact map format: do not start
+				 *	a new page for every area
+				 */
 extern	int	xflag;		/*	Map file radix type flag
 				 */
 
