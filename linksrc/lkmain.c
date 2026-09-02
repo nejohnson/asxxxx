@@ -687,6 +687,7 @@ link(void)
  *		FILE *	afile()		lkmain.c
  *		int	fprintf()	c_library
  *		void	lkexit()	lkmain.c
+ *		void	lkasym()	lksym.c
  *		void	lstarea()	lklist.c
  *		void	newpag()	lklist.c
  *		void	symdef()	lksym.c
@@ -712,6 +713,12 @@ map(void)
 		fprintf(stderr, "?ASlink-Error-Failed to create map file\n");
 		lkexit(ER_FATAL);
 	}
+
+	/*
+	 * Index the symbols by the areax defining them so that
+	 * lstarea() need not scan the whole symbol table per area.
+	 */
+	lkasym();
 
 	/*
 	 * Output Map Bank/Area Lists

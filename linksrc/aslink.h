@@ -642,6 +642,8 @@ struct	areax
 	a_uint	a_addr;		/* Beginning address of section */
 	a_uint	a_size;		/* Size of the area in section */
 	a_uint	a_bndry;	/* Boundary for this A directive */
+	struct	sym	*a_syp;	/* Symbol list head, see lkasym() */
+	struct	sym	*a_sytp;/* Symbol list tail, see lkasym() */
 };
 
 /*
@@ -659,6 +661,7 @@ struct	areax
 struct	sym
 {
 	struct	sym	*s_sp;	/* Symbol link */
+	struct	sym	*s_alp;	/* Next symbol of the same areax, see lkasym() */
 	struct	areax	*s_axp;	/* Symbol area link */
 	char	s_type;		/* Symbol subtype */
 	char	s_flag;		/* Flag byte */
@@ -1169,6 +1172,7 @@ extern	void		newhead(void);
 extern	void		newmode(void);
 
 /* lksym.c */
+extern	void		lkasym(void);
 extern	int		hash(char *p, int cflag);
 extern	struct	sym *	lkpsym(char *id, int f);
 extern	char *		new(unsigned int n);
