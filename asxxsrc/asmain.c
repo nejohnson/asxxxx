@@ -3115,6 +3115,19 @@ equate(char *id, struct expr *e1, a_uint equtype)
 	if (e1->e_flag && (e1->e_base.e_sp->s_type == S_NEW)) {
 		rerr();
 		xerr('x', "global argument NOT ALLOWED in an equate");
+	} else
+	if ((sp == &dot) && (e1->e_base.e_ap == NULL)) {
+		/*
+		 * A direct assignment of an absolute value to the
+		 * current location counter, '. = 4' rather than
+		 * '. = . + 4', has already been reported as a '.'
+		 * error above.  Do not go on to record the area of
+		 * the value, which for an absolute expression is
+		 * none:  the location counter must always have an
+		 * area, and newdot() dereferences it at the end of
+		 * the pass.
+		 */
+		;
 	} else {
 		sp->s_area = e1->e_base.e_ap;
 	}
