@@ -202,6 +202,15 @@
 #define	NINPUT		512	/* Input buffer size */
 #define	NHASH	     (1 << 6)	/* Buckets in hash table */
 #define	HMASK	    (NHASH - 1)	/* Hash mask */
+
+/*
+ * Buckets in the area name hash table used by lkparea().  A
+ * program compiled with one area per function has as many areas
+ * as it has functions, so this is sized for thousands of them
+ * rather than for the handful a hand written program defines.
+ */
+#define	NAHASH	    (1 << 9)	/* Buckets in area hash table */
+#define	AHMASK	   (NAHASH - 1)	/* Area hash mask */
 #define	NLPP		60	/* Lines per page */
 #define	NMAX		78	/* IXX/SXX/DBX Buffer Length */
 #define		IXXMAXBYTES	32	/* NMAX > (2 * IXXMAXBYTES) */
@@ -609,7 +618,9 @@ struct	bank
 struct	area
 {
 	struct	area	*a_ap;	/* Area link */
+	struct	area	*a_hp;	/* Area name hash link, see lkparea() */
 	struct	areax	*a_axp;	/* Area extension link */
+	struct	areax	*a_axtp;/* Area extension list tail */
 	struct	bank	*a_bp;	/* Bank link */
 	FILE *	a_ofp;		/* Area File Handle */
 	a_uint	a_addr;		/* Beginning address of area */
