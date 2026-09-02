@@ -14,3 +14,6 @@ a34
 rl_chk
 undef
 funct
+gc
+gccrt
+gckeep

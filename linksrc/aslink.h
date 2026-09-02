@@ -381,6 +381,8 @@ extern	int	ASxxxx_VERSION;
 
 #define	A4_OUT		0x0100		/* Output Code Flag */
 
+#define	A4_KEEP		0x0200		/* Never Discard This Area */
+
 /*
  *	The "R4_" relocation constants define values used in
  *	generating the assembler relocation output data for
@@ -631,6 +633,25 @@ struct	area
 };
 
 /*
+ *	A reference structure is created for every relocation read
+ *	from an R line while collecting, one for each reference the
+ *	code of a section makes to a section or to a symbol.  They
+ *	are the edges of the graph gcmark() walks:  a section is
+ *	reachable if a reachable section refers to it.
+ *
+ *	A relocation names either an area, which is a section of
+ *	this module directly, or a symbol, whose defining section is
+ *	not known until every file has been read.  Both are recorded
+ *	and resolved when the marking is done.
+ */
+struct	aref
+{
+	struct	aref	*r_rp;	/* Next reference from this section */
+	struct	areax	*r_axp;	/* Section referred to, or NULL */
+	struct	sym	*r_sp;	/* Symbol referred to, or NULL */
+};
+
+/*
  *	An areax structure is created for every A directive found
  *	while reading the REL files.  The struct areax contains a
  *	link to the 'unique' area structure referenced by the A
@@ -655,6 +676,8 @@ struct	areax
 	a_uint	a_bndry;	/* Boundary for this A directive */
 	struct	sym	*a_syp;	/* Symbol list head, see lkasym() */
 	struct	sym	*a_sytp;/* Symbol list tail, see lkasym() */
+	struct	aref	*a_rp;	/* References made by this section */
+	int	a_gcf;		/* Section is reachable, see lkgc.c */
 };
 
 /*
@@ -1006,6 +1029,18 @@ extern	int	m1flag;		/*	Include linker generated
 extern	int	mcflag;		/*	Compact map format: do not start
 				 *	a new page for every area
 				 */
+extern	int	gcflag;		/*	Discard unreachable sections
+				 */
+extern	int	gcnrem;		/*	Sections discarded
+				 */
+extern	a_uint	gcbrem;		/*	Bytes discarded
+				 */
+extern	struct	globl *gcrootp;	/*	The pointer to the first
+				 *	collector root structure
+				 */
+extern	struct	globl *gcrsp;	/*	Pointer to the current
+				 *	collector root structure
+				 */
 extern	int	xflag;		/*	Map file radix type flag
 				 */
 
@@ -1292,6 +1327,13 @@ extern	void		relr4(void);
 extern	void		relp4(void);
 extern	void		relerr4(char *str);
 extern	void		relerp4(char *str);
+
+/* lkgc.c */
+extern	void		gcrel(void);
+extern	void		gcsect(void);
+extern	int		gcdead(struct areax *taxp);
+extern	void		gclist(FILE *fp);
+extern	void		gcrsav(void);
 
 /* lklibr.c */
 extern	void		addfile(char *path, char *libfil);

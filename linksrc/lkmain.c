@@ -227,6 +227,9 @@ main(int argc, char *argv[])
 				case 'g':
 				case 'G':
 
+				case 'r':
+				case 'R':
+
 				case 'k':
 				case 'K':
 
@@ -317,6 +320,12 @@ main(int argc, char *argv[])
 			 * Search libraries for global symbols
 			 */
 			search();
+			/*
+			 * Discard the sections nothing reaches.
+			 * After the libraries, so that every section is
+			 * known, and before any address is assigned.
+			 */
+			gcsect();
 			/*
 			 * Set area base addresses.
 			 */
@@ -621,10 +630,24 @@ link(void)
 		break;
 
 	case 'T':
-	case 'R':
 	case 'P':
 		if (pass == 0)
 			break;
+		reloc(c);
+		break;
+
+	case 'R':
+		if (pass == 0) {
+			/*
+			 * The R lines are the references between
+			 * sections.  Read on the first pass they are the
+			 * graph the collector walks;  on the second they
+			 * relocate the code.
+			 */
+			if (gcflag)
+				gcrel();
+			break;
+		}
 		reloc(c);
 		break;
 
@@ -756,6 +779,7 @@ map(void)
 		filep = filep->f_flp;
 	}
 	fprintf(mfp, "\n");
+	gclist(mfp);
 	/*
 	 * List Linked Libraries
 	 */
@@ -995,6 +1019,11 @@ parse()
 				case 'Q':
 					xflag = 1;
 					break;
+
+				case 'r':
+				case 'R':
+					gcrsav();
+					return(0);
 
 				case 's':
 				case 'S':
@@ -1640,6 +1669,8 @@ char *usetxt[] = {
 	"  -a   Area base address=expression",
 	"  -b   Bank base address=expression",
 	"  -g   Global symbol=expression",
+	"Discard:",
+	"  -r   Root symbol or area, keeps it and all it reaches",
 	"Map format:",
 	"  -m   Map output generated as file1[.map]",
 	"  -m1    Linker generated symbols included in file1[.map]",

@@ -1,0 +1,71 @@
+ASxxxx Linker V--.--                                                                Page 1
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+.  .ABS.                   0000        0000 =           0. bytes (ABS,OVR,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0000  .__.ABS.
+ASxxxx Linker V--.--                                                                Page 2
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+TEXT.main                  0000        0003 =           3. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0000  main
+ASxxxx Linker V--.--                                                                Page 3
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+TEXT.used                  0003        0003 =           3. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0003  used
+ASxxxx Linker V--.--                                                                Page 4
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+TEXT.chain1                0006        0003 =           3. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0006  chain1
+ASxxxx Linker V--.--                                                                Page 5
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+TEXT.chain2                0009        0001 =           1. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0009  chain2
+ASxxxx Linker V--.--                                                                Page 6
+Hexadecimal [16-Bits]
+
+Files Linked                              [ module(s) ]
+
+gc                             [  ]
+
+ASxxxx Linker V--.--                                                                Page 7
+Hexadecimal [16-Bits]
+
+Sections Discarded                        [ module(s) ]
+
+
+2 section(s) discarded, 4 byte(s)
+
+Roots
+
+main
+
+
+

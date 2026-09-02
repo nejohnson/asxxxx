@@ -324,6 +324,8 @@ struct	bndry
 
 #define	A_OUT	0x0100		/* Output Code Flag */
 
+#define	A_KEEP	0x0200		/* Never Discard This Area */
+
 /*
  *	The "R_" relocation constants define values used in
  *	generating the assembler relocation output data for
