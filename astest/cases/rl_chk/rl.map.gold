@@ -1,0 +1,37 @@
+ASxxxx Linker V--.--                                                                Page 1
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+.  .ABS.                   0000        0000 =           0. bytes (ABS,OVR,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0000  .__.ABS.
+ASxxxx Linker V--.--                                                                Page 2
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+RELOC                      1000        000C =          12. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    1000  rl_here  |   1006  rl_word  |   1008  xab_ther |   100A  xab_word
+ASxxxx Linker V--.--                                                                Page 3
+Hexadecimal [16-Bits]
+
+Files Linked                              [ module(s) ]
+
+rl                         [  ]
+xab                        [  ]
+
+ASxxxx Linker V--.--                                                                Page 4
+Hexadecimal [16-Bits]
+
+User Area Base Address Definitions
+
+RELOC=0x1000
+
+
+

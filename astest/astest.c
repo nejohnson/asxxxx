@@ -764,6 +764,36 @@ readtst(char *path)
 	return (1);
 }
 
+/*)Function	void	subst(dst, src)
+ *
+ *		char *	dst		result
+ *		char *	src		text to substitute into
+ *
+ *	The function subst() replaces %w with the working directory
+ *	and %s with the current source directory.  A linker option
+ *	that names a directory, -k for a library path, cannot use a
+ *	bare name:  only the file names in a command file are taken
+ *	relative to that file.
+ */
+
+static void
+subst(char *dst, char *src)
+{
+	char *q;
+
+	q = dst;
+	while (*src) {
+		if (src[0] == '%' && (src[1] == 'w' || src[1] == 's')) {
+			strcpy(q, (src[1] == 'w') ? workdir : srcdir);
+			q += strlen(q);
+			src += 2;
+		} else {
+			*q++ = *src++;
+		}
+	}
+	*q = 0;
+}
+
 /*)Function	void	mkwork(id)
  *
  *		char *	id		the case id
@@ -897,7 +927,8 @@ runcase(char *id)
 			 * together:  aslink reads '-a name=expr' as one
 			 * line, not as two.
 			 */
-			q = p;
+			subst(args, p);
+			q = args;
 			while (*q) {
 				char word[NLINE];
 				char *w = word;
