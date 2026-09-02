@@ -92,6 +92,7 @@ ASXBAS=		../../../
 SRCASX=		$(ASXBAS)asxxsrc/
 SRCLNK=		$(ASXBAS)linksrc/
 SRCMISC=	$(ASXBAS)asxxmisc/
+SRCTEST=	$(ASXBAS)astest/
 SRCS19OS9=	$(ASXBAS)s19os9/
 DSTEXE=		../exe/
 
@@ -157,11 +158,28 @@ SRCZ280=	$(ASXBAS)asz280/
 # Special
 ####################################################################
 
-.PHONY:	all clean prep
+.PHONY:	all clean prep check bless check-clean
 
 all:	$(ASXXXX)
 
+#
+# The tools the test corpus uses.  ascheck is a machine independent
+# assembler, so the corpus needs no particular CPU target and 'check'
+# need not build all of them.
+#
+CHKTOOLS =	ascheck aslink asxscn astest
+
+check:	$(CHKTOOLS)
+	$(DSTEXE)astest -T $(DSTEXE) -R $(ASXBAS) -W _astest
+
+bless:	$(CHKTOOLS)
+	$(DSTEXE)astest -T $(DSTEXE) -R $(ASXBAS) -W _astest -b
+
+check-clean:
+	rm -rf _astest
+
 clean:
+	rm -rf _astest
 	rm -f as*
 	rm -f s19os9
 	rm -f *.o
@@ -1408,6 +1426,22 @@ asxscn :	$(ASXSCN)
 		cp asxscn $(DSTEXE)asxscn
 		strip $(DSTEXE)asxscn
 		chmod 755 $(DSTEXE)asxscn
+
+
+####################################################################
+# ASTEST
+####################################################################
+
+ASTEST =	astest.o
+
+astest.o :	$(SRCTEST)astest.c $(SRCTEST)astest.h
+		$(CC) $(CCFLAGS) -I$(SRCTEST) -c $< -o $(@F)
+
+astest :	$(ASTEST)
+		$(LD) $(LDFLAGS) -o astest $(ASTEST)
+		cp astest $(DSTEXE)astest
+		strip $(DSTEXE)astest
+		chmod 755 $(DSTEXE)astest
 
 
 ####################################################################
