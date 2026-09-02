@@ -1,0 +1,89 @@
+ASxxxx Linker V--.--                                                                Page 1
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+.  .ABS.                   0000        0000 =           0. bytes (ABS,OVR,CSEG)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+          0000  .__.ABS.                           b_areas_3
+          1234  .__.END.                           b_areas_1
+
+ASxxxx Linker V--.--                                                                Page 2
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+Area_1                     0000        00BC =         188. bytes (ABS,CON,CSEG)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+          0018  Area_1_1                           b_areas_1
+          0070  Area_1_2                           b_areas_2
+          00BC  Area_1_3                           b_areas_3
+
+ASxxxx Linker V--.--                                                                Page 3
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+Area_2                     0000        00C2 =         194. bytes (REL,CON,CSEG)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+          001E  Area_2_1                           b_areas_1
+          0076  Area_2_2                           b_areas_2
+          00C2  Area_2_3                           b_areas_3
+
+ASxxxx Linker V--.--                                                                Page 4
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+Area_A                     0000        0018 =          24. bytes (ABS,OVR,CSEG)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+          0018  Area_A                             b_areas_1
+
+ASxxxx Linker V--.--                                                                Page 5
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+Area_B                     0000        0028 =          40. bytes (ABS,OVR,CSEG)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+          0028  Area_B_1                           b_areas_2
+
+ASxxxx Linker V--.--                                                                Page 6
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+Area_C                     0000        002C =          44. bytes (ABS,OVR,CSEG)
+
+         Value  Global                             Global Defined In Module
+         -----  --------------------------------   ------------------------
+          002C  Area_C_1                           b_areas_3
+
+ASxxxx Linker V--.--                                                                Page 7
+Hexadecimal [16-Bits]
+
+Files Linked                              [ module(s) ]
+
+b_areas_1                   [ b_areas_1 ]
+b_areas_2                   [ b_areas_2 ]
+b_areas_3                   [ b_areas_3 ]
+
+ASxxxx Linker V--.--                                                                Page 8
+Hexadecimal [16-Bits]
+
+User Area Base Address Definitions
+
+Area_1=0x0000
+
+
+
