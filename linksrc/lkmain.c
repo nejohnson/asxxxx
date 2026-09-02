@@ -192,7 +192,8 @@ main(int argc, char *argv[])
 				 */
 				case 'm':
 				case 'M':
-					if (*p == '1') {
+					if ((*p == '1') ||
+					    (*p == 'c') || (*p == 'C')) {
 						sprintf(ip+2, "%c", *p++);
 					}
 					break;
@@ -988,8 +989,12 @@ parse()
 				case 'm':
 				case 'M':
 					mflag = 1;
-					if ((c=get()) == '1') {
+					c = get();
+					if (c == '1') {
 						m1flag = 1;
+					} else
+					if ((c == 'c') || (c == 'C')) {
+						mcflag = 1;
 					} else {
 						unget(c);
 					}
@@ -1677,6 +1682,7 @@ char *usetxt[] = {
 	"Map format:",
 	"  -m   Map output generated as file1[.map]",
 	"  -m1    Linker generated symbols included in file1[.map]",
+	"  -mc    Compact map, areas are not each given a new page",
 	"  -w   Wide listing format for map file",
 	"  -x   Hexadecimal (default)",
 	"  -d   Decimal",
