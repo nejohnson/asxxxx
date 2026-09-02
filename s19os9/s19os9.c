@@ -468,6 +468,7 @@ nxtline(void)
 {
 	if (fgets(ib, NINPUT, inpfp) == NULL) {
 		fclose(inpfp);
+		inpfp = NULL;
 		return (0);
 	}
 	chopcrlf(ib);
