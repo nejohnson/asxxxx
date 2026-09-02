@@ -1,0 +1,29 @@
+ASxxxx Linker V--.--                                                                Page 1
+Hexadecimal [24-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+.  .ABS.                 000000      000000 =           0. bytes (ABS,OVR,CSEG)
+
+        Value  Global            Value  Global            Value  Global
+        -----  ------            -----  ------            -----  ------
+       000000  .__.ABS.
+ASxxxx Linker V--.--                                                                Page 2
+Hexadecimal [24-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+A24                      000000      000006 =           6. bytes (REL,CON,CSEG)
+
+        Value  Global            Value  Global            Value  Global
+        -----  ------            -----  ------            -----  ------
+       000000  w24
+ASxxxx Linker V--.--                                                                Page 3
+Hexadecimal [24-Bits]
+
+Files Linked                              [ module(s) ]
+
+a34                           [  ]
+
+
+

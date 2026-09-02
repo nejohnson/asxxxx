@@ -1,0 +1,114 @@
+ASxxxx Linker V--.--                                                                Page 1
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+.  .ABS.                   0000        0000 =           0. bytes (ABS,OVR,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0000  .__.ABS.
+ASxxxx Linker V--.--                                                                Page 2
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+NOBANK                     0000        0101 =         257. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0100  LBL_NB
+ASxxxx Linker V--.--                                                                Page 3
+Hexadecimal [16-Bits]
+[ Bank == CODE1 ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+C1                         0000        0214 =         532. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0200  LBL_C1   |   0204  LBL_C1_1
+ASxxxx Linker V--.--                                                                Page 4
+Hexadecimal [16-Bits]
+[ Bank == DATA1 ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+D1                         0000        0303 =         771. bytes (REL,CON,DSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0300  LBL_D1
+ASxxxx Linker V--.--                                                                Page 5
+Hexadecimal [16-Bits]
+[ Bank == CODE2 ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+C2                         0000        0404 =        1028. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0400  LBL_C2
+ASxxxx Linker V--.--                                                                Page 6
+Hexadecimal [16-Bits]
+[ Bank == DATA2 ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+D2                         0000        0503 =        1283. bytes (REL,CON,DSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0500  LBL_D2
+ASxxxx Linker V--.--                                                                Page 7
+Hexadecimal [16-Bits]
+[ Bank == system ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+s1                         1000        0002 =           2. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+ASxxxx Linker V--.--                                                                Page 8
+Hexadecimal [16-Bits]
+[ Bank == system ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+s2                         1002        0001 =           1. bytes (REL,CON,DSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+ASxxxx Linker V--.--                                                                Page 9
+Hexadecimal [16-Bits]
+[ Bank == system ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+s3                         1003        0001 =           1. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+ASxxxx Linker V--.--                                                                 Page 10
+Hexadecimal [16-Bits]
+[ Bank == system ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+s4                         1004        0001 =           1. bytes (REL,CON,DSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+ASxxxx Linker V--.--                                                                 Page 11
+Hexadecimal [16-Bits]
+
+Files Linked                              [ module(s) ]
+
+bnkf                         [ BankFile ]
+
+
+?ASlink-Error-Addresses in Area[C1] overflow Bank[CODE1] region
+?ASlink-Error-Size limit exceeded in Bank[CODE1]
