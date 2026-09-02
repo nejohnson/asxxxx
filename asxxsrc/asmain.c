@@ -530,6 +530,7 @@ main(int argc, char *argv[])
 		incfil = 0;
 		maxinc = 0;
 		alevel = 0;
+		flevfn = 0;
 		srcline = 0;
 		asmline = 0;
 		incline = 0;
@@ -590,6 +591,11 @@ main(int argc, char *argv[])
 		err('i');
 		fprintf(stderr, "?ASxxxx-Error-<i> at end of assembly\n");
 		fprintf(stderr, "              %s\n", geterr('i'));
+	}
+	if (flevfn) {
+		err('f');
+		fprintf(stderr, "?ASxxxx-Error-<f> at end of assembly\n");
+		fprintf(stderr, "              .function %s without .endfunc\n", fnnam);
 	}
 	if (oflag)
 		outchk(HUGE, HUGE);	/* Flush */
@@ -2245,6 +2251,83 @@ loop:
 
 			ap->a_flag = (uf & A_DSEG) ? uf : uf | (area[0].a_flag & A_BYTES);
 
+			areap = ap;
+		}
+		newdot(ap);
+		lmode = SLIST;
+		break;
+
+	case S_FUNCT:
+		/*
+		 * .function <name> opens an area holding one function,
+		 * named for the area in effect and the function, and
+		 * carrying that area's attributes.  .endfunc closes it
+		 * and restores the area that was in effect.
+		 *
+		 * A per function area is what lets a linker discard the
+		 * functions a program does not reach.  Writing one by
+		 * hand means repeating the enclosing area's attributes
+		 * on every function, and an attribute left out is not
+		 * reported:  an area that omits its parent's bank is
+		 * quietly given a different one and allocated over the
+		 * top of it.  Deriving both here removes that.
+		 *
+		 * The pairing is checked.  Without an end marker a
+		 * forgotten separator would silently weld two functions
+		 * into one area, and a linker would then keep or discard
+		 * them together.
+		 */
+		if (mp->m_valu == O_ENDF) {
+			if (flevfn == 0) {
+				xerr('f', ".endfunc without .function");
+				break;
+			}
+			flevfn = 0;
+			fnnam[0] = 0;
+			newdot(astack[--alevel]);
+			lmode = SLIST;
+			break;
+		}
+		/*
+		 * Read the name before testing the nesting, so that a
+		 * rejected .function still consumes its whole line and
+		 * the name is not left to be read as a mnemonic.
+		 */
+		getid(id, -1);
+		if (flevfn) {
+			xerr('f', ".function inside .function");
+			break;
+		}
+		if (alevel >= 16) {
+			xerr('q', "Area Stack Is Full");
+			break;
+		}
+		/*
+		 * <area>.<function>, and the enclosing area's flags
+		 * and bank exactly as they stand.
+		 */
+		if ((strlen(dot.s_area->a_id) + strlen(id) + 2) > NCPS) {
+			xerr('f', ".function area name too long");
+			break;
+		}
+		strcpy(opt, dot.s_area->a_id);
+		strcat(opt, ".");
+		strcat(opt, id);
+		astack[alevel++] = dot.s_area;
+		flevfn = 1;
+		strncpy(fnnam, id, NCPS-1);
+		fnnam[NCPS-1] = 0;
+		if ((ap = alookup(opt)) == NULL) {
+			ap = (struct area *) new (sizeof(struct area));
+			ap->a_ap = areap;
+			ap->b_bp = dot.s_area->b_bp;
+			ap->a_id = strsto(opt);
+			ap->a_ref = areap->a_ref + 1;
+			ap->a_size = 0;
+			ap->a_fuzz = 0;
+			ap->a_bn = NULL;
+			ap->a_bndry = 0;
+			ap->a_flag = dot.s_area->a_flag;
 			areap = ap;
 		}
 		newdot(ap);
