@@ -85,6 +85,9 @@ int	mflag;		/*	Map output flag
 int	m1flag;		/*	Include linker generated
 			 *	symbols in map file
 			 */
+int	mcflag;		/*	Compact map format: do not start
+			 *	a new page for every area
+			 */
 int	xflag;		/*	Map file radix type flag
 			 */
 int	pflag;		/*	print linker command file flag

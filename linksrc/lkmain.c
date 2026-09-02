@@ -192,7 +192,8 @@ main(int argc, char *argv[])
 				 */
 				case 'm':
 				case 'M':
-					if (*p == '1') {
+					if ((*p == '1') ||
+					    (*p == 'c') || (*p == 'C')) {
 						sprintf(ip+2, "%c", *p++);
 					}
 					break;
@@ -687,6 +688,7 @@ link(void)
  *		FILE *	afile()		lkmain.c
  *		int	fprintf()	c_library
  *		void	lkexit()	lkmain.c
+ *		void	lkasym()	lksym.c
  *		void	lstarea()	lklist.c
  *		void	newpag()	lklist.c
  *		void	symdef()	lksym.c
@@ -712,6 +714,12 @@ map(void)
 		fprintf(stderr, "?ASlink-Error-Failed to create map file\n");
 		lkexit(ER_FATAL);
 	}
+
+	/*
+	 * Index the symbols by the areax defining them so that
+	 * lstarea() need not scan the whole symbol table per area.
+	 */
+	lkasym();
 
 	/*
 	 * Output Map Bank/Area Lists
@@ -957,8 +965,12 @@ parse()
 				case 'm':
 				case 'M':
 					mflag = 1;
-					if ((c=get()) == '1') {
+					c = get();
+					if (c == '1') {
 						m1flag = 1;
+					} else
+					if ((c == 'c') || (c == 'C')) {
+						mcflag = 1;
 					} else {
 						unget(c);
 					}
@@ -1631,6 +1643,7 @@ char *usetxt[] = {
 	"Map format:",
 	"  -m   Map output generated as file1[.map]",
 	"  -m1    Linker generated symbols included in file1[.map]",
+	"  -mc    Compact map, areas are not each given a new page",
 	"  -w   Wide listing format for map file",
 	"  -x   Hexadecimal (default)",
 	"  -d   Decimal",

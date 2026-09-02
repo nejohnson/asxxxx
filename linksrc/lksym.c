@@ -36,6 +36,7 @@
  *
  *	lksym.c contains the following functions:
  *		int	hash()
+ *		void	lkasym()
  *		sym *	lkpsym()
  *		char *	new()
  *		sym *	newsym()
@@ -371,6 +372,74 @@ symval(struct sym *tsp)
 		val += tsp->s_axp->a_addr;
 	}
 	return(val);
+}
+
+/*)Function	void	lkasym(void)
+ *
+ *	The function lkasym() indexes every symbol by the areax
+ *	it was defined in, linking the symbols of each areax into
+ *	a list rooted at that areax.
+ *
+ *	The map generator needs, for each area, the symbols defined
+ *	in each of its sections.  Without an index the only way to
+ *	find them is to scan the whole symbol hash table once per
+ *	section, which lstarea() did twice per area - to count the
+ *	symbols and then to collect them - making map generation
+ *	cost O(sections * symbols).  That is unnoticeable while a
+ *	program has a handful of areas and becomes the dominant
+ *	cost of linking when it has thousands.  One pass here
+ *	replaces all of those scans.
+ *
+ *	Symbols are appended to the tail of each list, so walking
+ *	a list visits them in the same order a scan of the hash
+ *	table would have: buckets in ascending order, and within a
+ *	bucket the chain from its head.  lstarea() sorts by address
+ *	afterwards and that sort is stable, so preserving this
+ *	order keeps the map output identical for symbols sharing
+ *	an address.
+ *
+ *	The function must be called after symdef(), which gives an
+ *	areax to any symbol that still lacks one, and before the
+ *	first use of a_syp.
+ *
+ *	local variables:
+ *		int	i		hash table index loop variable
+ *		sym *	sp		pointer to a symbol structure
+ *		areax *	taxp		pointer to the defining areax
+ *
+ *	global variables:
+ *		sym *symhash[NHASH]	array of pointers to NHASH
+ *					linked symbol lists
+ *
+ *	functions called:
+ *		none
+ *
+ *	side effects:
+ *		Every areax referenced by a symbol has its a_syp and
+ *		a_sytp list built;  every indexed symbol has its
+ *		s_alp link set.
+ */
+
+void
+lkasym(void)
+{
+	struct sym *sp;
+	struct areax *taxp;
+	int i;
+
+	for (i=0; i<NHASH; ++i) {
+		for (sp = symhash[i]; sp != NULL; sp = sp->s_sp) {
+			if ((taxp = sp->s_axp) == NULL)
+				continue;
+			sp->s_alp = NULL;
+			if (taxp->a_sytp == NULL) {
+				taxp->a_syp = sp;
+			} else {
+				taxp->a_sytp->s_alp = sp;
+			}
+			taxp->a_sytp = sp;
+		}
+	}
 }
 
 /*)Function	void	symdef(fp)
