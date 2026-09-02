@@ -85,8 +85,8 @@ Area_1_3:
 	.word	9$ - 0$		; 00 15
 	.word	10$ - 0$	; 00 16
 
-	.word	b_Area_2_3	; 00 48
-	.word	s_Area_2
+	.word	m_Area_2_3	; 00 48
+	.word	a_Area_2
 	.word	l_Area_2
 Area_2_3:
 
