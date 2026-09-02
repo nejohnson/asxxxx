@@ -165,6 +165,55 @@ dgt(int rdx, char *str, int n)
 	return(1);
 }
 
+/*
+ *	The map symbol reference used to sort an area's symbols into
+ *	address order.  m_addr is the symbol's relocated address,
+ *	m_seq the order in which the symbol was collected, used to
+ *	break ties so the sort is stable.
+ */
+struct	msym
+{
+	struct	sym *m_sp;	/* Symbol */
+	a_uint	m_addr;		/* Relocated address */
+	int	m_seq;		/* Collection order */
+};
+
+/*)Function	int	msymcmp(p1, p2)
+ *
+ *		void *	p1		pointer to a struct msym
+ *		void *	p2		pointer to a struct msym
+ *
+ *	The function msymcmp() is the qsort() comparison function
+ *	ordering an area's symbols by ascending relocated address,
+ *	symbols sharing an address keeping their collection order.
+ *
+ *	local variables:
+ *		msym *	m1		pointer to the first symbol
+ *		msym *	m2		pointer to the second symbol
+ *
+ *	global variables:
+ *		none
+ *
+ *	functions called:
+ *		none
+ *
+ *	side effects:
+ *		none
+ */
+
+static int
+msymcmp(const void *p1, const void *p2)
+{
+	const struct msym *m1 = (const struct msym *) p1;
+	const struct msym *m2 = (const struct msym *) p2;
+
+	if (m1->m_addr < m2->m_addr) return (-1);
+	if (m1->m_addr > m2->m_addr) return ( 1);
+	if (m1->m_seq  < m2->m_seq ) return (-1);
+	if (m1->m_seq  > m2->m_seq ) return ( 1);
+	return (0);
+}
+
 /*)Function	void	slew(xp, yp)
  *
  *		area *	xp		pointer to an area structure
@@ -406,29 +455,27 @@ void
 lstarea(struct area *xp, struct bank *yp)
 {
 	struct areax *oxp;
-	int i, j, n;
+	int i, n;
 	char *frmt, *ptr;
 	int nmsym;
-	a_uint a0, ai, aj;
+	a_uint aj;
 	struct sym *sp;
-	struct sym **p;
+	struct msym *p;
 
 	/*
-	 * Find number of symbols in area
+	 * Find number of symbols in area.  The symbols of each
+	 * section are reached through the index lkasym() built,
+	 * so this costs one walk of this area's own symbols
+	 * rather than a scan of the whole symbol table per
+	 * section.
 	 */
 	nmsym = 0;
-	oxp = xp->a_axp;
-	while (oxp) {
-		for (i=0; i<NHASH; i++) {
-			sp = symhash[i];
-			while (sp != NULL) {
-				if ((oxp == sp->s_axp) && !sp->s_flag && !(sp->s_type & S_HID)) {
-					++nmsym;
-				}
-				sp = sp->s_sp;
+	for (oxp = xp->a_axp; oxp != NULL; oxp = oxp->a_axp) {
+		for (sp = oxp->a_syp; sp != NULL; sp = sp->s_alp) {
+			if (!sp->s_flag && !(sp->s_type & S_HID)) {
+				++nmsym;
 			}
 		}
-		oxp = oxp->a_axp;
 	}
 
 	if ((nmsym == 0) && (xp->a_size == 0)) {
@@ -443,47 +490,32 @@ lstarea(struct area *xp, struct bank *yp)
 	}
 
 	/*
-	 * Allocate space for an array of pointers to symbols
+	 * Allocate space for an array of symbol references
 	 * and load array.
 	 */
-	if ( (p = (struct sym **) malloc (nmsym*sizeof(struct sym *))) == NULL) {
+	if ( (p = (struct msym *) malloc (nmsym*sizeof(struct msym))) == NULL) {
 		fprintf(mfp, "Insufficient space to build Map Segment.\n");
 		return;
 	}
 	nmsym = 0;
-	oxp = xp->a_axp;
-	while (oxp) {
-		for (i=0; i<NHASH; i++) {
-			sp = symhash[i];
-			while (sp != NULL) {
-				if ((oxp == sp->s_axp) && !sp->s_flag && !(sp->s_type & S_HID)) {
-					p[nmsym++] = sp;
-				}
-				sp = sp->s_sp;
+	for (oxp = xp->a_axp; oxp != NULL; oxp = oxp->a_axp) {
+		for (sp = oxp->a_syp; sp != NULL; sp = sp->s_alp) {
+			if (!sp->s_flag && !(sp->s_type & S_HID)) {
+				p[nmsym].m_sp   = sp;
+				p[nmsym].m_addr = sp->s_addr + oxp->a_addr;
+				p[nmsym].m_seq  = nmsym;
+				nmsym += 1;
 			}
 		}
-		oxp = oxp->a_axp;
 	}
 
 	/*
-	 * Bubble Sort of Addresses in Symbol Table Array
+	 * Sort the symbols into ascending address order.  m_seq
+	 * carries the order the symbols were collected in so that
+	 * qsort(), which is not required to be stable, still
+	 * orders symbols sharing an address as the collection did.
 	 */
-	j = 1;
-	while (j) {
-		j = 0;
-		sp = p[0];
-		a0 = sp->s_addr + sp->s_axp->a_addr;
-		for (i=1; i<nmsym; ++i) {
-			sp = p[i];
-			ai = sp->s_addr + sp->s_axp->a_addr;
-			if (a0 > ai) {
-				j = 1;
-				p[i] = p[i-1];
-				p[i-1] = sp;
-			}
-			a0 = ai;
-		}
-	}
+	qsort(p, nmsym, sizeof(struct msym), msymcmp);
 
 	/*
 	 * Repeat Counter
@@ -521,7 +553,7 @@ lstarea(struct area *xp, struct bank *yp)
 			fprintf(mfp, "%s", frmt);
 		}
 
-		sp = p[i];
+		sp = p[i].m_sp;
 		aj = (sp->s_addr + sp->s_axp->a_addr) & a_mask;
 #ifdef	LONGINT
 		switch(a_bytes) {
