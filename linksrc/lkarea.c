@@ -246,12 +246,11 @@ newarea(void)
 	}
 
 	/*
-	 * Place pointer in header area list
+	 * Place pointer in header area list.  lkparea() has just
+	 * appended this A directive's areax to the area, so the
+	 * area's recorded tail is the areax wanted here.
 	 */
-	taxp = ap->a_axp;
-	while (taxp->a_axp) {
-		taxp = taxp->a_axp;
-	}
+	taxp = ap->a_axtp;
 	narea = hp->h_narea;
 	halp = hp->a_list;
 	for (k=0; k < narea ;++k) {
@@ -298,36 +297,83 @@ newarea(void)
  *		will terminate the linker.
  */
 
+/*
+ *	The area name hash table, the tail of the linked area
+ *	structures, and a hash of an area name.
+ */
+static	struct	area *	ahash[NAHASH];
+static	struct	area *	areatp;
+
+/*)Function	int	aname(id)
+ *
+ *		char *	id		pointer to the area name string
+ *
+ *	The function aname() hashes an area name into the ahash[]
+ *	table.  Area names are always matched without regard to
+ *	case, by symeq(id, ap->a_id, 1) in lkparea(), so the hash
+ *	folds case through ccase[] to match.
+ *
+ *	This is deliberately not the hash() of lksym.c.  That
+ *	function sums the characters of a name, which for names
+ *	sharing a long common prefix takes only a small number of
+ *	distinct values - measured over the ten thousand area names
+ *	of a one-area-per-function program it reaches just 84 of
+ *	them, however many buckets it is given.  Multiplying as it
+ *	goes mixes the whole name into the result instead.
+ *
+ *	local variables:
+ *		a_uint	h		computed hash value
+ *
+ *	global variables:
+ *		char	ccase[]		an array of characters which
+ *					perform the case translation
+ *
+ *	functions called:
+ *		none
+ *
+ *	side effects:
+ *		none
+ */
+
+static int
+aname(char *id)
+{
+	a_uint h;
+
+	h = 0;
+	while (*id) {
+		h = (h * 31) + (a_uint) (ccase[*id++ & 0x007F] & 0x00FF);
+	}
+	return ((int) (h & AHMASK));
+}
+
 void
 lkparea(char *id)
 {
-	struct area *tap;
-	struct areax *taxp;
+	int h;
 
-	ap = areap;
+	h = aname(id);
 	axp = (struct areax *) new (sizeof(struct areax));
-	while (ap) {
+	for (ap = ahash[h]; ap != NULL; ap = ap->a_hp) {
 		if (symeq(id, ap->a_id, 1)) {
-			taxp = ap->a_axp;
-			while (taxp->a_axp)
-				taxp = taxp->a_axp;
-			taxp->a_axp = axp;
+			ap->a_axtp->a_axp = axp;
+			ap->a_axtp = axp;
 			axp->a_bap = ap;
 			axp->a_bhp = hp;
 			return;
 		}
-		ap = ap->a_ap;
 	}
 	ap = (struct area *) new (sizeof(struct area));
 	if (areap == NULL) {
 		areap = ap;
 	} else {
-		tap = areap;
-		while (tap->a_ap)
-			tap = tap->a_ap;
-		tap->a_ap = ap;
+		areatp->a_ap = ap;
 	}
+	areatp = ap;
+	ap->a_hp = ahash[h];
+	ahash[h] = ap;
 	ap->a_axp = axp;
+	ap->a_axtp = axp;
 	axp->a_bap = ap;
 	axp->a_bhp = hp;
 	ap->a_id = strsto(id);
