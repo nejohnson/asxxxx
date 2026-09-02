@@ -253,6 +253,10 @@ int	alevel;		/*	area stack pointer
 			 */
 struct	area *astack[16]; /*	area stack
 			 */
+int	flevfn;		/*	.function nesting level
+			 */
+char	fnnam[NCPS];	/*	name of the open .function
+			 */
 int	flevel;		/*	IF-ELSE-ENDIF flag (false != 0)
 			 */
 int	ftflevel;	/*	IIFF-IIFT-IIFTF FLAG

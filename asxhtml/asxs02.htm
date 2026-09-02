@@ -50,7 +50,7 @@ operands.  Legal operands differ with each directive.
 <LI><A HREF="#odd">  .odd Directive </A>
 <LI><A HREF="#bndry">  .bndry Directive </A>
 <LI><A HREF="#area">  .area Directive </A>
-<LI><A HREF="#pshpop">  .psharea and .poparea Directives </A>
+<LI><A HREF="#pshpop">  .psharea, .poparea, .function and .endfunc Directives </A>
 <LI><A HREF="#bank">  .bank Directive </A>
 <LI><A HREF="#org">  .org Directive </A>
 <LI><A HREF="#globl">  .globl Directive </A>
@@ -788,6 +788,9 @@ where:  name    represents the symbolic name of the program sec-
         option  specifies the data area bank:  
                 BANK    Named collection of areas 
 
+        option  specifies that an area is never discarded:  
+                KEEP    Linker must not discard this area 
+
 
    The .area directive provides a means of defining and separat-
 ing multiple programming and data sections.   The  name  is  the
@@ -916,6 +919,24 @@ specific area, and then restores the area context.
 stack is not affected by the restoration of the area's  context.
 The  code or data pointer is not part of the stacked area's con-
 text.
+
+   The  .function  directive opens an area holding a single
+function and .endfunc closes it, restoring the area that was
+in effect.  The new area is named for the area in effect and
+the  function, and carries that area's attributes and bank -
+so a program can give each function an area of its own with-
+out repeating them, and a linker can then leave out the ones
+nothing reaches.  See the -r option of ASLink.  
+
+        .area   _CODE  (REL,CON,CSEG,BANK=CODE)
+        .function main
+        main:   .byte   1
+        .endfunc
+
+   main is placed in an area named _CODE.main, which is REL,
+CON, CSEG and in bank CODE.  A .function within a .function,
+an .endfunc without a .function, or a .function still  open
+at the end of the assembly is reported as an &lt;f&gt; error.  
   
 </PRE></B></H4>
 <H5><A HREF= #Directives> =&gt; Section Index</A></H5>

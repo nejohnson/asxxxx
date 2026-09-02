@@ -261,6 +261,7 @@ char *errors[] = {
 	"<c> .bndry offset error",
 	"<d> direct page addressing error",
 	"<e> .error/.assume programmed error",
+	"<f> .function / .endfunc mismatch",
 	"<i> .include/.incbin file error or an .if/.endif mismatch",
 	"<k> numerical conversion error",
 	"<l> identifier too long, name truncated",

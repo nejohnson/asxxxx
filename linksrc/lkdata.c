@@ -85,6 +85,18 @@ int	mflag;		/*	Map output flag
 int	m1flag;		/*	Include linker generated
 			 *	symbols in map file
 			 */
+int	gcflag;		/*	Discard unreachable sections
+			 */
+int	gcnrem;		/*	Sections discarded
+			 */
+a_uint	gcbrem;		/*	Bytes discarded
+			 */
+struct	globl *gcrootp = NULL;	/* The pointer to the first
+			 *	collector root structure
+			 */
+struct	globl *gcrsp = NULL;	/* Pointer to the current
+			 *	collector root structure
+			 */
 int	xflag;		/*	Map file radix type flag
 			 */
 int	pflag;		/*	print linker command file flag

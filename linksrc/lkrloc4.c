@@ -859,7 +859,14 @@ fprintf(stdout, "R4_PAGX-MERGE: relv = %X, pcrv = %X, pagx = %X, n = %X, error =
 	if (uflag != 0) {
 		lkulist(1);
 	}
-	if (oflag != 0) {
+	/*
+	 * A discarded section is not written.  lkulist() above
+	 * still runs:  the .lst to .rst translation reads the
+	 * listing one line at a time as the T data is consumed,
+	 * so skipping a section would leave every listing line
+	 * after it against the wrong code.
+	 */
+	if ((oflag != 0) && !gcdead(a[aindex])) {
 		lkout(1);
 	}
 }

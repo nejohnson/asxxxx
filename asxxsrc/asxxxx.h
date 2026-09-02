@@ -327,6 +327,8 @@ struct	bndry
 
 #define	A_OUT	0x0100		/* Output Code Flag */
 
+#define	A_KEEP	0x0200		/* Never Discard This Area */
+
 /*
  *	The "R_" relocation constants define values used in
  *	generating the assembler relocation output data for
@@ -627,6 +629,11 @@ struct	sym
 #define   O_TRC      0		/* .trace */
 #define   O_NTRC     1		/* .ntrace */
 #define S_CONST		27	/* Permanent Symbols Accessible As Constants */
+
+#define	S_FUNCT		28	/* .function, .endfunc */
+
+#define	  O_FUNC     1		/* .function */
+#define	  O_ENDF     2		/* .endfunc */
 /*			28  */	/* Spare Definition */
 /*			29  */	/* Spare Definition */
 
@@ -1030,6 +1037,10 @@ extern	struct mstack mstk[MAXMCR]; /*	Macro Stack
 extern	int	alevel;		/*	area stack pointer
 				 */
 extern	struct	area *astack[16]; /*	area stack
+				 */
+extern	int	flevfn;		/*	.function nesting level
+				 */
+extern	char	fnnam[NCPS];	/*	name of the open .function
 				 */
 extern	int	asmblk;		/*	Assembler data blocks allocated
 				 */

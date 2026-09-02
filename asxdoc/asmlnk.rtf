@@ -86,7 +86,7 @@
           1.4.21    \cf2 .odd Directive                                  \cf0 1-28 \par
           1.4.22    \cf2 .bndry Directive                                \cf0 1-29 \par
           1.4.23    \cf2 .area Directive                                 \cf0 1-30 \par
-          1.4.24    \cf2 .psharea and .poparea Directives\cf0                 1-33 \par
+          1.4.24    .psharea, .poparea, .function, .endfunc         1-33 \par
           1.4.25    \cf2 .bank Directive                                 \cf0 1-34 \par
           1.4.26    \cf2 .org Directive                                  \cf0 1-35 \par
           1.4.27    \cf2 .globl Directive                                \cf0 1-35 \par
@@ -2104,12 +2104,15 @@
 \par
                 option  specifies the data area bank:  \par
                         BANK    Named collection of areas \par
-\par
 \page\par
 \par
         THE ASSEMBLER                                          PAGE 1-31\par
         GENERAL ASSEMBLER DIRECTIVES\par
 \par
+\par
+\par
+                option  specifies that an area is never discarded:  \par
+                        KEEP    Linker must not discard this area \par
 \par
            The .area directive provides a means of defining and separat-\par
         ing multiple programming and data sections.   The  name  is  the\par
@@ -2156,15 +2159,15 @@
         unequal:  e.g.  the executable code  uses  an  allocation  of  2\par
         bytes for each instruction and is addressed at an increment of 1\par
         for every instruction, and the data uses an allocation of 1 byte\par
-        for  each element and is addressed at an increment of 1 for each\par
-        data byte.  The allocation units are defined by the architecture\par
-        of the particular microprocessor.  \par
-\par
 \page\par
 \par
         THE ASSEMBLER                                          PAGE 1-32\par
         GENERAL ASSEMBLER DIRECTIVES\par
 \par
+\par
+        for  each element and is addressed at an increment of 1 for each\par
+        data byte.  The allocation units are defined by the architecture\par
+        of the particular microprocessor.  \par
 \par
            The  .area  directive also provides a means of specifying the\par
         bank this area is associated with.  All areas associated with  a\par
@@ -2216,7 +2219,7 @@
         GENERAL ASSEMBLER DIRECTIVES\par
 \par
 \par
-        1.4.24  \cf2 .psharea and .poparea Directives \cf0\par
+        1.4.24  .psharea, .poparea, .function and .endfunc \par
 \par
         Format:  \par
 \par
@@ -2252,12 +2255,30 @@
         stack is not affected by the restoration of the area's  context.\par
         The  code or data pointer is not part of the stacked area's con-\par
         text.  \par
-\par
-\par
 \page\par
 \par
         THE ASSEMBLER                                          PAGE 1-34\par
         GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
+\par
+           The  .function  directive opens an area holding a single\par
+        function and .endfunc closes it, restoring the area that was\par
+        in effect.  The new area is named for the area in effect and\par
+        the  function, and carries that area's attributes and bank -\par
+        so a program can give each function an area of its own with-\par
+        out repeating them, and a linker can then leave out the ones\par
+        nothing reaches.  See the -r option of ASLink.  \par
+\par
+                .area   _CODE  (REL,CON,CSEG,BANK=CODE)\par
+                .function main\par
+                main:   .byte   1\par
+                .endfunc\par
+\par
+           main is placed in an area named _CODE.main, which is REL,\par
+        CON, CSEG and in bank CODE.  A .function within a .function,\par
+        an .endfunc without a .function, or a .function still  open\par
+        at the end of the assembly is reported as an <f> error.  \par
 \par
 \par
         1.4.25  \cf2 .bank Directive \cf0\par
@@ -2289,6 +2310,12 @@
                  ing  the  linker -b option.  The bank address is always\par
                  specified in 'byte' addressing.  A first area which  is\par
                  not  'byte' addressed (e.g.  a processor addressed by a\par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-35\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
                  'word' of 2 or more bytes) has the area address  scaled\par
                  to begin at the 'byte' address.  \par
 \par
@@ -2309,12 +2336,6 @@
                                         ;This bank starts at 0x0100,\par
                                         ;has a maximum size of 0x1000,\par
                                         ;and is to be placed into\par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-35\par
-        GENERAL ASSEMBLER DIRECTIVES\par
-\par
-\par
                                         ;a file with a suffix of _C1\par
 \par
            The parameters must be absolute (external symbols are not al-\par
@@ -2344,6 +2365,12 @@
 \par
         where:  sym1,           represent legal symbolic names.\par
                 sym2,...        When multiple symbols are specified,\par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-36\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
                 symn            they are separated by commas.\par
 \par
            A  .globl directive may also have a label field and/or a com-\par
@@ -2362,12 +2389,6 @@
         they will be considered undefined.  The assembly directive  (-g)\par
         can  be  invoked to make all undefined symbols global at the end\par
         of pass 1.  \par
-\par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-36\par
-        GENERAL ASSEMBLER DIRECTIVES\par
-\par
 \par
            The  .globl directive and == construct can be overridden by a\par
         following .local directive.  \par
@@ -2399,6 +2420,12 @@
         local to the current assembly process.  Local  symbols  are  not\par
         effected  by  the assembler option -a (make all symbols global).\par
         In defining local symbols the directive .local J is similar to: \par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-37\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
 \par
               J =: expression \par
 \par
@@ -2418,12 +2445,6 @@
              The  ASxxxx  assemblers  use the last occurring symbol\par
              specification in the source file(s) as the type  shown\par
              in the symbol table and output to the .rel file.  \par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-37\par
-        GENERAL ASSEMBLER DIRECTIVES\par
-\par
-\par
         1.4.29  \cf2 .equ, .gblequ, and .lclequ Directives \cf0\par
 \par
         Format:  \par
@@ -2454,6 +2475,12 @@
                 .                       ;\}\par
                 .                       ;\} range of false condition\par
                 .                       ;\}\par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-38\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
                 .endif\par
 \par
            The  conditional  assembly directives allow you to include or\par
@@ -2473,12 +2500,6 @@
         \par
                 .if     K+3             ;evaluate K+3\par
                 .else\par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-38\par
-        GENERAL ASSEMBLER DIRECTIVES\par
-\par
-\par
                 .byte   3,4             ;insert bytes if K+3\par
                 .endif                  ;is zero\par
         \par
@@ -2509,6 +2530,12 @@
                  .      ;\} range of false condition     ;\} block\par
                  .iftf                                  ;\}\par
                  .      ;\} unconditional range          ;\}\par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-39\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
                 .else           ;'else' range Condition is\par
                                 ;TRUE when expr is zero\par
                  .ift                                   ;\}\par
@@ -2528,12 +2555,6 @@
                 2. The assembly of non-contiguous body of code\par
                    within the conditional assembly block,\par
                    depending upon the result of the conditional\par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-39\par
-        GENERAL ASSEMBLER DIRECTIVES\par
-\par
-\par
                    test in entering the block.\par
         \par
                 3. The unconditional assembly of a body of code\par
@@ -2564,6 +2585,12 @@
            Additional  conditional  directives are available to test the\par
         value of an evaluated expression:  \par
 \par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-40\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
                 .ifne   expr            ; true if expr != 0\par
                 .ifeq   expr            ; true if expr == 0\par
                 .ifgt   expr            ; true if expr >  0\par
@@ -2582,12 +2609,6 @@
                 .                       ;\} range of false condition\par
                 .                       ;\}\par
                 .endif\par
-\par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-40\par
-        GENERAL ASSEMBLER DIRECTIVES\par
-\par
 \par
            The  conditional  assembly directives allow you to include or\par
         exclude blocks of source code during the assembly process, based\par
@@ -2619,6 +2640,12 @@
         of 10 levels.  \par
 \par
            The  use of a .else directive outside a .if/.endif block will\par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-41\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
         generate an <i> error.  Assemblies having unequal .if and .endif\par
         counts will cause an <i> error.  \par
 \par
@@ -2636,12 +2663,6 @@
                 .                       ;\} range of false condition\par
                 .                       ;\}\par
                 .endif\par
-\par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-41\par
-        GENERAL ASSEMBLER DIRECTIVES\par
-\par
 \par
            The  conditional  assembly directives allow you to include or\par
         exclude blocks of source code during the assembly process, based\par
@@ -2674,6 +2695,12 @@
 \par
         Note  that the default assembler configuration of case sensitive\par
         means the testing for a defined symbol is also case sensitive.  \par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-42\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
 \par
            All  .if/.else/.endif  directives  are  limited  to a maximum\par
         nesting of 10 levels.  \par
@@ -2681,12 +2708,6 @@
            The  use of a .else directive outside a .if/.endif block will\par
         generate an <i> error.  Assemblies having unequal .if and .endif\par
         counts will cause an <i> error.  \par
-\par
-\par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-42\par
-        GENERAL ASSEMBLER DIRECTIVES\par
 \par
 \par
         1.4.34  \cf2 .ifndef Directive \cf0\par
@@ -2729,6 +2750,12 @@
                 .byte   12              ;insert this byte if sym$3\par
                 .else                   ;is not defined/valued\par
                 .byte   13              ;insert this byte if sym$3\par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-43\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
                 .endif                  ;is defined/valued\par
 \par
 \par
@@ -2738,12 +2765,6 @@
            The  use of a .else directive outside a .if/.endif block will\par
         generate an <i> error.  Assemblies having unequal .if and .endif\par
         counts will cause an <i> error.  \par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-43\par
-        GENERAL ASSEMBLER DIRECTIVES\par
-\par
-\par
         1.4.35  \cf2 .ifb Directive \cf0\par
 \par
         Format:  \par
@@ -2784,6 +2805,12 @@
                 .byte   13              ;insert this byte if\par
                 .endif                  ;argument not blank\par
 \par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-44\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
 \par
         All .if/.else/.endif directives are limited to a maximum nesting\par
         of 10 levels.  \par
@@ -2791,12 +2818,6 @@
            The  use of a .else directive outside a .if/.endif block will\par
         generate an <i> error.  Assemblies having unequal .if and .endif\par
         counts will cause an <i> error.  \par
-\par
-\par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-44\par
-        GENERAL ASSEMBLER DIRECTIVES\par
 \par
 \par
         1.4.36  \cf2 .ifnb Directive \cf0\par
@@ -2839,6 +2860,12 @@
                 .byte   13              ;insert this byte if\par
                 .endif                  ;argument is blank\par
 \par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-45\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
 \par
         All .if/.else/.endif directives are limited to a maximum nesting\par
         of 10 levels.  \par
@@ -2846,12 +2873,6 @@
            The  use of a .else directive outside a .if/.endif block will\par
         generate an <i> error.  Assemblies having unequal .if and .endif\par
         counts will cause an <i> error.  \par
-\par
-\par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-45\par
-        GENERAL ASSEMBLER DIRECTIVES\par
 \par
 \par
         1.4.37  \cf2 .ifidn Directive \cf0\par
@@ -2894,6 +2915,12 @@
                 .endif                  ;are not the same\par
         \par
                 .ifidn  sym$3,sym$3     ;arguments are the same\par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-46\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
                 .byte   12              ;insert this byte if\par
                 .else                   ;arguments are the same\par
                 .byte   13              ;insert this byte if\par
@@ -2902,12 +2929,6 @@
 \par
         All .if/.else/.endif directives are limited to a maximum nesting\par
         of 10 levels.  \par
-\par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-46\par
-        GENERAL ASSEMBLER DIRECTIVES\par
-\par
 \par
            The  use of a .else directive outside a .if/.endif block will\par
         generate an <i> error.  Assemblies having unequal .if and .endif\par
@@ -2949,6 +2970,12 @@
                 .endif                  ;are different\par
         \par
                 .ifdif  sym$1,sym$1     ;arguments are identical\par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-47\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
                 .else\par
                 .byte   3,4             ;insert bytes if arguments\par
                 .endif                  ;are different\par
@@ -2958,12 +2985,6 @@
                 .else                   ;arguments are different\par
                 .byte   13              ;insert this byte if\par
                 .endif                  ;arguments are identical\par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-47\par
-        GENERAL ASSEMBLER DIRECTIVES\par
-\par
-\par
 \par
 \par
         All .if/.else/.endif directives are limited to a maximum nesting\par
@@ -3004,6 +3025,12 @@
                                 symbol  (argument not present)\par
         \par
                 idn  ( dif )    macro   arguments identical\par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-48\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
                                 symbol  (arguments not identical)\par
         \par
                 f    ( t )      -----   only within a .if/.else/.endif\par
@@ -3011,12 +3038,6 @@
         \par
                 tf              -----   only within a .if/.else/.endif\par
                                         conditional block\par
-\par
-\par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-48\par
-        GENERAL ASSEMBLER DIRECTIVES\par
 \par
 \par
         All .if/.else/.endif directives are limited to a maximum nesting\par
@@ -3059,6 +3080,12 @@
                 .iiftf                          line_to_assemble\par
 \par
 \par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-49\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
         Alternate Format:  \par
 \par
                 .iif            arg(,)          line_to_assemble\par
@@ -3068,12 +3095,6 @@
                 .iif    le      arg(,)          line_to_assemble\par
                 .iif    ge      arg(,)          line_to_assemble\par
                 .iif    lt      arg(,)          line_to_assemble\par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-49\par
-        GENERAL ASSEMBLER DIRECTIVES\par
-\par
-\par
                 .iif    def     arg(,)          line_to_assemble\par
                 .iif    ndef    arg(,)          line_to_assemble\par
         \par
@@ -3114,6 +3135,12 @@
                 /  /    represent   the  delimiting  characters.   These\par
                         delimiters   may   be   any   paired    printing\par
                         characters,  as  long  as the characters are not\par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-50\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
                         contained within  the  string  itself.   If  the\par
                         delimiting  characters do not match, the .incbin\par
                         directive will give the <q> error.  \par
@@ -3123,12 +3150,6 @@
         handy  (for example) when including some arbitrary data directly\par
         into the executable output.  However, it is recommended  to  use\par
         this only for small pieces of data.  \par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-50\par
-        GENERAL ASSEMBLER DIRECTIVES\par
-\par
-\par
            The .incbin can be invoked with one or two optional arguments\par
         which specify the number of bytes to skip in the  file  and  the\par
         maximum number of bytes to insert into the output file.  \par
@@ -3169,6 +3190,12 @@
 \par
            The .include directive is used to insert a source file within\par
         the source file currently being assembled.  When this  directive\par
+\page\par
+\par
+        THE ASSEMBLER                                          PAGE 1-51\par
+        GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
         is encountered, an implicit .page directive is issued.  When the\par
         end of the specified source file is reached, an  implicit  .page\par
         directive is issued and input continues from the previous source\par
@@ -3178,12 +3205,6 @@
            The  total  number  of separately specified .include files is\par
         unlimited as each .include file is opened and then closed during\par
         each pass made by the assembler.  \par
-\page\par
-\par
-        THE ASSEMBLER                                          PAGE 1-51\par
-        GENERAL ASSEMBLER DIRECTIVES\par
-\par
-\par
            The  default  directory  path,  if none is specified, for any\par
         .include file is the directory path of the  current  file.   For\par
         example:   if  the  current  source file, D:\\proj\\file1.asm, in-\par
@@ -3971,6 +3992,10 @@
 \par
               <e>   Caused by a .error or .assume directive.  \par
 \par
+              <f>   A .function within a .function, an .endfunc with-\par
+                    out a .function, or a .function still open at the\par
+                    end of the assembly.  \par
+\par
               <i>   Caused  by  an  .include file error or an .if/.endif\par
                     mismatch.  \par
 \par
@@ -4002,14 +4027,14 @@
                     same programming area or external symbols.  \par
 \par
               <s>   String Substitution / recursion error.  \par
-\par
-              <u>   Undefined symbol encountered during assembly.  \par
-\par
 \page\par
 \par
         THE ASSEMBLER                                          PAGE 1-68\par
         ERRORS\par
 \par
+\par
+\par
+              <u>   Undefined symbol encountered during assembly.  \par
 \par
               <v>   Value out of range:  signed or unsigned argument.  \par
 \par
@@ -4057,15 +4082,15 @@
         Each succeeding line contains six fields:  \par
 \par
 \par
-             1.  Error field (first two characters of line) \par
-\par
-             2.  Current location counter \par
 \page\par
 \par
         THE ASSEMBLER                                          PAGE 1-69\par
         LISTING FILE\par
 \par
 \par
+             1.  Error field (first two characters of line) \par
+\par
+             2.  Current location counter \par
 \par
              3.  Generated code in byte format \par
 \par
@@ -4112,14 +4137,14 @@
         '`' character.  If the -ff option is specified then each byte to\par
         be   relocated   will  be  preceded  by  one  of  the  following\par
         characters:  \par
-\par
-             1.  *   paged relocation \par
-\par
 \page\par
 \par
         THE ASSEMBLER                                          PAGE 1-70\par
         LISTING FILE\par
 \par
+\par
+\par
+             1.  *   paged relocation \par
 \par
              2.  u   low  byte of unsigned word or unsigned byte \par
 \par
@@ -5723,6 +5748,8 @@
           -a   Area base address=expression\par
           -b   Bank base address=expression\par
           -g   Global symbol=expression\par
+        Discard:\par
+          -r   Root symbol or area, keeps it and all it reaches\par
         Map format:\par
           -m   Map output generated as file1[.map]\par
           -m1    Linker generated symbols included in file1[.map]\par
@@ -5750,12 +5777,12 @@
           -e   or null line terminates input\par
 \par
 \par
-\par
-\par
 \page\par
 \par
         THE LINKER                                              PAGE 3-4\par
         INVOKING ASLINK\par
+\par
+\par
 \par
 \par
                                       NOTE\par
@@ -5805,14 +5832,14 @@
         \par
                 -p/-n   enable/disable echoing commands to stdout.\par
         \par
-                -i      Intel Hex as file1[.hex]\par
-                -s      Motorola S Record as file1[.s--]\par
 \page\par
 \par
         THE LINKER                                              PAGE 3-5\par
         INVOKING ASLINK\par
 \par
 \par
+                -i      Intel Hex as file1[.hex]\par
+                -s      Motorola S Record as file1[.s--]\par
                 -t      Tandy CoCo Disk BASIC binary as file1[.bin]\par
         \par
                 -*+   -i+/-s+/-t+ Renaming Options  -o+[ ][name][.ext]\par
@@ -5860,14 +5887,14 @@
                 -w      Wide listing format for map file\par
         \par
                         Specifies that a wide listing format\par
-                        be used for the map file.\par
-        \par
 \page\par
 \par
         THE LINKER                                              PAGE 3-6\par
         INVOKING ASLINK\par
 \par
 \par
+                        be used for the map file.\par
+        \par
                 -x      Hexadecimal (default)\par
                 -d      Decimal\par
                 -q      Octal\par
@@ -5905,6 +5932,24 @@
                         from the linked files. (one definition\par
                         per line in a linker command file.)\par
         \par
+\page\par
+\par
+        THE LINKER                                              PAGE 3-7\par
+        INVOKING ASLINK\par
+\par
+\par
+                -r      Root symbol or area name\par
+        \par
+                        This names a symbol or an area to keep, and\par
+                        enables the discarding of every section that\par
+                        nothing kept refers to.  Sections of absolute\par
+                        areas, of areas given an address with -a, and\par
+                        of areas marked KEEP are always kept, as is\par
+                        any area named by a reference to one of the\par
+                        a_, l_, s_ or m_ symbols the linker generates\par
+                        for it.  (one name per line in a linker\par
+                        command file.)\par
+        \par
                 -k      Library path specification, one per -k\par
         \par
                         This specifies one possible path to an\par
@@ -5917,12 +5962,6 @@
                         This specifies a possible library file.\par
                         More than one file is allowed.  (one\par
                         definition per line in a linker command file.)\par
-\page\par
-\par
-        THE LINKER                                              PAGE 3-7\par
-        INVOKING ASLINK\par
-\par
-\par
         \par
                 -e      or null line, terminates input\par
         \par
@@ -5948,6 +5987,12 @@
         input object  files  includes  the  scanning  of  object  module\par
         libraries.   The  linker will search through all combinations of\par
         the library path specifications (input by the -k option) and the\par
+\page\par
+\par
+        THE LINKER                                              PAGE 3-8\par
+        LIBRARY PATH(S) AND FILE(S)\par
+\par
+\par
         library  file  specifications (input by the -l option) that lead\par
         to an existing library file.  Each library file contains a  list\par
         (one  file  per  line)  of  modules  included in this particular\par
@@ -5972,12 +6017,6 @@
                  this  file  specification  becomes  the object module's\par
                  path/file.  \par
                  (i.e.  \\...  or /...) \par
-\page\par
-\par
-        THE LINKER                                              PAGE 3-8\par
-        LIBRARY PATH(S) AND FILE(S)\par
-\par
-\par
            As  an example, assume there exists a library file termio.lib\par
         in the syslib directory specifying the following object modules: \par
 \par
@@ -6003,6 +6042,12 @@
 \par
 \par
         3.4  \cf1 ASLINK PROCESSING \cf0\par
+\page\par
+\par
+        THE LINKER                                              PAGE 3-9\par
+        ASLINK PROCESSING\par
+\par
+\par
 \par
 \par
            The  linker  processes  the  files  in  the  order  they  are\par
@@ -6027,12 +6072,6 @@
         have  the area definitions in the desired order.  At the comple-\par
         tion of the area linking all area  addresses  and  lengths  have\par
         been  determined.  The areas of type PAG are verified to be on a\par
-\page\par
-\par
-        THE LINKER                                              PAGE 3-9\par
-        ASLINK PROCESSING\par
-\par
-\par
         256 byte boundary and that the length does not exceed 256 bytes.\par
         Any errors are noted on stderr and in the map file.  \par
 \par
@@ -6058,6 +6097,12 @@
 \par
            Next  the  global symbol definitions (-g option), if any, are\par
         processed.  The symbol definitions have been delayed until  this\par
+\page\par
+\par
+        THE LINKER                                             PAGE 3-10\par
+        ASLINK PROCESSING\par
+\par
+\par
         point because the absolute addresses of all internal symbols are\par
         known and can be used in the expression calculations.  \par
 \par
@@ -6081,12 +6126,6 @@
              2.  Defined areas and there lengths \par
 \par
              3.  Remaining undefined symbols \par
-\par
-\page\par
-\par
-        THE LINKER                                             PAGE 3-10\par
-        ASLINK PROCESSING\par
-\par
 \par
              4.  List of modules linked \par
 \par
@@ -6113,16 +6152,16 @@
         overlay modules.  Loadable and overlay modules normally need  to\par
         be  linked  with  a  main module(s) to resolve external symbols.\par
         The -o/-v options can be used to enable object  output  for  the\par
-        loadable  or overlay module(s) and suppress the object code from\par
-        the linked main module(s).  The -o/-v  options  can  be  applied\par
-        repeatedly  to specify a single linked file, groups of files, or\par
-        libraries for object code inclusion or suppression.  \par
 \page\par
 \par
         THE LINKER                                             Page 3-11\par
         ASXXXX VERSION 6 (5 and 4) LINKING\par
 \par
 \par
+        loadable  or overlay module(s) and suppress the object code from\par
+        the linked main module(s).  The -o/-v  options  can  be  applied\par
+        repeatedly  to specify a single linked file, groups of files, or\par
+        libraries for object code inclusion or suppression.  \par
         3.5  \cf1 ASXXXX VERSION 6 (5 AND 4) LINKING \cf0\par
 \par
 \par

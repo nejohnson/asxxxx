@@ -84,7 +84,7 @@
           1.4.21    .odd Directive                                  1-28 
           1.4.22    .bndry Directive                                1-29 
           1.4.23    .area Directive                                 1-30 
-          1.4.24    .psharea and .poparea Directives                1-33 
+          1.4.24    .psharea, .poparea, .function, .endfunc         1-33 
           1.4.25    .bank Directive                                 1-34 
           1.4.26    .org Directive                                  1-35 
           1.4.27    .globl Directive                                1-35 
@@ -2102,12 +2102,15 @@
 
                 option  specifies the data area bank:  
                         BANK    Named collection of areas 
-
 
 
         THE ASSEMBLER                                          PAGE 1-31
         GENERAL ASSEMBLER DIRECTIVES
 
+
+
+                option  specifies that an area is never discarded:  
+                        KEEP    Linker must not discard this area 
 
            The .area directive provides a means of defining and separat-
         ing multiple programming and data sections.   The  name  is  the
@@ -2154,15 +2157,15 @@
         unequal:  e.g.  the executable code  uses  an  allocation  of  2
         bytes for each instruction and is addressed at an increment of 1
         for every instruction, and the data uses an allocation of 1 byte
-        for  each element and is addressed at an increment of 1 for each
-        data byte.  The allocation units are defined by the architecture
-        of the particular microprocessor.  
-
 
 
         THE ASSEMBLER                                          PAGE 1-32
         GENERAL ASSEMBLER DIRECTIVES
 
+
+        for  each element and is addressed at an increment of 1 for each
+        data byte.  The allocation units are defined by the architecture
+        of the particular microprocessor.  
 
            The  .area  directive also provides a means of specifying the
         bank this area is associated with.  All areas associated with  a
@@ -2214,7 +2217,7 @@
         GENERAL ASSEMBLER DIRECTIVES
 
 
-        1.4.24  .psharea and .poparea Directives 
+        1.4.24  .psharea, .poparea, .function and .endfunc 
 
         Format:  
 
@@ -2250,12 +2253,30 @@
         stack is not affected by the restoration of the area's  context.
         The  code or data pointer is not part of the stacked area's con-
         text.  
-
-
 
 
         THE ASSEMBLER                                          PAGE 1-34
         GENERAL ASSEMBLER DIRECTIVES
+
+
+
+           The  .function  directive opens an area holding a single
+        function and .endfunc closes it, restoring the area that was
+        in effect.  The new area is named for the area in effect and
+        the  function, and carries that area's attributes and bank -
+        so a program can give each function an area of its own with-
+        out repeating them, and a linker can then leave out the ones
+        nothing reaches.  See the -r option of ASLink.  
+
+                .area   _CODE  (REL,CON,CSEG,BANK=CODE)
+                .function main
+                main:   .byte   1
+                .endfunc
+
+           main is placed in an area named _CODE.main, which is REL,
+        CON, CSEG and in bank CODE.  A .function within a .function,
+        an .endfunc without a .function, or a .function still  open
+        at the end of the assembly is reported as an <f> error.  
 
 
         1.4.25  .bank Directive 
@@ -2287,6 +2308,12 @@
                  ing  the  linker -b option.  The bank address is always
                  specified in 'byte' addressing.  A first area which  is
                  not  'byte' addressed (e.g.  a processor addressed by a
+
+
+        THE ASSEMBLER                                          PAGE 1-35
+        GENERAL ASSEMBLER DIRECTIVES
+
+
                  'word' of 2 or more bytes) has the area address  scaled
                  to begin at the 'byte' address.  
 
@@ -2307,12 +2334,6 @@
                                         ;This bank starts at 0x0100,
                                         ;has a maximum size of 0x1000,
                                         ;and is to be placed into
-
-
-        THE ASSEMBLER                                          PAGE 1-35
-        GENERAL ASSEMBLER DIRECTIVES
-
-
                                         ;a file with a suffix of _C1
 
            The parameters must be absolute (external symbols are not al-
@@ -2342,6 +2363,12 @@
 
         where:  sym1,           represent legal symbolic names.
                 sym2,...        When multiple symbols are specified,
+
+
+        THE ASSEMBLER                                          PAGE 1-36
+        GENERAL ASSEMBLER DIRECTIVES
+
+
                 symn            they are separated by commas.
 
            A  .globl directive may also have a label field and/or a com-
@@ -2360,12 +2387,6 @@
         they will be considered undefined.  The assembly directive  (-g)
         can  be  invoked to make all undefined symbols global at the end
         of pass 1.  
-
-
-
-        THE ASSEMBLER                                          PAGE 1-36
-        GENERAL ASSEMBLER DIRECTIVES
-
 
            The  .globl directive and == construct can be overridden by a
         following .local directive.  
@@ -2397,6 +2418,12 @@
         local to the current assembly process.  Local  symbols  are  not
         effected  by  the assembler option -a (make all symbols global).
         In defining local symbols the directive .local J is similar to: 
+
+
+        THE ASSEMBLER                                          PAGE 1-37
+        GENERAL ASSEMBLER DIRECTIVES
+
+
 
               J =: expression 
 
@@ -2416,12 +2443,6 @@
              The  ASxxxx  assemblers  use the last occurring symbol
              specification in the source file(s) as the type  shown
              in the symbol table and output to the .rel file.  
-
-
-        THE ASSEMBLER                                          PAGE 1-37
-        GENERAL ASSEMBLER DIRECTIVES
-
-
         1.4.29  .equ, .gblequ, and .lclequ Directives 
 
         Format:  
@@ -2452,6 +2473,12 @@
                 .                       ;}
                 .                       ;} range of false condition
                 .                       ;}
+
+
+        THE ASSEMBLER                                          PAGE 1-38
+        GENERAL ASSEMBLER DIRECTIVES
+
+
                 .endif
 
            The  conditional  assembly directives allow you to include or
@@ -2471,12 +2498,6 @@
         
                 .if     K+3             ;evaluate K+3
                 .else
-
-
-        THE ASSEMBLER                                          PAGE 1-38
-        GENERAL ASSEMBLER DIRECTIVES
-
-
                 .byte   3,4             ;insert bytes if K+3
                 .endif                  ;is zero
         
@@ -2507,6 +2528,12 @@
                  .      ;} range of false condition     ;} block
                  .iftf                                  ;}
                  .      ;} unconditional range          ;}
+
+
+        THE ASSEMBLER                                          PAGE 1-39
+        GENERAL ASSEMBLER DIRECTIVES
+
+
                 .else           ;'else' range Condition is
                                 ;TRUE when expr is zero
                  .ift                                   ;}
@@ -2526,12 +2553,6 @@
                 2. The assembly of non-contiguous body of code
                    within the conditional assembly block,
                    depending upon the result of the conditional
-
-
-        THE ASSEMBLER                                          PAGE 1-39
-        GENERAL ASSEMBLER DIRECTIVES
-
-
                    test in entering the block.
         
                 3. The unconditional assembly of a body of code
@@ -2562,6 +2583,12 @@
            Additional  conditional  directives are available to test the
         value of an evaluated expression:  
 
+
+
+        THE ASSEMBLER                                          PAGE 1-40
+        GENERAL ASSEMBLER DIRECTIVES
+
+
                 .ifne   expr            ; true if expr != 0
                 .ifeq   expr            ; true if expr == 0
                 .ifgt   expr            ; true if expr >  0
@@ -2580,12 +2607,6 @@
                 .                       ;} range of false condition
                 .                       ;}
                 .endif
-
-
-
-        THE ASSEMBLER                                          PAGE 1-40
-        GENERAL ASSEMBLER DIRECTIVES
-
 
            The  conditional  assembly directives allow you to include or
         exclude blocks of source code during the assembly process, based
@@ -2617,6 +2638,12 @@
         of 10 levels.  
 
            The  use of a .else directive outside a .if/.endif block will
+
+
+        THE ASSEMBLER                                          PAGE 1-41
+        GENERAL ASSEMBLER DIRECTIVES
+
+
         generate an <i> error.  Assemblies having unequal .if and .endif
         counts will cause an <i> error.  
 
@@ -2634,12 +2661,6 @@
                 .                       ;} range of false condition
                 .                       ;}
                 .endif
-
-
-
-        THE ASSEMBLER                                          PAGE 1-41
-        GENERAL ASSEMBLER DIRECTIVES
-
 
            The  conditional  assembly directives allow you to include or
         exclude blocks of source code during the assembly process, based
@@ -2672,6 +2693,12 @@
 
         Note  that the default assembler configuration of case sensitive
         means the testing for a defined symbol is also case sensitive.  
+
+
+        THE ASSEMBLER                                          PAGE 1-42
+        GENERAL ASSEMBLER DIRECTIVES
+
+
 
            All  .if/.else/.endif  directives  are  limited  to a maximum
         nesting of 10 levels.  
@@ -2679,12 +2706,6 @@
            The  use of a .else directive outside a .if/.endif block will
         generate an <i> error.  Assemblies having unequal .if and .endif
         counts will cause an <i> error.  
-
-
-
-
-        THE ASSEMBLER                                          PAGE 1-42
-        GENERAL ASSEMBLER DIRECTIVES
 
 
         1.4.34  .ifndef Directive 
@@ -2727,6 +2748,12 @@
                 .byte   12              ;insert this byte if sym$3
                 .else                   ;is not defined/valued
                 .byte   13              ;insert this byte if sym$3
+
+
+        THE ASSEMBLER                                          PAGE 1-43
+        GENERAL ASSEMBLER DIRECTIVES
+
+
                 .endif                  ;is defined/valued
 
 
@@ -2736,12 +2763,6 @@
            The  use of a .else directive outside a .if/.endif block will
         generate an <i> error.  Assemblies having unequal .if and .endif
         counts will cause an <i> error.  
-
-
-        THE ASSEMBLER                                          PAGE 1-43
-        GENERAL ASSEMBLER DIRECTIVES
-
-
         1.4.35  .ifb Directive 
 
         Format:  
@@ -2782,6 +2803,12 @@
                 .byte   13              ;insert this byte if
                 .endif                  ;argument not blank
 
+
+
+        THE ASSEMBLER                                          PAGE 1-44
+        GENERAL ASSEMBLER DIRECTIVES
+
+
 
         All .if/.else/.endif directives are limited to a maximum nesting
         of 10 levels.  
@@ -2789,12 +2816,6 @@
            The  use of a .else directive outside a .if/.endif block will
         generate an <i> error.  Assemblies having unequal .if and .endif
         counts will cause an <i> error.  
-
-
-
-
-        THE ASSEMBLER                                          PAGE 1-44
-        GENERAL ASSEMBLER DIRECTIVES
 
 
         1.4.36  .ifnb Directive 
@@ -2837,6 +2858,12 @@
                 .byte   13              ;insert this byte if
                 .endif                  ;argument is blank
 
+
+
+        THE ASSEMBLER                                          PAGE 1-45
+        GENERAL ASSEMBLER DIRECTIVES
+
+
 
         All .if/.else/.endif directives are limited to a maximum nesting
         of 10 levels.  
@@ -2844,12 +2871,6 @@
            The  use of a .else directive outside a .if/.endif block will
         generate an <i> error.  Assemblies having unequal .if and .endif
         counts will cause an <i> error.  
-
-
-
-
-        THE ASSEMBLER                                          PAGE 1-45
-        GENERAL ASSEMBLER DIRECTIVES
 
 
         1.4.37  .ifidn Directive 
@@ -2892,6 +2913,12 @@
                 .endif                  ;are not the same
         
                 .ifidn  sym$3,sym$3     ;arguments are the same
+
+
+        THE ASSEMBLER                                          PAGE 1-46
+        GENERAL ASSEMBLER DIRECTIVES
+
+
                 .byte   12              ;insert this byte if
                 .else                   ;arguments are the same
                 .byte   13              ;insert this byte if
@@ -2900,12 +2927,6 @@
 
         All .if/.else/.endif directives are limited to a maximum nesting
         of 10 levels.  
-
-
-
-        THE ASSEMBLER                                          PAGE 1-46
-        GENERAL ASSEMBLER DIRECTIVES
-
 
            The  use of a .else directive outside a .if/.endif block will
         generate an <i> error.  Assemblies having unequal .if and .endif
@@ -2947,6 +2968,12 @@
                 .endif                  ;are different
         
                 .ifdif  sym$1,sym$1     ;arguments are identical
+
+
+        THE ASSEMBLER                                          PAGE 1-47
+        GENERAL ASSEMBLER DIRECTIVES
+
+
                 .else
                 .byte   3,4             ;insert bytes if arguments
                 .endif                  ;are different
@@ -2956,12 +2983,6 @@
                 .else                   ;arguments are different
                 .byte   13              ;insert this byte if
                 .endif                  ;arguments are identical
-
-
-        THE ASSEMBLER                                          PAGE 1-47
-        GENERAL ASSEMBLER DIRECTIVES
-
-
 
 
         All .if/.else/.endif directives are limited to a maximum nesting
@@ -3002,6 +3023,12 @@
                                 symbol  (argument not present)
         
                 idn  ( dif )    macro   arguments identical
+
+
+        THE ASSEMBLER                                          PAGE 1-48
+        GENERAL ASSEMBLER DIRECTIVES
+
+
                                 symbol  (arguments not identical)
         
                 f    ( t )      -----   only within a .if/.else/.endif
@@ -3009,12 +3036,6 @@
         
                 tf              -----   only within a .if/.else/.endif
                                         conditional block
-
-
-
-
-        THE ASSEMBLER                                          PAGE 1-48
-        GENERAL ASSEMBLER DIRECTIVES
 
 
         All .if/.else/.endif directives are limited to a maximum nesting
@@ -3057,6 +3078,12 @@
                 .iiftf                          line_to_assemble
 
 
+
+
+        THE ASSEMBLER                                          PAGE 1-49
+        GENERAL ASSEMBLER DIRECTIVES
+
+
         Alternate Format:  
 
                 .iif            arg(,)          line_to_assemble
@@ -3066,12 +3093,6 @@
                 .iif    le      arg(,)          line_to_assemble
                 .iif    ge      arg(,)          line_to_assemble
                 .iif    lt      arg(,)          line_to_assemble
-
-
-        THE ASSEMBLER                                          PAGE 1-49
-        GENERAL ASSEMBLER DIRECTIVES
-
-
                 .iif    def     arg(,)          line_to_assemble
                 .iif    ndef    arg(,)          line_to_assemble
         
@@ -3112,6 +3133,12 @@
                 /  /    represent   the  delimiting  characters.   These
                         delimiters   may   be   any   paired    printing
                         characters,  as  long  as the characters are not
+
+
+        THE ASSEMBLER                                          PAGE 1-50
+        GENERAL ASSEMBLER DIRECTIVES
+
+
                         contained within  the  string  itself.   If  the
                         delimiting  characters do not match, the .incbin
                         directive will give the <q> error.  
@@ -3121,12 +3148,6 @@
         handy  (for example) when including some arbitrary data directly
         into the executable output.  However, it is recommended  to  use
         this only for small pieces of data.  
-
-
-        THE ASSEMBLER                                          PAGE 1-50
-        GENERAL ASSEMBLER DIRECTIVES
-
-
            The .incbin can be invoked with one or two optional arguments
         which specify the number of bytes to skip in the  file  and  the
         maximum number of bytes to insert into the output file.  
@@ -3167,6 +3188,12 @@
 
            The .include directive is used to insert a source file within
         the source file currently being assembled.  When this  directive
+
+
+        THE ASSEMBLER                                          PAGE 1-51
+        GENERAL ASSEMBLER DIRECTIVES
+
+
         is encountered, an implicit .page directive is issued.  When the
         end of the specified source file is reached, an  implicit  .page
         directive is issued and input continues from the previous source
@@ -3176,12 +3203,6 @@
            The  total  number  of separately specified .include files is
         unlimited as each .include file is opened and then closed during
         each pass made by the assembler.  
-
-
-        THE ASSEMBLER                                          PAGE 1-51
-        GENERAL ASSEMBLER DIRECTIVES
-
-
            The  default  directory  path,  if none is specified, for any
         .include file is the directory path of the  current  file.   For
         example:   if  the  current  source file, D:\proj\file1.asm, in-
@@ -3969,6 +3990,10 @@
 
               <e>   Caused by a .error or .assume directive.  
 
+              <f>   A .function within a .function, an .endfunc with-
+                    out a .function, or a .function still open at the
+                    end of the assembly.  
+
               <i>   Caused  by  an  .include file error or an .if/.endif
                     mismatch.  
 
@@ -4000,14 +4025,14 @@
                     same programming area or external symbols.  
 
               <s>   String Substitution / recursion error.  
-
-              <u>   Undefined symbol encountered during assembly.  
-
 
 
         THE ASSEMBLER                                          PAGE 1-68
         ERRORS
 
+
+
+              <u>   Undefined symbol encountered during assembly.  
 
               <v>   Value out of range:  signed or unsigned argument.  
 
@@ -4055,15 +4080,15 @@
         Each succeeding line contains six fields:  
 
 
-             1.  Error field (first two characters of line) 
-
-             2.  Current location counter 
 
 
         THE ASSEMBLER                                          PAGE 1-69
         LISTING FILE
 
 
+             1.  Error field (first two characters of line) 
+
+             2.  Current location counter 
 
              3.  Generated code in byte format 
 
@@ -4110,14 +4135,14 @@
         '`' character.  If the -ff option is specified then each byte to
         be   relocated   will  be  preceded  by  one  of  the  following
         characters:  
-
-             1.  *   paged relocation 
-
 
 
         THE ASSEMBLER                                          PAGE 1-70
         LISTING FILE
 
+
+
+             1.  *   paged relocation 
 
              2.  u   low  byte of unsigned word or unsigned byte 
 
@@ -5721,6 +5746,8 @@
           -a   Area base address=expression
           -b   Bank base address=expression
           -g   Global symbol=expression
+        Discard:
+          -r   Root symbol or area, keeps it and all it reaches
         Map format:
           -m   Map output generated as file1[.map]
           -m1    Linker generated symbols included in file1[.map]
@@ -5748,12 +5775,12 @@
           -e   or null line terminates input
 
 
-
-
 
 
         THE LINKER                                              PAGE 3-4
         INVOKING ASLINK
+
+
 
 
                                       NOTE
@@ -5803,14 +5830,14 @@
         
                 -p/-n   enable/disable echoing commands to stdout.
         
-                -i      Intel Hex as file1[.hex]
-                -s      Motorola S Record as file1[.s--]
 
 
         THE LINKER                                              PAGE 3-5
         INVOKING ASLINK
 
 
+                -i      Intel Hex as file1[.hex]
+                -s      Motorola S Record as file1[.s--]
                 -t      Tandy CoCo Disk BASIC binary as file1[.bin]
         
                 -*+   -i+/-s+/-t+ Renaming Options  -o+[ ][name][.ext]
@@ -5858,14 +5885,14 @@
                 -w      Wide listing format for map file
         
                         Specifies that a wide listing format
-                        be used for the map file.
-        
 
 
         THE LINKER                                              PAGE 3-6
         INVOKING ASLINK
 
 
+                        be used for the map file.
+        
                 -x      Hexadecimal (default)
                 -d      Decimal
                 -q      Octal
@@ -5903,6 +5930,24 @@
                         from the linked files. (one definition
                         per line in a linker command file.)
         
+
+
+        THE LINKER                                              PAGE 3-7
+        INVOKING ASLINK
+
+
+                -r      Root symbol or area name
+        
+                        This names a symbol or an area to keep, and
+                        enables the discarding of every section that
+                        nothing kept refers to.  Sections of absolute
+                        areas, of areas given an address with -a, and
+                        of areas marked KEEP are always kept, as is
+                        any area named by a reference to one of the
+                        a_, l_, s_ or m_ symbols the linker generates
+                        for it.  (one name per line in a linker
+                        command file.)
+        
                 -k      Library path specification, one per -k
         
                         This specifies one possible path to an
@@ -5915,12 +5960,6 @@
                         This specifies a possible library file.
                         More than one file is allowed.  (one
                         definition per line in a linker command file.)
-
-
-        THE LINKER                                              PAGE 3-7
-        INVOKING ASLINK
-
-
         
                 -e      or null line, terminates input
         
@@ -5946,6 +5985,12 @@
         input object  files  includes  the  scanning  of  object  module
         libraries.   The  linker will search through all combinations of
         the library path specifications (input by the -k option) and the
+
+
+        THE LINKER                                              PAGE 3-8
+        LIBRARY PATH(S) AND FILE(S)
+
+
         library  file  specifications (input by the -l option) that lead
         to an existing library file.  Each library file contains a  list
         (one  file  per  line)  of  modules  included in this particular
@@ -5970,12 +6015,6 @@
                  this  file  specification  becomes  the object module's
                  path/file.  
                  (i.e.  \...  or /...) 
-
-
-        THE LINKER                                              PAGE 3-8
-        LIBRARY PATH(S) AND FILE(S)
-
-
            As  an example, assume there exists a library file termio.lib
         in the syslib directory specifying the following object modules: 
 
@@ -6001,6 +6040,12 @@
 
 
         3.4  ASLINK PROCESSING 
+
+
+        THE LINKER                                              PAGE 3-9
+        ASLINK PROCESSING
+
+
 
 
            The  linker  processes  the  files  in  the  order  they  are
@@ -6025,12 +6070,6 @@
         have  the area definitions in the desired order.  At the comple-
         tion of the area linking all area  addresses  and  lengths  have
         been  determined.  The areas of type PAG are verified to be on a
-
-
-        THE LINKER                                              PAGE 3-9
-        ASLINK PROCESSING
-
-
         256 byte boundary and that the length does not exceed 256 bytes.
         Any errors are noted on stderr and in the map file.  
 
@@ -6056,6 +6095,12 @@
 
            Next  the  global symbol definitions (-g option), if any, are
         processed.  The symbol definitions have been delayed until  this
+
+
+        THE LINKER                                             PAGE 3-10
+        ASLINK PROCESSING
+
+
         point because the absolute addresses of all internal symbols are
         known and can be used in the expression calculations.  
 
@@ -6079,12 +6124,6 @@
              2.  Defined areas and there lengths 
 
              3.  Remaining undefined symbols 
-
-
-
-        THE LINKER                                             PAGE 3-10
-        ASLINK PROCESSING
-
 
              4.  List of modules linked 
 
@@ -6111,16 +6150,16 @@
         overlay modules.  Loadable and overlay modules normally need  to
         be  linked  with  a  main module(s) to resolve external symbols.
         The -o/-v options can be used to enable object  output  for  the
-        loadable  or overlay module(s) and suppress the object code from
-        the linked main module(s).  The -o/-v  options  can  be  applied
-        repeatedly  to specify a single linked file, groups of files, or
-        libraries for object code inclusion or suppression.  
 
 
         THE LINKER                                             Page 3-11
         ASXXXX VERSION 6 (5 and 4) LINKING
 
 
+        loadable  or overlay module(s) and suppress the object code from
+        the linked main module(s).  The -o/-v  options  can  be  applied
+        repeatedly  to specify a single linked file, groups of files, or
+        libraries for object code inclusion or suppression.  
         3.5  ASXXXX VERSION 6 (5 AND 4) LINKING 
 
 

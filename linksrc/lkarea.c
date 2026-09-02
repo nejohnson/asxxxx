@@ -203,9 +203,11 @@ newarea(void)
 					}
 				}
 				/*
-				 * Merge Output Code Flag
+				 * Merge the Output Code and Keep flags.
+				 * One module asking for an area to be
+				 * kept keeps all of it.
 				 */
-				ap->a_flag |= (int) (i & A4_OUT);
+				ap->a_flag |= (int) (i & (A4_OUT | A4_KEEP));
 			} else {
 				ap->a_flag = (int) i;
 			}
@@ -573,6 +575,17 @@ lnksect(struct area *tap)
 		lkerr++;
 	}
 	for (taxp = tap->a_axp, i=1; taxp != NULL; taxp = taxp->a_axp, i++) {
+		/*
+		 * A discarded section occupies nothing and moves
+		 * nothing.  The segment number i still advances, so
+		 * that the m_<area>_n and s_<area>_n names of the
+		 * sections that remain do not change with it.
+		 */
+		if (gcdead(taxp)) {
+			taxp->a_addr = addr;
+			taxp->a_size = 0;
+			continue;
+		}
 		if (taxp->a_bndry != 0) {
 			bofst = addr % taxp->a_bndry;
 			if (bofst != 0) {

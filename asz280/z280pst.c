@@ -113,6 +113,8 @@ struct	mne	mne[] = {
     {	NULL,	".area",	S_AREA,		0,	0	},
     {	NULL,	".psharea",	S_AREA,		0,	O_PSH	},
     {	NULL,	".poparea",	S_AREA,		0,	O_POP	},
+    {	NULL,	".function",	S_FUNCT,	0,	O_FUNC	},
+    {	NULL,	".endfunc",	S_FUNCT,	0,	O_ENDF	},
 #ifndef S_OPTSDCC
     {	NULL,	".bank",	S_BANK,		0,	0	},
 #endif
