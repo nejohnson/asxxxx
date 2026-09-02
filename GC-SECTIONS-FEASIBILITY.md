@@ -7,9 +7,54 @@
 | Subject | ASxxxx Cross Assemblers + ASLink, V06.10 (2026) |
 | Scope | 56 target assemblers sharing `asxxsrc/`, one shared linker `linksrc/` |
 | Consumer | SDCC, via the in-progress ASxxxx-into-SDCC port replacing `sdas`/`sdld` |
-| Date | 2026-09-01 (rev. 2 — SDCC identified as the client) |
-| Verdict | **Feasible and worth doing. The object format already carries everything needed, and with SDCC as the consumer the granularity question is answered. The remaining work is bounded.** |
-| Already actioned | Fixed on `master` during this study: the `aslink -y` hang (§7.4, `5356e4c`), a stack-buffer overflow in `lnksect()` (§6.7, `5c1a749`), the `NCPS` truncation mismatch (§6.7/§7.6, `d5e2177`), silent identifier truncation in both tools (§6.7, `d150ace`), the manual's missing error codes (`baf7fcd`), the map-generation quadratic plus a compact map format (§6.3/§7.3, `198f405`), and `lkparea()`'s linear area search (§6.3, `7d7548b`). |
+| Date | 2026-09-02 (rev. 3 — final; prerequisites implemented) |
+| Verdict | **Feasible and worth doing.** The object format already carries the section reference graph, SDCC answers the granularity question, and every linker-side prerequisite is now implemented and on `master`. What is left is the collector itself. |
+| Work completed | Seven changes on `master` arising from this study — four code defects, two performance faults, one documentation gap. See **Status** below. |
+
+---
+
+## Status
+
+This study was written by reading and measuring the code rather than by
+inspection alone, and the measuring turned up faults. Seven changes came
+out of it, all pre-existing, none needing GC to be reachable. Each is on
+`master` as its own `bugfix/*` branch, merged `--no-ff`, so any of them
+can be handed to Baldwin as a standalone patch.
+
+**Four code defects.** Three of the four produced no diagnostic at all —
+a clean exit and wrong output:
+
+| Commit | Defect | Symptom |
+|---|---|---|
+| `5356e4c` | `DefineSDCDB()` never advanced its scan pointer, so `aslink -y` hung on any symbol containing a `$` — that is, on every SDCC symbol (§7.4) | hang, no output |
+| `5c1a749` | Stack-buffer overflow in `lnksect()` building the `a_`/`l_`/`m_`/`s_` area symbol names; one maximum-length `.area` name triggers it (§6.7) | **silent** |
+| `d5e2177` | `NCPS` was 80 in the linker against 256 in the assemblers, so two names sharing 79 characters collapsed into one and an undefined reference bound to the wrong function (§6.7) | **silent** |
+| `d150ace` | Identifier truncation itself was silent in both tools; now diagnosed, with a new assembler error code `<l>` (§6.7) | **silent** |
+
+**Two performance faults**, both quadratic in the section count and so
+harmless until per-function sections make them the whole cost:
+
+| Commit | Fault |
+|---|---|
+| `198f405` | Map generation scanned the entire symbol table once per *section*, twice per area, then bubble-sorted. Adds the `-mc` compact map format (§6.3) |
+| `7d7548b` | `lkparea()` scanned the whole area list for every `A` record, with three further tail-walks behind it (§6.3) |
+
+**One documentation gap**: `baf7fcd` added the missing `<k>`, `<v>` and
+new `<l>` error codes to the manual, across all six of its text
+renderings.
+
+Net effect on the 10,000-section benchmark of §4.4: **10.4 s → 0.31 s,
+with byte-identical output**. Every linker-side item in §8.1 is now done
+bar two optional ones.
+
+Four earlier fixes on this fork (`1fbc20f`, `83a99c1`, `56c5bcd`,
+`18aa725`) predate the study; `VENDOR.md` was corrected too (`2b32c63`),
+having claimed the tree was never edited locally long after that stopped
+being true.
+
+The next step is not more linker work. It is getting the SDCC port
+running, so its regression suite becomes the linker test coverage this
+tree does not otherwise have (§7.7).
 
 ---
 
@@ -487,7 +532,11 @@ This work lives as a fork rather than an upstream contribution. Two practical co
 
 ## 8. Effort estimate
 
-### 8.1 Fix first — needed by the SDCC port whether or not GC happens
+### 8.1 Linker prerequisites — done, except two optional items
+
+Needed by the SDCC port whether or not GC ever ships. Struck-through
+rows are on `master`; see **Status**.
+
 
 | Work item | Files | Rough size |
 |---|---|---|
@@ -539,7 +588,7 @@ The single sizing question that dominates this column is whether the per-functio
 
 **Worth doing.** The decision gate that dominated the first draft of this study — *who emits per-function areas?* — is answered by the SDCC port, and the answer is a good one: a real code generator that already knows function boundaries, driven by GCC-style `--ffunction-sections` / `--fdata-sections` options.
 
-Sequence it so that each stage is independently useful and none of them is wasted if the next is abandoned.
+Sequence it so that each stage is independently useful and none of them is wasted if the next is abandoned. **Stages 0 and 1 are complete** — what follows begins at Stage 2.
 
 - **Stage 0 — the `-y` hang.** ✅ **Done** — `5356e4c`, merged as `883f305` (§7.4). One line. It blocked the SDCC port outright and had nothing to do with GC.
 
