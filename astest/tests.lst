@@ -3,13 +3,7 @@
 ab_ts
 ab_tm
 ab_tbm
+bndry
 radix
 expr
-
-# Held back, both blocked by faults this harness found in the tree:
-#
-#   equtst  ascheck -loxff equtst segfaults in newdot(), asmain.c:3373,
-#           with dot.s_area NULL.  Present in the pristine 6.10 drop.
-#   bndry   ascheck/bndry/b_areas_*.asm reference s_Area_2 and
-#           b_Area_2_1, which are not names 6.10 generates;  the
-#           linker reports them undefined.  Stale test source.
+equtst
