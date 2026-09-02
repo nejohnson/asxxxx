@@ -1,0 +1,63 @@
+ASxxxx Linker V--.--                                                                Page 1
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+.  .ABS.                   0000        0000 =           0. bytes (ABS,OVR,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0000  .__.ABS.
+ASxxxx Linker V--.--                                                                Page 2
+Hexadecimal [16-Bits]
+[ Bank == CODE ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+TEXT                       0000        0001 =           1. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0000  tail
+ASxxxx Linker V--.--                                                                Page 3
+Hexadecimal [16-Bits]
+[ Bank == CODE ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+TEXT.main                  0001        0002 =           2. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0001  main
+ASxxxx Linker V--.--                                                                Page 4
+Hexadecimal [16-Bits]
+[ Bank == CODE ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+TEXT.helper                0003        0001 =           1. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0003  helper
+ASxxxx Linker V--.--                                                                Page 5
+Hexadecimal [16-Bits]
+[ Bank == CODE ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+TEXT.unused                0004        0003 =           3. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0004  unused
+ASxxxx Linker V--.--                                                                Page 6
+Hexadecimal [16-Bits]
+
+Files Linked                              [ module(s) ]
+
+fn                          [  ]
+
+
+

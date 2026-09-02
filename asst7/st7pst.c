@@ -119,6 +119,8 @@ struct	mne	mne[] = {
     {	NULL,	".incbin",	S_INCL,		0,	I_BNRY	},
     {	NULL,	".area",	S_AREA,		0,	0	},
     {	NULL,	".poparea",	S_AREA,		0,	O_POP	},
+    {	NULL,	".function",	S_FUNCT,	0,	O_FUNC	},
+    {	NULL,	".endfunc",	S_FUNCT,	0,	O_ENDF	},
     {	NULL,	".bank",	S_BANK,		0,	0	},
     {	NULL,	".bank",	S_BANK,		0,	0	},
     {	NULL,	".org",		S_ORG,		0,	0	},
