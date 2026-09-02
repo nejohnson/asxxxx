@@ -1436,13 +1436,13 @@
 
                 .module name 
 
-           The  .module  directive causes the name to be included in the
-        assemblers output file as an identifier for this particular  ob-
-        ject module.  The name may be from 1 to 79 characters in length.
-        The name may not have any embedded white space (spaces or tabs).
-        Only  one  identifier is allowed per assembled module.  The main
-        use of this directive  is  to  allow  the  linker  to  report  a
-        modules'  use  of undefined symbols.  At link time all undefined
+           The .module directive causes the name to be included  in  the
+        assemblers output file as  an  identifier  for  this  particular
+        object module.  The name may be from  1  to  255  characters  in
+        length.  The name may not have any embedded white space  (spaces
+        or tabs).  Only one identifier is allowed per assembled  module.
+        The main use of this directive is to allow the linker to  report
+        a modules' use of undefined symbols.  At link time all undefined
         symbols are  reported  and  the  modules  referencing  them  are
         listed.  
 
@@ -2110,7 +2110,7 @@
         ing multiple programming and data sections.   The  name  is  the
         area  label used by the assembler and the linker to collect code
         from various separately assembled modules into one section.  The
-        name may be from 1 to 79 characters in length.  
+        name may be from 1 to 255 characters in length.  
 
            The options are specified within parenthesis and separated by
         commas as shown in the following example:  
@@ -2283,7 +2283,7 @@
                         tion.   This  name  may  be  the  same  as   any
                         user-defined  symbol  or  area as the bank names
                         are independent  of  all  symbols,  labels,  and
-                        areas.   The name may be from 1 to 79 characters
+                        areas.  The name may be from 1 to 255 characters
                         in length.  
 
                 options specify the parameters of the bank:  
