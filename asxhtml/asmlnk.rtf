@@ -1444,13 +1444,13 @@
 \par
                 .module name \par
 \par
-           The  .module  directive causes the name to be included in the\par
-        assemblers output file as an identifier for this particular  ob-\par
-        ject module.  The name may be from 1 to 79 characters in length.\par
-        The name may not have any embedded white space (spaces or tabs).\par
-        Only  one  identifier is allowed per assembled module.  The main\par
-        use of this directive  is  to  allow  the  linker  to  report  a\par
-        modules'  use  of undefined symbols.  At link time all undefined\par
+           The .module directive causes the name to be included  in  the\par
+        assemblers output file as  an  identifier  for  this  particular\par
+        object module.  The name may be from  1  to  255  characters  in\par
+        length.  The name may not have any embedded white space  (spaces\par
+        or tabs).  Only one identifier is allowed per assembled  module.\par
+        The main use of this directive is to allow the linker to  report\par
+        a modules' use of undefined symbols.  At link time all undefined\par
         symbols are  reported  and  the  modules  referencing  them  are\par
         listed.  \par
 \par
@@ -2118,7 +2118,7 @@
         ing multiple programming and data sections.   The  name  is  the\par
         area  label used by the assembler and the linker to collect code\par
         from various separately assembled modules into one section.  The\par
-        name may be from 1 to 79 characters in length.  \par
+        name may be from 1 to 255 characters in length.  \par
 \par
            The options are specified within parenthesis and separated by\par
         commas as shown in the following example:  \par
@@ -2291,7 +2291,7 @@
                         tion.   This  name  may  be  the  same  as   any\par
                         user-defined  symbol  or  area as the bank names\par
                         are independent  of  all  symbols,  labels,  and\par
-                        areas.   The name may be from 1 to 79 characters\par
+                        areas.  The name may be from 1 to 255 characters\par
                         in length.  \par
 \par
                 options specify the parameters of the bank:  \par
