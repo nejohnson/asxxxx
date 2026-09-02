@@ -1,0 +1,65 @@
+ASxxxx Linker V--.--                                                                Page 1
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+.  .ABS.                   0000        0000 =           0. bytes (ABS,OVR,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0000  .__.ABS.
+ASxxxx Linker V--.--                                                                Page 2
+Hexadecimal [16-Bits]
+[ Bank == SCT ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+area1                      C000        0006 =           6. bytes (ABS,OVR,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    C000  tm1_1    |   C000  tm2_1
+ASxxxx Linker V--.--                                                                Page 3
+Hexadecimal [16-Bits]
+[ Bank == SCT ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+area2                      C000        000C =          12. bytes (ABS,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    C000  tm1_2    |   C00A  tm2_2
+ASxxxx Linker V--.--                                                                Page 4
+Hexadecimal [16-Bits]
+[ Bank == SCT ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+area3                      C000        000E =          14. bytes (REL,OVR,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    C000  tm1_3    |   C000  tm2_3
+ASxxxx Linker V--.--                                                                Page 5
+Hexadecimal [16-Bits]
+[ Bank == SCT ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+area4                      C00E        0014 =          20. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    C00E  tm1_4    |   C020  tm2_4
+ASxxxx Linker V--.--                                                                Page 6
+Hexadecimal [16-Bits]
+
+Files Linked                              [ module(s) ]
+
+tbm                        [  ]
+tbm1                       [  ]
+tbm2                       [  ]
+
+
+

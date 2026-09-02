@@ -1,0 +1,37 @@
+ASxxxx Linker V--.--                                                                Page 1
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+.  .ABS.                   0000        0000 =           0. bytes (ABS,OVR,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0000  .__.ABS. |   0002  two      |   00AB  cc
+ASxxxx Linker V--.--                                                                Page 2
+Hexadecimal [16-Bits]
+[ Bank == _CSEG ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+_CODE                      0000        00A8 =         168. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+ASxxxx Linker V--.--                                                                Page 3
+Hexadecimal [16-Bits]
+
+Files Linked                              [ module(s) ]
+
+expr                         [  ]
+
+ASxxxx Linker V--.--                                                                Page 4
+Hexadecimal [16-Bits]
+
+User Global Definitions
+
+cc=0xAB
+two=2
+
+
+
