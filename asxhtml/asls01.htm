@@ -37,6 +37,8 @@ Relocation:
   -a   Area base address=expression
   -b   Bank base address=expression
   -g   Global symbol=expression
+Discard:
+  -r   Root symbol or area, keeps it and all it reaches
 Map format:
   -m   Map output generated as file1[.map]
   -m1    Linker generated symbols included in file1[.map]
@@ -200,6 +202,18 @@ The linker commands are explained in some more detail:
                 constants and/or defined symbols
                 from the linked files. (one definition
                 per line in a linker command file.)
+
+        -r      Root symbol or area name
+
+                This names a symbol or an area to keep, and
+                enables the discarding of every section that
+                nothing kept refers to.  Sections of absolute
+                areas, of areas given an address with -a, and
+                of areas marked KEEP are always kept, as is
+                any area named by a reference to one of the
+                a_, l_, s_ or m_ symbols the linker generates
+                for it.  (one name per line in a linker
+                command file.)
 
         -k      Library path specification, one per -k
 
