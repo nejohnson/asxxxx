@@ -65,7 +65,7 @@
 void SDCDBfopen(void)
 {
 	if (yflag) {
-		yfp = afile(linkp->f_idp, "cdb", 1);
+		yfp = afile(outbase ? outbase : linkp->f_idp, "cdb", 1);
 		if (yfp == NULL) {
 			lkexit(1);
 		}

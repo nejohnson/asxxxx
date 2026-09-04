@@ -5766,6 +5766,8 @@
             '-*+name'      (or)  '-*+  name'      ->  name[.---]\par
             '-*+name.ext'  (or)  '-*+  name.ext'  ->   name.ext\par
           -o   Linked file/library -i/-s/-t output enable (default)\par
+          -o+  Output base name               -o+[ ]name\par
+                 for the map, the debug files and the linked output\par
           -v   Linked file/library -i/-s/-t output disable\par
           -j   NoICE Debug output as file1[.noi]\par
           -y   SDCDB Debug output as file1[.cdb]\par
@@ -5775,8 +5777,6 @@
           -z   Disable Case Sensitivity for Symbols\par
         End:\par
           -e   or null line terminates input\par
-\par
-\par
 \page\par
 \par
         THE LINKER                                              PAGE 3-4\par
@@ -5856,6 +5856,14 @@
                         files/libraries will enable object output.\par
                         (if option -i, -s, or -t was specified)\par
         \par
+                -o+     Output base name  -o+[ ][name][.ext]\par
+        \par
+                        Specifies the base name used for the\par
+                        map file, the debug files, and the\par
+                        linked output file when -i+, -s+, or\par
+                        -t+ has not named it.  No output\par
+                        format is selected by this option.\par
+        \par
                 -v      Linked file/library output disabled\par
         \par
                         Specifies that subsequent linked\par
@@ -5879,6 +5887,12 @@
         \par
                         The linker creates internal symbols for\par
                         each area (area segment) input during\par
+\page\par
+\par
+        THE LINKER                                              PAGE 3-6\par
+        INVOKING ASLINK\par
+\par
+\par
                         the linking process but normally suppresses\par
                         their inclusion in the map file.  This\par
                         option enables their inclusion in the\par
@@ -5887,12 +5901,6 @@
                 -w      Wide listing format for map file\par
         \par
                         Specifies that a wide listing format\par
-\page\par
-\par
-        THE LINKER                                              PAGE 3-6\par
-        INVOKING ASLINK\par
-\par
-\par
                         be used for the map file.\par
         \par
                 -x      Hexadecimal (default)\par

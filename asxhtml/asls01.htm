@@ -55,6 +55,8 @@ Output:
     '-*+name'      (or)  '-*+  name'      -&gt;  name[.---]
     '-*+name.ext'  (or)  '-*+  name.ext'  -&gt;   name.ext
   -o   Linked file/library -i/-s/-t output enable (default)
+  -o+  Output base name               -o+[ ]name
+         for the map, the debug files and the linked output
   -v   Linked file/library -i/-s/-t output disable
   -j   NoICE Debug output as file1[.noi]
   -y   SDCDB Debug output as file1[.cdb]
@@ -132,6 +134,14 @@ The linker commands are explained in some more detail:
                 Specifies that subsequent linked
                 files/libraries will enable object output.
                 (if option -i, -s, or -t was specified)
+
+        -o+     Output base name  -o+[ ][name][.ext]
+
+                Specifies the base name used for the
+                map file, the debug files, and the
+                linked output file when -i+, -s+, or
+                -t+ has not named it.  No output
+                format is selected by this option.
 
         -v      Linked file/library output disabled
 

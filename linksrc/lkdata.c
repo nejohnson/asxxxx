@@ -67,6 +67,10 @@ char	*outnam;	/*	Pointer to -o+ output file name
 			 */
 char	*outext;	/*	Pointer to -o+ output file extension
 			 */
+char	*outbase;	/*	Pointer to -o+ output base file name,
+			 *	used for every file the linker creates
+			 *	whose name is not otherwise specified
+			 */
 int	objflg;		/*	Linked file/library object output flag
 			 */
 

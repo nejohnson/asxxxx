@@ -5764,6 +5764,8 @@
             '-*+name'      (or)  '-*+  name'      ->  name[.---]
             '-*+name.ext'  (or)  '-*+  name.ext'  ->   name.ext
           -o   Linked file/library -i/-s/-t output enable (default)
+          -o+  Output base name               -o+[ ]name
+                 for the map, the debug files and the linked output
           -v   Linked file/library -i/-s/-t output disable
           -j   NoICE Debug output as file1[.noi]
           -y   SDCDB Debug output as file1[.cdb]
@@ -5773,8 +5775,6 @@
           -z   Disable Case Sensitivity for Symbols
         End:
           -e   or null line terminates input
-
-
 
 
         THE LINKER                                              PAGE 3-4
@@ -5854,6 +5854,14 @@
                         files/libraries will enable object output.
                         (if option -i, -s, or -t was specified)
         
+                -o+     Output base name  -o+[ ][name][.ext]
+        
+                        Specifies the base name used for the
+                        map file, the debug files, and the
+                        linked output file when -i+, -s+, or
+                        -t+ has not named it.  No output
+                        format is selected by this option.
+        
                 -v      Linked file/library output disabled
         
                         Specifies that subsequent linked
@@ -5877,6 +5885,12 @@
         
                         The linker creates internal symbols for
                         each area (area segment) input during
+
+
+        THE LINKER                                              PAGE 3-6
+        INVOKING ASLINK
+
+
                         the linking process but normally suppresses
                         their inclusion in the map file.  This
                         option enables their inclusion in the
@@ -5885,12 +5899,6 @@
                 -w      Wide listing format for map file
         
                         Specifies that a wide listing format
-
-
-        THE LINKER                                              PAGE 3-6
-        INVOKING ASLINK
-
-
                         be used for the map file.
         
                 -x      Hexadecimal (default)
