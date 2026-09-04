@@ -101,7 +101,7 @@ void
 NoICEfopen(void)
 {
 	if (jflag) {
-		jfp = afile(linkp->f_idp, "noi", 1);
+		jfp = afile(outbase ? outbase : linkp->f_idp, "noi", 1);
 		if (jfp == NULL) {
 			lkexit(1);
 		}
