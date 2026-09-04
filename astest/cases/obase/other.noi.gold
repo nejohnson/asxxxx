@@ -1,0 +1,2 @@
+DEF .__.ABS. 0x0
+LOAD _astest/obase/other.hex

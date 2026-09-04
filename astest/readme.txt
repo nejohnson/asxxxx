@@ -43,6 +43,12 @@ In a link the ';' separates one line of the command file from the
 next, so that an option and its argument stay together:  aslink
 reads "-a name=expr" as one line, not as two.
 
+'%w' in an argument expands to the working directory and '%s' to
+the input directory, for the options that need a path rather than a
+bare name:  a bare name in a command file is resolved relative to
+that file, but a file the linker creates is resolved relative to the
+directory the linker was run from.
+
 Nothing is quoted.  The quoting rules of the Bourne shell, cmd.exe
 and COMMAND.COM do not agree, so a path containing a space is
 refused at startup instead.

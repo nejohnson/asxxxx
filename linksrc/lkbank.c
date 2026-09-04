@@ -554,6 +554,10 @@ lkfopen(void)
 	if (outnam != NULL) {
 		idx = strlen(outnam);
 		strcpy(str, outnam);
+	} else
+	if (outbase != NULL) {
+		idx = strlen(outbase);
+		strcpy(str, outbase);
 	} else {
 		idx = linkp->f_idx + fndext(linkp->f_idp + linkp->f_idx);
 		strncpy(str, linkp->f_idp, idx);

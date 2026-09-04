@@ -1013,6 +1013,10 @@ extern	char	*outnam;	/*	Pointer to -o+ output file name
 				 */
 extern	char	*outext;	/*	Pointer to -o+ output file extension
 				 */
+extern	char	*outbase;	/*	Pointer to -o+ output base file name,
+				 *	used for every file the linker creates
+				 *	whose name is not otherwise specified
+				 */
 extern	int	objflg;		/*	Linked file/library object output flag
 				 */
 

@@ -166,6 +166,7 @@ main(int argc, char *argv[])
 
 	outnam = NULL;
 	outext = NULL;
+	outbase = NULL;
 
 	startp = (struct lfile *) new (sizeof (struct lfile));
 	startp->f_idp = "";
@@ -208,6 +209,8 @@ main(int argc, char *argv[])
 				case 'S':
 				case 't':
 				case 'T':
+				case 'o':
+				case 'O':
 					if (*p == '+') {
 						sprintf(ip+2, "%c", *p++);
 					} else {
@@ -732,7 +735,7 @@ map(void)
 	/*
 	 * Open Map File
 	 */
-	mfp = afile(linkp->f_idp, "map", 1);
+	mfp = afile(outbase ? outbase : linkp->f_idp, "map", 1);
 	if (mfp == NULL) {
 		fprintf(stderr, "?ASlink-Error-Failed to create map file\n");
 		lkexit(ER_FATAL);
@@ -1007,7 +1010,11 @@ parse()
 
 				case 'o':
 				case 'O':
-					objflg = 0;
+					if (*ip == '+') {
+						ip = filespec(ip);
+					} else {
+						objflg = 0;
+					}
 					break;
 
 				case 'p':
@@ -1230,7 +1237,11 @@ char *filespec(char *p)
 			} else {
 				*q = '\0';
 				if (*p) {
-					outnam = strsto(p);
+					if ((opt == 'o') || (opt == 'O')) {
+						outbase = strsto(p);
+					} else {
+						outnam = strsto(p);
+					}
 					p += strlen(p);
 				}
 				if (*(++q)) {
@@ -1241,7 +1252,11 @@ char *filespec(char *p)
 		} else
 		/* Form -*+name */
 		if (*p != '\0') {
-			outnam = strsto(p);
+			if ((opt == 'o') || (opt == 'O')) {
+				outbase = strsto(p);
+			} else {
+				outnam = strsto(p);
+			}
 			p += strlen(p);
 		} else {
 			fprintf(stderr, "?ASlink-Error-Missing [name][.ext] After -%c+\n", opt);
@@ -1688,6 +1703,8 @@ char *usetxt[] = {
 	"    '-*+name'      (or)  '-*+  name'      ->  name[.---]",
 	"    '-*+name.ext'  (or)  '-*+  name.ext'  ->   name.ext",
 	"  -o   Linked file/library output enable (default)",
+	"  -o+  Output base name               -o+[ ]name",
+	"         for the map, the debug files and the linked output",
 	"  -v   Linked file/library output disable",
 #if NOICE
 	"  -j   NoICE Debug output as file1[.noi]",
