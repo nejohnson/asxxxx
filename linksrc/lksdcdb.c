@@ -111,7 +111,12 @@ void SDCDBcopy(char *str)
 	 * Copy cdb file if present and requested.
 	 */
 	if (yflag && yfp) {
-		xfp = afile(str,"cdb",0);
+		/*
+		 * A module compiled without debugging information has no
+		 * cdb file.  That is not a fault - the loop below simply
+		 * has nothing to copy - so the open is made silently.
+		 */
+		xfp = afile(str,"cdb",16);
 		if (xfp) {
 			while (fgets(line, sizeof(line), xfp) != NULL) {
 				fprintf(yfp, "%s", line);
