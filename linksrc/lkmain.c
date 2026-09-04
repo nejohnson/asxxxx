@@ -1511,6 +1511,11 @@ setgbl(void)
  *
  *	side effects:
  *		File is opened for read or write.
+ *
+ *	The wf argument is a bit field:  1 selects write, 2 binary,
+ *	4 downgrades a failure to open from an error to a warning,
+ *	8 keeps an extension already present in fn, and 16 reports
+ *	nothing at all - for a file whose absence is not a fault.
  */
 
 FILE *
@@ -1580,6 +1585,9 @@ afile(char *fn, char *ft, int wf)
 	case 3:	frmt = "wb";	break;
 	}
 	if ((fp = fopen(afspec, frmt)) == NULL) {
+		if (wf & 16) {
+			;
+		} else
 		if (wf & 4) {
 			fprintf(stderr, "?ASlink-Warning-<cannot %s> : \"%s\"\n", (frmt[0] == 'w')?"create":"open", afspec);
 		} else {
