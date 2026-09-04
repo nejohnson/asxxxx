@@ -1290,7 +1290,7 @@ extern	void		relerr4(char *str);
 extern	void		relerp4(char *str);
 
 /* lklibr.c */
-extern	void		addfile(char *path, char *libfil);
+extern	int		addfile(char *path, char *libfil);
 extern	void		addlib(void);
 extern	void		addpath(void);
 extern	int		fndsym(char *name);
