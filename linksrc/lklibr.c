@@ -122,15 +122,29 @@ void
 addlib(void)
 {
 	struct lbpath *lbph;
+	int found;
 
 	unget(getnb());
 
 	if (lbphead == NULL) {
-		addfile(NULL,ip);
-		return;
-	}	
-	for (lbph=lbphead; lbph; lbph=lbph->next) {
-		addfile(lbph->path,ip);
+		found = addfile(NULL,ip);
+	} else {
+		found = 0;
+		for (lbph=lbphead; lbph; lbph=lbph->next) {
+			found |= addfile(lbph->path,ip);
+		}
+		/*
+		 * None of the -k paths held it.  The -l argument may be a
+		 * path in its own right, relative to the current directory
+		 * rather than to any library path.
+		 */
+		if (found == 0) {
+			found = addfile(NULL,ip);
+		}
+	}
+	if (found == 0) {
+		fprintf(stderr,
+			"?ASlink-Warning-Cannot find library file %s\n", ip);
 	}
 }
 
@@ -172,13 +186,14 @@ addlib(void)
  *		An lbname structure may be created.
  */
 
-void
+int
 addfile(char *path, char *libfil)
 {
 	FILE *fp;
 	char *str, *strend;
 	char *p, *q;
 	struct lbname *lbnh, *lbn;
+	int found = 0;
 
 	if ((path != NULL) && (strchr(libfil,':') == NULL)){
 		str = (char *) malloc (strlen(path) + strlen(libfil) + 5);
@@ -202,6 +217,7 @@ addfile(char *path, char *libfil)
 	}
 	if ((fp = fopen(str, "r")) != NULL) {
 		fclose(fp);
+		found = 1;
 		lbnh = (struct lbname *) new (sizeof(struct lbname));
 		if (lbnhead == NULL) {
 			lbnhead = lbnh;
@@ -211,8 +227,21 @@ addfile(char *path, char *libfil)
 				lbn = lbn->next;
 			lbn->next = lbnh;
 		}
-		if ((path != NULL) && (strchr(libfil,':') == NULL)){
-			lbnh->path = path;
+		/*
+		 * The names inside a library are relative to the library
+		 * itself, so the path fndsym() prefixes to them is the
+		 * directory the library was actually found in - which is
+		 * not the -k path whenever the -l argument carried a
+		 * directory of its own, and is not the current directory
+		 * when the library was found without a -k path at all.
+		 */
+		p = str + strlen(str);
+		while ((p != str) && (*(p-1) != '\\') && (*(p-1) != '/')) {
+			p -= 1;
+		}
+		if (p != str) {
+			lbnh->path = (char *) new ((int) (p - str) + 1);
+			strncpy(lbnh->path, str, (int) (p - str));
 		}
 		lbnh->libfil = (char *) new (strlen(libfil) + 1);
 		strcpy(lbnh->libfil,libfil);
@@ -221,6 +250,7 @@ addfile(char *path, char *libfil)
 	} else {
 		free(str);
 	}
+	return(found);
 }
 
 /*)Function	void	search(void)

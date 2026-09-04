@@ -1340,7 +1340,7 @@ extern	void		gclist(FILE *fp);
 extern	void		gcrsav(void);
 
 /* lklibr.c */
-extern	void		addfile(char *path, char *libfil);
+extern	int		addfile(char *path, char *libfil);
 extern	void		addlib(void);
 extern	void		addpath(void);
 extern	int		fndsym(char *name);
