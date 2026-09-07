@@ -84,6 +84,29 @@ eval(void)
 
 	c = getnb();
 	v = 0;
+	/*
+	 * Every field eval() reads comes from a machine generated .rel
+	 * file and is a number in the current radix.  A character that is
+	 * neither a digit nor the end of the line means the file is not
+	 * one:  it is corrupt, or it was written in a radix other than the
+	 * one its header asked for.
+	 *
+	 * This has to be caught here rather than left to the callers.  The
+	 * loop below would not run, unget() would put the character back
+	 * unread, and eval() would return 0 having consumed nothing - so
+	 * the 'while (more())' loops that read these records would call it
+	 * again on the same character, and again, without end.
+	 */
+	if ((digit(c, radix) < 0) && (c != '\0') && (c != ';')) {
+		fprintf(stderr,
+			"?ASlink-Error-Invalid digit 0x%02X in object record,"
+			" radix %d\n", c & 0xFF, radix);
+		if (cfp != NULL) {
+			fprintf(stderr, "              file : %s\n", cfp->f_idp);
+		}
+		fprintf(stderr, "              line : %s\n", ib);
+		lkexit(ER_FATAL);
+	}
 	while ((n = digit(c, radix)) >= 0) {
 		v = v*radix + n;
 		c = get();
