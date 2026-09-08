@@ -432,6 +432,9 @@ char	aretbl[] = { "Area Table" };
 
 char	module[NCPS+2];	/*	module name string
 			 */
+char *	abistr;		/*	.abi compatibility string, or
+			 *	NULL if the module declared none
+			 */
 
 /*
  *	The mne structure is a linked list of the assembler

@@ -63,7 +63,7 @@
           1.3.6     \cf2 Terms\cf0                                            1-15 \par
           1.3.7     \cf2 Expressions\cf0                                      1-16 \par
           1.4     \cf1 GENERAL ASSEMBLER DIRECTIVES                      \cf0 1-18 \par
-          1.4.1     \cf2 .module Directive                               \cf0 1-18 \par
+          1.4.1     \cf2 .module and .abi Directives                     \cf0 1-18 \par
           1.4.2     \cf2 .title Directive                                \cf0 1-18 \par
           1.4.3     \cf2 .sbttl Directive                                \cf0 1-19 \par
           1.4.4     \cf2 .list and .nlist Directives                     \cf0 1-19 \par
@@ -175,7 +175,7 @@
           3.5     \cf1 ASXXXX VERSION 6 (5 AND 4) LINKING                \cf0 3-11 \par
           3.5.1     \cf2 Object Module Format                            \cf0 3-11 \par
           3.5.2     \cf2 Header Line                                     \cf0 3-12 \par
-          3.5.3     \cf2 Module Line                                     \cf0 3-12 \par
+          3.5.3     \cf2 Module and ABI Lines                            \cf0 3-12 \par
           3.5.4     \cf2 Merge Mode Line                                 \cf0 3-12 \par
           3.5.5     \cf2 Bank Line                                       \cf0 3-13 \par
           3.5.6     \cf2 Area Line                                       \cf0 3-13 \par
@@ -1438,7 +1438,7 @@
         operands.  Legal operands differ with each directive.  \par
 \par
 \par
-        1.4.1  \cf2 .module Directive \cf0\par
+        1.4.1  \cf2 .module and .abi Directives \cf0\par
 \par
         Format:  \par
 \par
@@ -1454,6 +1454,21 @@
         symbols are  reported  and  the  modules  referencing  them  are\par
         listed.  \par
 \par
+                .abi text \par
+\par
+           The  .abi  directive records a string in the assembler output\par
+        file.  The assembler does not interpret it:  the linker compares\par
+        it,  whole,  between  the  modules  it links and reports any two\par
+        whose  strings differ.  A module with no .abi directive makes no\par
+        claim  and  is not compared against.  Only one string is allowed\par
+        per assembled module.\par
+\par
+           The  string is for what would make two modules unsafe to link\par
+        together  - a calling convention, a memory model, the width of a\par
+        type.   As  the  strings  are  compared  in full, one mentioning\par
+        anything  two  modules  may legitimately differ upon will report\par
+        conflicts which are not real.\par
+\par
 \par
         1.4.2  \cf2 .title Directive \cf0\par
 \par
@@ -1463,14 +1478,14 @@
 \par
            The .title directive provides a character string to be placed\par
         on the second line of each page during listing.  The string  be-\par
-        gins  with  the first non white space character (after any space\par
-        or tab) and ends with the end of the line.  \par
-\par
-\par
 \page\par
 \par
         THE ASSEMBLER                                          PAGE 1-19\par
         GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
+        gins  with  the first non white space character (after any space\par
+        or tab) and ends with the end of the line.  \par
 \par
 \par
         1.4.3  \cf2 .sbttl Directive \cf0\par
@@ -1518,16 +1533,16 @@
                 md      -       macro definition listing\par
                 me      -       macro expansion listing\par
                 meb     -       macro expansion binary only listing\par
-                mel     -       macro expansion binary with source\par
-                !       -       sets the listing mode to\par
-                                !(.list) or !(.nlist) before\par
-                                applying the sublist options\par
 \page\par
 \par
         THE ASSEMBLER                                          PAGE 1-20\par
         GENERAL ASSEMBLER DIRECTIVES\par
 \par
 \par
+                mel     -       macro expansion binary with source\par
+                !       -       sets the listing mode to\par
+                                !(.list) or !(.nlist) before\par
+                                applying the sublist options\par
 \par
 \par
         The  'normal' listing mode .list is the combination of err, loc,\par
@@ -1573,14 +1588,14 @@
         \par
                 .list   (!,src) ; list only the source line\par
         \par
-                .list   1       ; enable listing even within\par
-                                ; a FALSE conditional block\par
-\par
-\par
 \page\par
 \par
         THE ASSEMBLER                                          PAGE 1-21\par
         GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
+                .list   1       ; enable listing even within\par
+                                ; a FALSE conditional block\par
 \par
 \par
         1.4.5  \cf2 .page Directive \cf0\par
@@ -1628,16 +1643,16 @@
 \par
         where:  string  represents a text string.  The string is printed\par
                         to the console during the final assembly pass.  \par
-\par
-                /  /    represent   the  delimiting  characters.   These\par
-                        delimiters   may   be   any   paired    printing\par
-                        characters,  as  long  as the characters are not\par
 \page\par
 \par
         THE ASSEMBLER                                          PAGE 1-22\par
         GENERAL ASSEMBLER DIRECTIVES\par
 \par
 \par
+\par
+                /  /    represent   the  delimiting  characters.   These\par
+                        delimiters   may   be   any   paired    printing\par
+                        characters,  as  long  as the characters are not\par
                         contained within  the  string  itself.   If  the\par
                         delimiting  characters  do  not  match, the .msg\par
                         directive will give the <q> error.  \par
@@ -1683,15 +1698,15 @@
                 .       the high-order byte will be truncated.\par
                 .       Multiple expressions must be\par
                 expn    separated by commas.\par
-\par
-           The  .byte, .db, or .fcb directives are used to generate suc-\par
-        cessive bytes of binary data in the object module.  \par
-\par
 \page\par
 \par
         THE ASSEMBLER                                          PAGE 1-23\par
         GENERAL ASSEMBLER DIRECTIVES\par
 \par
+\par
+\par
+           The  .byte, .db, or .fcb directives are used to generate suc-\par
+        cessive bytes of binary data in the object module.  \par
 \par
         1.4.9  \cf2 .word, .dw, and .fdb Directives \cf0\par
 \par
@@ -1738,12 +1753,12 @@
         sive triples of binary data in the object module.  (These direc-\par
         tives   are  only  available  in  assemblers  supporting  24-bit\par
         addressing.) \par
-\par
-\par
 \page\par
 \par
         THE ASSEMBLER                                          PAGE 1-24\par
         GENERAL ASSEMBLER DIRECTIVES\par
+\par
+\par
 \par
 \par
         1.4.11  \cf2 .dl, .long, .4byte, and .quad Directives \cf0\par
@@ -6226,13 +6241,20 @@
         ject module segment.  \par
 \par
 \par
-        3.5.3  \cf2 Module Line \cf0\par
+        3.5.3  \cf2 Module and ABI Lines \cf0\par
 \par
                 M name \par
 \par
            The  module  line  specifies  the module name from which this\par
         header segment was assembled.  The module line will  not  appear\par
         if the .module directive was not used in the source program.  \par
+\par
+                O text \par
+\par
+           The  abi line carries the string given by the .abi directive,\par
+        and  will  not appear if the directive was not used.  The linker\par
+        requires  that  every  module carrying one carries the same one,\par
+        and reports two that do not agree.\par
 \par
 \par
         3.5.4  \cf2 Merge Mode Line \cf0\par
@@ -6259,12 +6281,12 @@
                     teger bit is active (bit <7> is set, 0x80) and  what\par
                     destination  bit  (bits  <4:0>,  0  -  31) should be\par
                     loaded with this normal integer bit.  \par
-\par
-\par
 \page\par
 \par
         THE LINKER                                             PAGE 3-13\par
         ASXXXX VERSION 6 (5 AND 4) LINKING\par
+\par
+\par
 \par
 \par
         3.5.5  \cf2 Bank Line \cf0\par

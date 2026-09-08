@@ -27,7 +27,7 @@ operands.  Legal operands differ with each directive.
 </PRE></B></H4>
 <code><b>
 <UL>
-<LI><A HREF="#module">  .module Directive </A> 
+<LI><A HREF="#module">  .module and .abi Directives </A> 
 <LI><A HREF="#title">  .title Directive </A>
 <LI><A HREF="#sbttl">  .sbttl Directive </A>
 <LI><A HREF="#list">  .list and .nlist Directives </A>
@@ -84,7 +84,7 @@ operands.  Legal operands differ with each directive.
 <HR SIZE="3" WIDTH="100%" NOSHADE>
 
 <H4><B><PRE>
-<A NAME = "module"></A><FONT COLOR="#FF0000">.module</FONT> Directive 
+<A NAME = "module"></A><FONT COLOR="#FF0000">.module</FONT> and <FONT COLOR="#FF0000">.abi</FONT> Directives 
 
 Format:  
 
@@ -99,6 +99,21 @@ The main use of this directive is to allow the linker to  report
 a modules' use of undefined symbols.  At link time all undefined
 symbols are  reported  and  the  modules  referencing  them  are
 listed.  
+
+        .abi text 
+
+   The  .abi  directive records a string in the assembler output
+file.  The assembler does not interpret it:  the linker compares
+it,  whole,  between  the  modules  it links and reports any two
+whose  strings differ.  A module with no .abi directive makes no
+claim  and  is not compared against.  Only one string is allowed
+per assembled module.
+
+   The  string is for what would make two modules unsafe to link
+together  - a calling convention, a memory model, the width of a
+type.   As  the  strings  are  compared  in full, one mentioning
+anything  two  modules  may legitimately differ upon will report
+conflicts which are not real.
 
 </PRE></B></H4>
 <H5><A HREF= #Directives> =&gt; Section Index</A></H5>

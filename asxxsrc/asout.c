@@ -1283,6 +1283,13 @@ outgsd(void)
 	}
 
 	/*
+	 * Compatibility string
+	 */
+	if (abistr != NULL) {
+		fprintf(ofp, "O %s\n", abistr);
+	}
+
+	/*
 	 * Modes
 	 */
 	for (i=0; i<nmode; i++) {
