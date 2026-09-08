@@ -617,6 +617,11 @@ link(void)
 			module();
 		break;
 
+	case 'O':
+		if (pass == 0)
+			abi();
+		break;
+
 	case 'A':
 		if (pass == 0)
 			newarea();

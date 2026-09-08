@@ -632,7 +632,7 @@ struct	sym
 #define	  O_FUNC     1		/* .function */
 #define	  O_ENDF     2		/* .endfunc */
 /*			28  */	/* Spare Definition */
-/*			29  */	/* Spare Definition */
+#define	S_ABI		29	/* .abi */
 
 #define S_DIREOL	30	/* Assembler Directive End Of List */
 
@@ -1254,6 +1254,9 @@ extern	char	symtbl[];	/*	string "Symbol Table"
 extern	char	aretbl[];	/*	string "Area Table"
 				 */
 extern	char	module[NCPS+2];	/*	module name string
+				 */
+extern	char *	abistr;		/*	.abi compatibility string, or
+				 *	NULL if the module declared none
 				 */
 extern	FILE	*hfp;		/*	.lst to .rst hint file handle
 				 */

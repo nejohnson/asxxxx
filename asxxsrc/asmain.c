@@ -1973,6 +1973,42 @@ loop:
 		}
 		break;
 
+	case S_ABI:
+		/*
+		 * .abi <text> records a string that every module linked
+		 * together must give the same answer for.  The assembler
+		 * does not read it:  it is an opaque key, written into the
+		 * object file and compared by the linker, which reports a
+		 * disagreement between two modules.
+		 *
+		 * What belongs in it is whatever would make two modules
+		 * unsafe to link - a calling convention, a memory model,
+		 * the width of a type.  What does not belong in it is
+		 * anything two modules may legitimately differ on, since
+		 * the strings are compared whole:  a key that says more
+		 * than it needs to reports conflicts that are not real.
+		 */
+		if ((c = getnb()) == 0) {
+			qerr();
+			break;
+		}
+		unget(c);
+		p = ip;
+		q = p + strlen(p);
+		while ((q != p) && ((*(q-1) == ' ') || (*(q-1) == '\t'))) {
+			q -= 1;
+		}
+		*q = 0;
+		if (abistr == NULL) {
+			abistr = strsto(p);
+		} else
+		if (strcmp(abistr, p)) {
+			err('m');
+		}
+		ip = q;
+		lmode = SLIST;
+		break;
+
 	case S_MODUL:
 		getst(id, -1);
 		if (module[0]) {
