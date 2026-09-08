@@ -303,6 +303,11 @@ FILE	*hfp = NULL;	/*	File handle for input ASxxxx
 struct	head	*headp;	/*	The pointer to the first
 			 *	head structure of a linked list
 			 */
+char	*abistr;	/*	The .abi string of the first module
+			 *	to declare one, or NULL
+			 */
+char	*abimod;	/*	The name of that module
+			 */
 struct	head	*hp;	/*	Pointer to the current
 			 *	head structure
 			 */

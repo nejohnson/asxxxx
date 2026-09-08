@@ -931,6 +931,11 @@ extern	struct	lfile	*lfp;	/*	pointer to current lfile structure
 extern	struct	head	*headp;	/*	The pointer to the first
 				 *	head structure of a linked list
 				 */
+extern	char	*abistr;	/*	The .abi string of the first module
+				 *	to declare one, or NULL
+				 */
+extern	char	*abimod;	/*	The name of that module
+				 */
 extern	struct	head	*hp;	/*	Pointer to the current
 				 *	head structure
 				 */
@@ -1221,6 +1226,7 @@ extern	void		setbank(void);
 
 /* lkhead.c */
 extern	void		module(void);
+extern	void		abi(void);
 extern	void		newhead(void);
 extern	void		newmode(void);
 

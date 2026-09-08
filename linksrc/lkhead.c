@@ -309,3 +309,63 @@ module(void)
 		lkerr++;
 	}
 }
+
+/*)Function	void	abi(void)
+ *
+ *	The function abi() reads the .abi compatibility string of the
+ *	module being loaded.  The string is opaque:  the linker does not
+ *	read it, it only requires that every module carrying one carries
+ *	the same one.  A module without an .abi record makes no claim and
+ *	is not compared against.
+ *
+ *	The first string seen is kept, along with the name of the module
+ *	that gave it, so that a later disagreement can name both sides.
+ *
+ *	local variables:
+ *		char *	p		pointer to the string
+ *
+ *	global variables:
+ *		char *	abistr		the string kept
+ *		char *	abimod		the module that gave it
+ *		head *	headp		The pointer to the first
+ *				 	head structure
+ *		head *	hp		Pointer to the current
+ *				 	head structure
+ *		int	lkerr		error flag
+ *
+ *	functions called:
+ *		int	fprintf()	c_library
+ *		int	getnb()		lklex.c
+ *		char *	strsto()	lksym.c
+ *		int	strcmp()	c_library
+ *		void	unget()		lklex.c
+ *
+ *	side effects:
+ *		A disagreement is reported and counted in lkerr.
+ */
+
+void
+abi(void)
+{
+	char *p;
+
+	if (headp == NULL) {
+		fprintf(stderr, "?ASlink-Error-No header defined\n");
+		lkerr++;
+		return;
+	}
+	unget(getnb());
+	p = ip;
+	if (abistr == NULL) {
+		abistr = strsto(p);
+		abimod = hp->m_id;
+	} else
+	if (strcmp(abistr, p)) {
+		fprintf(stderr, "?ASlink-Warning-Conflicting .abi strings:\n");
+		fprintf(stderr, "                \"%s\" in module %s\n",
+			abistr, (abimod != NULL) ? abimod : "");
+		fprintf(stderr, "                \"%s\" in module %s\n",
+			p, (hp->m_id != NULL) ? hp->m_id : "");
+		lkerr++;
+	}
+}

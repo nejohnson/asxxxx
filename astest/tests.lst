@@ -22,3 +22,5 @@ obase_i
 optcdb
 libpath
 badrel
+abi
+abichk
