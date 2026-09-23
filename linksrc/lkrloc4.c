@@ -1171,7 +1171,7 @@ errdmp4(FILE *fptr, char *str)
 "         file              module            area                   offset\n");
 	fprintf(fptr,
 "  Refby  %-14.14s    %-14.14s    %-14.14s    ",
-			hp->h_lfile->f_idp,
+			lkmfile(hp),
 			&hp->m_id[0],
 			&a[aindex]->a_bap->a_id[0]);
 	prntval(fptr, rerr.rtbase);
@@ -1189,7 +1189,7 @@ errdmp4(FILE *fptr, char *str)
 /*        |                 |                 |                 |           */
 	fprintf(fptr,
 "  Defin  %-14.14s    %-14.14s    %-14.14s    ",
-			raxp->a_bhp->h_lfile->f_idp,
+			lkmfile(raxp->a_bhp),
 			&raxp->a_bhp->m_id[0],
 			&raxp->a_bap->a_id[0]);
 	if (mode & R4_SYM) {
@@ -1274,7 +1274,7 @@ erpdmp4(FILE *fptr, char *str)
 "         file              module            pgarea               pgoffset\n");
 	fprintf(fptr,
 "  PgDef  %-14.14s    %-14.14s    %-14.14s    ",
-			thp->h_lfile->f_idp,
+			lkmfile(thp),
 			&thp->m_id[0],
 			&sdp.s_area->a_id[0]);
 	prntval(fptr, sdp.s_area->a_addr + sdp.s_addr);

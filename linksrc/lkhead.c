@@ -39,6 +39,52 @@
  *	lkhead.c contains no local variables.
  */
 
+/*)Function	char *	lkmfile(thp)
+ *
+ *		struct head *thp	module header
+ *
+ *	The function lkmfile() returns the name of the file a module was
+ *	read from, for use in a diagnostic.
+ *
+ *	A module named in the link script has an lfile and is reported by
+ *	its path.  A module pulled from a library has none:  loadfile() in
+ *	lklibr.c opens the library member directly, so it never becomes the
+ *	current lfile, and lkmain.c has already cleared cfp for the library
+ *	pass by then.  Such a module is reported by its library instead.
+ *	The remaining case, a header with neither, cannot arise today but is
+ *	given a name rather than a NULL:  every caller is in the middle of
+ *	printing an error, and taking the linker down while it does so -
+ *	which is what dereferencing h_lfile unconditionally used to do -
+ *	loses the diagnostic the user was about to be given.
+ *
+ *	local variables:
+ *		none
+ *
+ *	global variables:
+ *		none
+ *
+ *	functions called:
+ *		none
+ *
+ *	side effects:
+ *		none
+ */
+
+char *
+lkmfile(struct head *thp)
+{
+	if (thp == NULL) {
+		return "<unknown>";
+	}
+	if (thp->h_lfile != NULL) {
+		return thp->h_lfile->f_idp;
+	}
+	if (thp->h_lspc != NULL) {
+		return thp->h_lspc;
+	}
+	return "<library>";
+}
+
 /*)Function	void	newhead(void)
  *
  *	The function newhead() creates a head structure.  All head
@@ -112,6 +158,7 @@ newhead(void)
 	 * Initialize the header
 	 */
 	hp->h_lfile = cfp;		/* Set file pointer */
+	hp->h_lspc = lblibspc;		/* Library, if this came from one */
 	hp->m_id = "";			/* No Module */
 	/*
 	 * Scan for Parameters	 
