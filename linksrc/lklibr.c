@@ -30,6 +30,15 @@
 
 #include "aslink.h"
 
+/*
+ * The library object file currently being read, or NULL when the modules
+ * being read came from the link script.  A library member is opened here
+ * with fopen() rather than reached through the script's file list, so it
+ * never becomes the current lfile and its header carries no h_lfile - see
+ * lkmfile() in lkhead.c.
+ */
+char	*lblibspc = NULL;
+
 /*)Module	lklibr.c
  *
  *	The module lklibr.c contains the functions which
@@ -596,11 +605,13 @@ loadfile(char *filspc)
 	char str[NINPUT];
 
 	if ((fp = fopen(filspc,"r")) != NULL) {
+		lblibspc = filspc;
 		while (fgets(str, NINPUT, fp) != NULL) {
 			chopcrlf(str);
 			ip = str;
 			link();
 		}
+		lblibspc = NULL;
 		fclose(fp);
 	}
 }
