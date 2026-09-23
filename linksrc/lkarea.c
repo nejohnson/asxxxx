@@ -646,10 +646,20 @@ lnksect(struct area *tap)
 	 * Written against a_mask rather than a literal so that it follows
 	 * -2/-3/-4.  The subtraction is arranged to keep both sides inside
 	 * the address space:  a_addr + size would itself wrap when a_bytes
-	 * is the width of a_uint.  a_addr is masked first because expr()
-	 * sign extends, so a base given as -a AREA=0xFF80 arrives here as
-	 * 0xFFFFFF80 and would make the subtraction underflow;  the map
-	 * prints it masked, which is why it reads correctly there.
+	 * is the width of a_uint.
+	 *
+	 * Both operands are masked first, because both arrive sign extended.
+	 * A base given as -a AREA=0xFF80 reaches here as 0xFFFFFF80, and an
+	 * area of 0x96F3 bytes - anything at or above 0x8000 - reaches here
+	 * as 0xFFFF96F3.  Either one unmasked makes the comparison meaningless:
+	 * the first underflows the subtraction, the second reports every large
+	 * area as an overrun however much room it has.  The map prints both
+	 * masked, which is exactly why this is easy to miss.
+	 *
+	 * The masking means an area of 64K or more cannot be distinguished
+	 * from its remainder and is not caught here.  In a 16 bit space that
+	 * is pathological, and the sizes are sign extended by the time they
+	 * arrive, so there is nothing left to test against.
 	 *
 	 * An absolute area is skipped, and not only _abs_ itself.  Its
 	 * sections each carry their own address, so a_addr and the summed
@@ -660,9 +670,9 @@ lnksect(struct area *tap)
 	 * inside.  Catching an absolute section that does not fit wants a
 	 * test per section rather than per area.
 	 */
-	if ((size != 0) &&
+	if (((size & a_mask) != 0) &&
 	    ((tap->a_flag & A4_ABS) != A4_ABS) &&
-	    ((size - 1) > (a_mask - (tap->a_addr & a_mask)))) {
+	    (((size & a_mask) - 1) > (a_mask - (tap->a_addr & a_mask)))) {
 		fprintf(stderr,
 			"?ASlink-Error-Area %s Exceeds The Address Space\n",
 			tap->a_id);
