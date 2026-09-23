@@ -649,11 +649,19 @@ lnksect(struct area *tap)
 	 * is the width of a_uint.  a_addr is masked first because expr()
 	 * sign extends, so a base given as -a AREA=0xFF80 arrives here as
 	 * 0xFFFFFF80 and would make the subtraction underflow;  the map
-	 * prints it masked, which is why it reads correctly there.  _abs_
-	 * is not a placed area and is left alone.
+	 * prints it masked, which is why it reads correctly there.
+	 *
+	 * An absolute area is skipped, and not only _abs_ itself.  Its
+	 * sections each carry their own address, so a_addr and the summed
+	 * size do not describe one span and there is nothing here to
+	 * compare:  hc08's XABS came through with a_addr 0 and a size of
+	 * 0xFFFFCAAE, that being an absolute address of 0xCAAE sign
+	 * extended, and was reported as overrunning a space it sits well
+	 * inside.  Catching an absolute section that does not fit wants a
+	 * test per section rather than per area.
 	 */
 	if ((size != 0) &&
-	    (! symeq(tap->a_id, _abs_, 1)) &&
+	    ((tap->a_flag & A4_ABS) != A4_ABS) &&
 	    ((size - 1) > (a_mask - (tap->a_addr & a_mask)))) {
 		fprintf(stderr,
 			"?ASlink-Error-Area %s Exceeds The Address Space\n",
