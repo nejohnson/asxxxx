@@ -517,6 +517,7 @@ struct	head
 	int	h_nmode;	/* # of modes */
 	struct	mode  **m_list;	/* Mode list */
 	char *	m_id;		/* Module name */
+	char *	h_lspc;		/* Library file, if the module came from one */
 };
 
 /*
@@ -1227,6 +1228,7 @@ extern	void		setbank(void);
 /* lkhead.c */
 extern	void		module(void);
 extern	void		abi(void);
+extern	char *		lkmfile(struct head *thp);
 extern	void		newhead(void);
 extern	void		newmode(void);
 
@@ -1352,6 +1354,7 @@ extern	void		addpath(void);
 extern	int		fndsym(char *name);
 extern	void		library(void);
 extern	void		loadfile(char *filspc);
+extern	char *		lblibspc;	/* Library being loaded, or NULL */
 extern	void		search(void);
 
 /* lkout.c */
