@@ -637,6 +637,29 @@ lnksect(struct area *tap)
 			tap->a_id);
 		lkerr++;
 	}
+	/*
+	 * An area has to end inside the address space.  Nothing further on
+	 * catches this:  the addresses simply wrap, and the far end of the
+	 * area reappears at the bottom of memory on top of whatever is
+	 * already there, with the output written and no error given.
+	 *
+	 * Written against a_mask rather than a literal so that it follows
+	 * -2/-3/-4.  The subtraction is arranged to keep both sides inside
+	 * the address space:  a_addr + size would itself wrap when a_bytes
+	 * is the width of a_uint.  a_addr is masked first because expr()
+	 * sign extends, so a base given as -a AREA=0xFF80 arrives here as
+	 * 0xFFFFFF80 and would make the subtraction underflow;  the map
+	 * prints it masked, which is why it reads correctly there.  _abs_
+	 * is not a placed area and is left alone.
+	 */
+	if ((size != 0) &&
+	    (! symeq(tap->a_id, _abs_, 1)) &&
+	    ((size - 1) > (a_mask - (tap->a_addr & a_mask)))) {
+		fprintf(stderr,
+			"?ASlink-Error-Area %s Exceeds The Address Space\n",
+			tap->a_id);
+		lkerr++;
+	}
 }
 
 
