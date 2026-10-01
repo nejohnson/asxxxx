@@ -1126,30 +1126,61 @@ machine(struct mne *mp)
 		break;
 
 	case X_TST:
-		t1 = addr(&e1);
-		if (t1 == S_USER)
-			t1 = e1.e_mode = S_IMMED;
-		if (t1 == S_R8) {
-			outab(0xED);
-			outab(op | (e1.e_addr<<3));
-			break;
+		/*
+		 * tst	(hl)
+		 * tst	r
+		 * tst	n	[#n]
+		 *
+		 * and the same three with the accumulator written out:
+		 *
+		 * tst	a,(hl)
+		 * tst	a,r
+		 * tst	a,n	[a,#n]
+		 *
+		 * The destination can only ever be a, so naming it adds
+		 * nothing and both spellings assemble the same.  Zilog's
+		 * own Z180 manual writes the one operand form, but the two
+		 * operand form reads like every other instruction that
+		 * works on the accumulator, which is why code generators
+		 * tend to emit it - SDCC does.  Accept either, the way the
+		 * arithmetic and logic group already does.
+		 */
+		t1 = 0;
+		t2 = addr(&e2);
+		if (t2 == S_USER)
+			t2 = e2.e_mode = S_IMMED;
+		if (more()) {
+			if ((t2 != S_R8) || (e2.e_addr != A))
+				++t1;
+			comma(1);
+			clrexpr(&e2);
+			t2 = addr(&e2);
+			if (t2 == S_USER)
+				t2 = e2.e_mode = S_IMMED;
 		}
-		if (t1 == S_IDHL) {
-			outab(0xED);
-			outab(0x34);
-			break;
-		}
-		if (t1 == S_IMMED) {
-			outab(0xED);
-			if (mchtyp == X_HD64) {
-				outab(0x64);
-			} else if (mchtyp == X_ZXN) {
- 				outab(0x27);
-			} else {
-				aerr();
+		if (t1 == 0) {
+			if (t2 == S_R8) {
+				outab(0xED);
+				outab(op | (e2.e_addr<<3));
+				break;
 			}
-			outrb(&e1, 0);
-			break;
+			if (t2 == S_IDHL) {
+				outab(0xED);
+				outab(0x34);
+				break;
+			}
+			if (t2 == S_IMMED) {
+				outab(0xED);
+				if (mchtyp == X_HD64) {
+					outab(0x64);
+				} else if (mchtyp == X_ZXN) {
+					outab(0x27);
+				} else {
+					aerr();
+				}
+				outrb(&e2, 0);
+				break;
+			}
 		}
 		xerr('a', "Invalid Addressing Mode.");
 		break;
