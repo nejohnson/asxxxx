@@ -227,5 +227,6 @@ extern	int		gixiy(int v);
 extern	void		machine(struct mne *mp);
 extern	int		mchpcr(struct expr *esp, int *v, int n);
 extern	int		mchtyp;
+extern	int		allow_undoc;
 extern	void		minit(void);
 

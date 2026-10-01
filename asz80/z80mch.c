@@ -37,6 +37,14 @@ char	imtab[3] = { 0x46, 0x56, 0x5E };
 int	mchtyp;
 
 /*
+ * Non-zero when the undocumented IX/IY half register instructions are
+ * available.  Set by .allow_undocumented, and implied by .zxn: the
+ * ZX Spectrum Next's core documents them, so a program written for it
+ * should not have to ask twice.
+ */
+int	allow_undoc;
+
+/*
  * Opcode Cycle Definitions
  */
 #define	OPCY_SDP	((char) (0xFF))
@@ -503,6 +511,21 @@ machine(struct mne *mp)
 		mchtyp = op;
 		sym[2].s_addr = op;
 		lmode = SLIST;
+		allow_undoc = (mchtyp == X_ZXN);
+		break;
+
+	case X_UNDOCD:
+		/*
+		 * The HD64180/Z180 traps on an illegal instruction rather
+		 * than quietly doing what the Z80 did, so there is nothing
+		 * here to enable and asking for it is a mistake worth
+		 * reporting.
+		 */
+		if (mchtyp == X_HD64) {
+			xerr('a', "HD64180/Z180: Traps on illegal instruction");
+		} else {
+			allow_undoc = 1;
+		}
 		break;
 
 	case X_INH1:
@@ -745,6 +768,62 @@ machine(struct mne *mp)
 		t2 = addr(&e2);
 		if (t2 == S_USER)
 			t2 = e2.e_mode = S_IMMED;
+		/*
+		 * ld	ixh,n	ld	ixl,n
+		 * ld	iyh,n	ld	iyl,n
+		 */
+		if (allow_undoc &&
+		    ((t1 == S_R8U1) || (t1 == S_R8U2)) && (t2 == S_IMMED)) {
+			outab((t1 == S_R8U1) ? 0xDD : 0xFD);
+			outab((e1.e_addr<<3) | 0x06);
+			outrb(&e2, 0);
+			break;
+		}
+		/*
+		 * ld	r,ixh	ld	r,ixl
+		 * ld	r,iyh	ld	r,iyl
+		 *
+		 * r may not be h or l: behind the prefix those name the index
+		 * register's own halves, so the instruction asked for cannot be
+		 * encoded and the one that would come out is a different move.
+		 */
+		if (allow_undoc &&
+		    (t1 == S_R8) && ((t2 == S_R8U1) || (t2 == S_R8U2))) {
+			if ((e1.e_addr == H) || (e1.e_addr == L)) {
+				xerr('a', "Invalid Addressing Mode.");
+				break;
+			}
+			outab((t2 == S_R8U1) ? 0xDD : 0xFD);
+			outab((e1.e_addr<<3) | 0x40 | e2.e_addr);
+			break;
+		}
+		/*
+		 * ld	ixh,r	ld	ixl,r
+		 * ld	iyh,r	ld	iyl,r
+		 */
+		if (allow_undoc &&
+		    ((t1 == S_R8U1) || (t1 == S_R8U2)) && (t2 == S_R8)) {
+			if ((e2.e_addr == H) || (e2.e_addr == L)) {
+				xerr('a', "Invalid Addressing Mode.");
+				break;
+			}
+			outab((t1 == S_R8U1) ? 0xDD : 0xFD);
+			outab((e1.e_addr<<3) | 0x40 | e2.e_addr);
+			break;
+		}
+		/*
+		 * ld	ixh,ixl	ld	iyl,iyh	...
+		 *
+		 * One prefix, so both halves must belong to the same index
+		 * register.  ld ixh,iyl cannot be said at all.
+		 */
+		if (allow_undoc &&
+		    (((t1 == S_R8U1) && (t2 == S_R8U1)) ||
+		     ((t1 == S_R8U2) && (t2 == S_R8U2)))) {
+			outab((t1 == S_R8U1) ? 0xDD : 0xFD);
+			outab((e1.e_addr<<3) | 0x40 | e2.e_addr);
+			break;
+		}
 		if (t1 == S_R8) {
 			v1 = op | (int) (e1.e_addr<<3);
 			if (genop(0, v1, &e2, 0) == 0)
@@ -898,6 +977,14 @@ machine(struct mne *mp)
 		t1 = addr(&e1);
 		v1 = (int) e1.e_addr;
 		if (t1 == S_R8) {
+			outab(op|(v1<<3));
+			break;
+		}
+		/*
+		 * inc	ixh	dec	ixl	...
+		 */
+		if (allow_undoc && ((t1 == S_R8U1) || (t1 == S_R8U2))) {
+			outab((t1 == S_R8U1) ? 0xDD : 0xFD);
 			outab(op|(v1<<3));
 			break;
 		}
@@ -1351,6 +1438,19 @@ genop(int pop, int op, struct expr *esp, int f)
 		outab(op|esp->e_addr);
 		return(0);
 	}
+	/*
+	 * op	ixh / ixl / iyh / iyl
+	 *
+	 * An index register's halves stand in for h and l behind a DD or
+	 * FD prefix, so the opcode is the ordinary one and only the prefix
+	 * is new.  Not offered behind a CB prefix: there the undocumented
+	 * encodings do something else entirely.
+	 */
+	if (allow_undoc && (pop == 0) && ((t1 == S_R8U1) || (t1 == S_R8U2))) {
+		outab((t1 == S_R8U1) ? 0xDD : 0xFD);
+		outab(op|esp->e_addr);
+		return(0);
+	}
 	if (t1 == S_IDHL) {
 		if (pop)
 			outab(pop);
@@ -1456,5 +1556,6 @@ minit(void)
 	 */
 	mchtyp = X_Z80;
 	sym[2].s_addr = X_Z80;
+	allow_undoc = 0;
 }
 
