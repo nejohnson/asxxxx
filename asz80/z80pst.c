@@ -218,6 +218,10 @@ struct	mne	mne[] = {
 
     {	NULL,	".mdelete",	S_MACRO,	0,	O_MDEL	},
 
+	/* Special */
+
+    {	NULL,	".allow_undocumented", X_UNDOCD,	0,	0	},
+
 	/* Machines */
 
     {	NULL,	".z80",		S_CPU,		0,	X_Z80	},
