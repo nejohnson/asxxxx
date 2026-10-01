@@ -35,9 +35,10 @@ and local fixes have been applied on top of it since.
 Every change is kept individually submittable to Baldwin, because at some
 point it will be offered upstream.
 
-- **One self-contained change per `bugfix/<slug>` branch**, merged back to
-  `master` with `--no-ff` so the branch stays visible in the history and
-  `git log master..bugfix/<slug>` is the patch.
+- **One self-contained change per branch**, `bugfix/<slug>` for a defect
+  and `feat/<slug>` for an addition, merged back to `master` with
+  `--no-ff` so the branch stays visible in the history and
+  `git log master..<branch>` is the patch.
 - **Commit messages carry the analysis**: what the defect is, the
   mechanism, then a `Verified:` section recording what was actually run —
   reproducer, regression comparison, sanitizer build. These are written to
@@ -50,8 +51,19 @@ point it will be offered upstream.
 
 ## Local changes so far
 
-Fixes, oldest first. All are upstream defects, none are fork-specific
-adaptations.
+Grouped by what each one would be if it were offered upstream, because
+that is the only distinction that matters when the time comes. Within a
+group, oldest first.
+
+Four commits are not submittable in the shape they are in, and there is
+a table for them below. Three repair something this fork itself added,
+so they belong squashed into their parent rather than sent as defects in
+their own right; the fourth carries two unrelated changes and needs
+splitting.
+
+### Fixes to upstream defects
+
+Submittable as they stand.
 
 | Commit | Area | Change |
 |---|---|---|
@@ -63,11 +75,71 @@ adaptations.
 | `5c1a749` | `aslink` | stack-buffer overflow building the generated `a_`/`l_`/`m_`/`s_` area symbol names; buffer was sized for the prefix but not the section index |
 | `d5e2177` | `aslink` | `NCPS` was 80 in the linker against 256 in the assemblers, so long names were truncated on read and distinct symbols silently collided |
 | `d150ace` | `asxxsrc`, `aslink` | identifier truncation was silent in both tools; now reported (new assembler error code `<l>`) |
-| `baf7fcd` | `asxdoc`, `asxhtml` | manual's error-code list was missing `<k>`, `<v>` and the new `<l>` |
+| `7d7548b` | `aslink` | `lkparea()` searched the area list linearly; hash the names |
+| `d5994a8` | `s19os9` | the input file was closed twice |
+| `f49765f` | `asxxsrc` | a `. = <arg>` error cleared the location counter's area |
+| `0d2c37a` | `ascheck` | the `bndry` test generated the wrong area symbol names |
+| `a0a3eda` | `aslink` | a module with no `.cdb` file was treated as an error |
+| `62b5902` | `aslink` | `-l` could not find a library named by a path, and said nothing when one was missing |
+| `c9fbd13` | `aslink` | a malformed object record was an endless loop rather than an error |
+| `ad6cd6e` | `aslink` | crashed printing a relocation error against a library module — every header pulled from a library has `h_lfile == NULL` |
+| `f3922a6` | `asz80` | `sll` reported `Internal Opcode Error` for a mnemonic its own table carries |
 
-Local documents, not for upstream: `GC-SECTIONS-FEASIBILITY.md` (a study
-of whether ASLink could gain an `ld --gc-sections` equivalent, added in
-`6b8fdc3` and updated in `abd44c1` and `8341553`) and this file.
+### Additions
+
+New behaviour rather than repaired behaviour. Each is self-contained and
+guarded, but an addition is a different conversation upstream from a
+defect, so they travel separately.
+
+| Commit | Area | Addition |
+|---|---|---|
+| `5e75020`, `64281e6`, `4870877` | `astest` | a portable regression harness for the assemblers and the linker: C89 driver, `.tst` case format, `make check` / `make bless`. 32 cases |
+| `d033ae5` | `asxxsrc` | `.function` / `.endfunc`, per-function areas that inherit the enclosing area's flags and bank |
+| `80f74d0` | `aslink` | the section collector — `-r` roots, `KEEP`, `--print-gc-sections` equivalent |
+| `a3ce67a` | `aslink` | `-o+` names every file the linker creates after the program rather than after the first object |
+| `5c4207e` | `asxxsrc`, `aslink` | `.abi`, an opaque compatibility key compared between modules at link time |
+| `94d8c73` | `aslink` | report an area that runs off the end of the address space, which was silently wrapping |
+| `40e56a0` | `asz80` | `.allow_undocumented` and the IX/IY half register instructions. Upstream already classified the operands and reserved the opcode type; only the directive row and the encodings were missing |
+| `d02ee7a` | `asz80` | `tst` accepts `tst a,n` as well as `tst n`. Same instruction, same bytes; code generators emit the first |
+
+### Not for upstream as separate patches
+
+| Commit | Why |
+|---|---|
+| `03533d2` | repairs `s19os9` after **our own** `56c5bcd` made `ib[]` a pointer. Belongs squashed into `56c5bcd` |
+| `b37cf7e`, `79c25e7` | both correct sign-extension bugs in **our own** `94d8c73`. Belong squashed into it — three commits, one patch |
+| `198f405` | two changes in one: a real `lstarea()` fix (map generation was `O(sections * symbols)`; 10,000 sections took 10.36 s, of which nine tenths was the map) and a new `-mc` compact map format. Split before offering |
+
+### Documentation
+
+Travels with whichever change above it describes, never on its own.
+
+| Commit | Describes |
+|---|---|
+| `baf7fcd` | the `<k>`, `<l>` and `<v>` assembler error codes |
+| `f0528ad` | `.function`, `.endfunc`, `KEEP`, `-r` and the `<f>` error |
+| `246880f` | a name may be 255 characters, not 79 |
+| `91f79bb` | `aslink`'s `-o+` |
+| `1131948` | the `.abi` directive and the `O` line |
+
+### Fork-only files
+
+Never on a branch that goes upstream.
+
+- `VENDOR.md` — this file (`2b32c63`, and the commit that added the
+  grouping above).
+- `GC-SECTIONS-FEASIBILITY.md` — a study of whether ASLink could gain an
+  `ld --gc-sections` equivalent. Added in `6b8fdc3`, updated in
+  `abd44c1`, `8341553`, `89cf960`, `9e68e94`, `3b976de` and `7690547`.
+
+### One measured obstacle to submitting any of it
+
+`astest`'s golden files pin **this fork's** output, not upstream's. The
+map module column is wider because `d5e2177` took `NCPS` from 80 to 256,
+and the area and symbol listing changed again in `198f405`. Goldens have
+to be regenerated against pristine `903242b`, and the cases sorted by
+which feature patch each one travels with, before the harness can be
+offered to anyone.
 
 ## Known divergences and upstream quirks
 
