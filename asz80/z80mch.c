@@ -597,6 +597,14 @@ machine(struct mne *mp)
 			xerr('a', "Invalid Addressing Mode.");
 		break;
 
+	/*
+	 * sll is an undocumented instruction but the only one of its
+	 * group, so it shares the shift/rotate code rather than having
+	 * its own.  Without this label S_RL_UNDOCD, which z80pst.c does
+	 * assign to sll, reaches no case at all and the assembler
+	 * reports an Internal Opcode Error for a mnemonic in its table.
+	 */
+	case S_RL_UNDOCD:
 	case S_RL:
 		t1 = 0;
 		t2 = addr(&e2);
