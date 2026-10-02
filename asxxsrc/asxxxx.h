@@ -1400,6 +1400,7 @@ extern	void		exprx(struct expr *esp, int n);
 extern	void		exprmasks(int n);
 extern	void		exprscan(struct expr *esp, char *end, char *bgn);
 extern	void		exprsym(struct expr *esp, char *str);
+extern	char *		symfn(void);
 extern	int		is_abs(struct expr *esp);
 extern	int		is_digit(int c, int r);
 extern	struct sym *	newsym(char *str, char *id, struct area *ap, a_uint addr);

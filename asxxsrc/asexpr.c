@@ -370,7 +370,7 @@ exprscan(struct expr *esp, char *bgn, char *end)
 					/*
 					 * Create symbol name
 					 */
-					sprintf(nbufr, "%.32s.%.80s.%d$", asmc->afn, sp->s_id, n);
+					sprintf(nbufr, "%.32s.%.80s.%d$", symfn(), sp->s_id, n);
 					while (tp) {
 						if (tp->t_num == n) {
 							/*
@@ -389,11 +389,11 @@ exprscan(struct expr *esp, char *bgn, char *end)
 					sp = slookup(sbufr);
 					if (sp != NULL) {
 						if (sp == &dot) {
-							sprintf(nbufr, "%.32s_%d", asmc->afn, ++rlsym);
+							sprintf(nbufr, "%.32s_%d", symfn(), ++rlsym);
 							sp = newsym(nbufr, sbufr, sp->s_area, sp->s_addr);
 							s = nbufr;
 						} else {
-							sprintf(nbufr, "%.32s.%.80s", asmc->afn, sbufr);
+							sprintf(nbufr, "%.32s.%.80s", symfn(), sbufr);
 							if ((sp->s_flag & S_GBL) == 0) {
 								sp = newsym(nbufr, sbufr, sp->s_area, sp->s_addr);
 								s = nbufr;
@@ -482,6 +482,55 @@ newsym(char *str, char *id, struct area *ap, a_uint addr)
 	return(sp);
 }
 
+/*)Function	char *	symfn()
+ *
+ *	The function symfn() returns the current source file's name with
+ *	every character that may not appear in an identifier replaced by
+ *	'_', truncated to the 32 characters the names built from it use.
+ *
+ *	Those names are manufactured rather than written by anyone: a local
+ *	symbol or an expression symbol is made unique across modules by
+ *	prefixing it with the file's name.  A file name may contain
+ *	characters an identifier may not, and a dash is both the common one
+ *	and an operator, so a name like
+ *
+ *		S my-file.__str_1 =D 0011
+ *
+ *	is written into a .rel file where the linker must read it back as an
+ *	operand of an expression and cannot tell it from a subtraction.  The
+ *	assembler is the only thing that ever puts a dash there, so it is
+ *	the right place to not put one.
+ *
+ *	local variables:
+ *		char *	p		pointer to the file name
+ *		int	i		character index
+ *
+ *	global variables:
+ *		asmf *	asmc		current input file
+ *		char	ctype[]		character type array
+ *
+ *	functions called:
+ *		none
+ *
+ *	side effects:
+ *		none
+ */
+
+char *
+symfn(void)
+{
+	static char fn[33];
+	char *p;
+	int i;
+
+	p = asmc->afn;
+	for (i=0; (i < (int) (sizeof(fn)-1)) && p[i]; i++) {
+		fn[i] = (ctype[p[i] & 0x7F] & (LETTER|DIGIT)) ? p[i] : '_';
+	}
+	fn[i] = '\0';
+	return(fn);
+}
+
 /*)Function	void	exprsym(struct expr *esp, char *str)
  *
  *		struct expr *	esp	pointer to the expression to modify
@@ -525,7 +574,7 @@ exprsym(struct expr *esp, char *str)
 	/*
 	 * Create a new symbol
 	 */
-	sprintf(bufr, "%.32s_%d", asmc->afn, ++rlsym);
+	sprintf(bufr, "%.32s_%d", symfn(), ++rlsym);
 	sp = lookup(bufr);
 	if ((sp->s_type == S_NEW) && (sp->s_flag == 0)) {
 		sp->s_id = strsto(bufr);
