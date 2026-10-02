@@ -1201,7 +1201,6 @@ extern	char		endline(void);
 extern	int		get(void);
 extern	void		getfid(char *str, int c);
 extern	void		getid(char *id, int c);
-extern	void		getsymid(char *id, int c);
 extern	int		getmap(int d);
 extern	int		getnb(void);
 extern	int		more(void);
