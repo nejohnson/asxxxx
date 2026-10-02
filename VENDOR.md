@@ -70,7 +70,6 @@ Submittable as they stand.
 | `1fbc20f` | `asz80` | `i85pg1[0x11]` incorrectly marked `LD DE,nn` illegal on 8085 |
 | `83a99c1` | `asxxsrc` | `aslex.c` read only half of the `ib[]` input line buffer |
 | `56c5bcd` | `asxxsrc` | made the source-line input buffer (`ib[]`/`ic[]`) dynamically sized |
-| `18aa725` | `aslink` | accept `-` in a symbol name when reading a `.rel` `S` record |
 | `5356e4c` | `aslink` | `DefineSDCDB()` hung forever on any symbol containing a `$` (i.e. on every SDCC symbol) — the scan pointer was never advanced |
 | `5c1a749` | `aslink` | stack-buffer overflow building the generated `a_`/`l_`/`m_`/`s_` area symbol names; buffer was sized for the prefix but not the section index |
 | `d5e2177` | `aslink` | `NCPS` was 80 in the linker against 256 in the assemblers, so long names were truncated on read and distinct symbols silently collided |
@@ -84,6 +83,7 @@ Submittable as they stand.
 | `c9fbd13` | `aslink` | a malformed object record was an endless loop rather than an error |
 | `ad6cd6e` | `aslink` | crashed printing a relocation error against a library module — every header pulled from a library has `h_lfile == NULL` |
 | `f3922a6` | `asz80` | `sll` reported `Internal Opcode Error` for a mnemonic its own table carries |
+| `d7ee0bd` | `asxxsrc` | a manufactured symbol name took the source file name verbatim, so a file name containing a `-` produced a symbol the linker could not read back as an expression operand — `-` is also subtraction. Sanitised in `symfn()`, which is also where `18aa725` is reverted |
 
 ### Additions
 
@@ -108,6 +108,7 @@ defect, so they travel separately.
 |---|---|
 | `03533d2` | repairs `s19os9` after **our own** `56c5bcd` made `ib[]` a pointer. Belongs squashed into `56c5bcd` |
 | `b37cf7e`, `79c25e7` | both correct sign-extension bugs in **our own** `94d8c73`. Belong squashed into it — three commits, one patch |
+| `18aa725` | **reverted by `d7ee0bd`** and no longer in the tree. It taught the linker's `newsym()` to accept `-` in a symbol's own name, which was the same defect treated one layer out: a name is only half of it, and an expression referring to that name is the other half. Not to be offered upstream, and worth remembering as the shape of mistake it was - the assembler was manufacturing the name, so the assembler was where to fix it |
 | `198f405` | two changes in one: a real `lstarea()` fix (map generation was `O(sections * symbols)`; 10,000 sections took 10.36 s, of which nine tenths was the map) and a new `-mc` compact map format. Split before offering |
 
 ### Documentation
@@ -126,8 +127,8 @@ Travels with whichever change above it describes, never on its own.
 
 Never on a branch that goes upstream.
 
-- `VENDOR.md` — this file (`2b32c63`, and the commit that added the
-  grouping above).
+- `VENDOR.md` — this file (`2b32c63`, `5d0dd04`, and the commit that
+  added this line).
 - `GC-SECTIONS-FEASIBILITY.md` — a study of whether ASLink could gain an
   `ld --gc-sections` equivalent. Added in `6b8fdc3`, updated in
   `abd44c1`, `8341553`, `89cf960`, `9e68e94`, `3b976de` and `7690547`.
