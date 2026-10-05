@@ -945,12 +945,19 @@ machine(struct mne *mp)
 		}
                 /*
                  * add  sp,n	[sp,#n]
+                 *
+                 * n is a signed displacement: negative to
+                 * allocate a stack frame, positive to free one.
+                 * Checking it as unsigned refused every frame
+                 * allocation, which is the common case, so the
+                 * byte is emitted without a range check - both
+                 * signs name the same byte and both are meant.
                  */
 		if ((mchtyp == X_R2K) && (rf == S_ADD) &&
 		    (t1 == S_R16) && (e1.e_addr == SP) &&
 		    (t2 == S_IMMED)) {
 			outab(0x27);
-			outrb(&e2, R_USGN);
+			outrb(&e2, 0);
 			break;
                 }
 		xerr('a', "Invalid Addressing Mode.");
