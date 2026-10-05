@@ -228,6 +228,7 @@ struct	mne	mne[] = {
     {	NULL,	".hd64",	S_CPU,		0,	X_HD64	},
     {	NULL,	".z180",	S_CPU,		0,	X_HD64	},
     {	NULL,	".zxn",		S_CPU,		0,	X_ZXN	},
+    {	NULL,	".r800",	S_CPU,		0,	X_R800	},
     {	NULL,	".8080",	S_CPU,		0,	X_8080	},
     {	NULL,	".8085",	S_CPU,		0,	X_8085	},
     {	NULL,	".8085x",	S_CPU,		0,	X_8085X	},
@@ -336,6 +337,8 @@ struct	mne	mne[] = {
 	/* z80-zxn */
 
     {   NULL,   "swapnib",      X_ZXN_INH2,     0,      0x23    },
+    {   NULL,   "multu",        X_R800_MULTU,   0,      0xC1    },
+    {   NULL,   "multuw",       X_R800_MULTUW,  0,      0xC3    },
     {   NULL,   "swap",         X_ZXN_INH2,     0,      0x23    },
     {   NULL,   "mul",          X_ZXN_MUL,      0,      0x30    },
     {   NULL,   "outinb",       X_ZXN_INH2,     0,      0x90    },
