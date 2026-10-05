@@ -917,6 +917,12 @@ mchpcr(struct expr *esp, int *v, int n)
 void
 minit(void)
 {
+	struct sym	*sp;
+	struct PreDef	*pd;
+	int i;
+	char pid[8];
+	char *p;
+
 	/*
 	 * Byte Order
 	 */
@@ -927,6 +933,41 @@ minit(void)
 		ds8_bytes = 0;
 		mchtyp = X_DS8XCXXX;
 		sym[2].s_addr = X_DS8XCXXX;
+
+		/*
+		 * First time only:
+		 *	add the pre-defined symbols to the table
+		 *	as local symbols.  A ptype of zero selects a
+		 *	symbol common to every processor.
+		 */
+		pd = preDef;
+		while (pd->id) {
+			if ((pd->ptype != 0) && (pd->ptype != mchtyp)) {
+				pd++;
+				continue;
+			}
+			strcpy(pid, pd->id);
+			for (i=0; i<2; i++) {
+				/*
+				 * i == 0,  Create Upper Case Symbols
+				 * i == 1,  Create Lower Case Symbols
+				 */
+				if (i == 1) {
+					p = pid;
+					while (*p) {
+						*p = ccase[*p & 0x007F];
+						p++;
+					}
+				}
+				sp = lookup(pid);
+				if (sp->s_type == S_NEW) {
+					sp->s_addr = pd->value;
+					sp->s_type = S_USER;
+					sp->s_flag = S_LCL | S_ASG;
+				}
+			}
+			pd++;
+		}
 	}
 }
 
