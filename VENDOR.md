@@ -84,6 +84,7 @@ Submittable as they stand.
 | `ad6cd6e` | `aslink` | crashed printing a relocation error against a library module — every header pulled from a library has `h_lfile == NULL` |
 | `f3922a6` | `asz80` | `sll` reported `Internal Opcode Error` for a mnemonic its own table carries |
 | `d7ee0bd` | `asxxsrc` | a manufactured symbol name took the source file name verbatim, so a file name containing a `-` produced a symbol the linker could not read back as an expression operand — `-` is also subtraction. Sanitised in `symfn()`, which is also where `18aa725` is reverted |
+| `8f3852f` | `as8xcxxx` | the predefined 8051 SFR names were missing. `ds8.h` declares `struct PreDef` and an `extern` for the table, but no table was ever defined and `minit()` never registered one, so the `extern` dangled and every name `as8xcxxx` shares with `as8051` assembled as an undefined global. Table and registration added, matching `as8051`'s values |
 
 ### Additions
 
@@ -93,7 +94,7 @@ defect, so they travel separately.
 
 | Commit | Area | Addition |
 |---|---|---|
-| `5e75020`, `64281e6`, `4870877` | `astest` | a portable regression harness for the assemblers and the linker: C89 driver, `.tst` case format, `make check` / `make bless`. 32 cases |
+| `5e75020`, `64281e6`, `4870877` | `astest` | a portable regression harness for the assemblers and the linker: C89 driver, `.tst` case format, `make check` / `make bless`. 33 cases |
 | `d033ae5` | `asxxsrc` | `.function` / `.endfunc`, per-function areas that inherit the enclosing area's flags and bank |
 | `80f74d0` | `aslink` | the section collector — `-r` roots, `KEEP`, `--print-gc-sections` equivalent |
 | `a3ce67a` | `aslink` | `-o+` names every file the linker creates after the program rather than after the first object |
