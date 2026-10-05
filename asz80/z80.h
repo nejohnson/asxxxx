@@ -184,6 +184,7 @@
 #define	X_8085	3
 #define	X_8085X	4
 #define	X_ZXN	12
+#define	X_R800	13
 
 /*
  * Z80-ZX Next Instructions
@@ -196,6 +197,8 @@
 #define	X_ZXN_CU_MOVE	105
 #define	X_ZXN_CU_STOP	106
 #define	X_ZXN_CU_NOP	107
+#define	X_R800_MULTU	108
+#define	X_R800_MULTUW	109
 
 
 struct adsym
