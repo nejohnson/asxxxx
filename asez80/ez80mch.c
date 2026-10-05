@@ -1787,6 +1787,24 @@ machine(struct mne *mp)
 		v2 = (int) e2.e_addr;
 		if ((t1 == S_RX) && (v1 != SP) && (t2 == S_RX) && (v2==IX || v2==IY)) {
 			if (more()) {
+				int c;
+				/*
+				 * Zilog writes the displacement into the
+				 * second operand, "lea hl,ix-6".  Code
+				 * generators write it as a third operand,
+				 * "lea hl,ix,#-6", which reads like every
+				 * other three operand instruction.  Same
+				 * instruction, same bytes, so take either:
+				 * step over a comma, and over the immediate
+				 * marker if one follows it.
+				 */
+				if ((c = getnb()) == ',') {
+					if ((c = getnb()) != '#') {
+						unget(c);
+					}
+				} else {
+					unget(c);
+				}
 				t2 = e2.e_mode = S_INDR + v2;
 				clrexpr(&e2);
 				expr(&e2);
