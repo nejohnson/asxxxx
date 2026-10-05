@@ -511,7 +511,7 @@ machine(struct mne *mp)
 		mchtyp = op;
 		sym[2].s_addr = op;
 		lmode = SLIST;
-		allow_undoc = (mchtyp == X_ZXN);
+		allow_undoc = (mchtyp == X_ZXN) || (mchtyp == X_R800);
 		break;
 
 	case X_UNDOCD:
@@ -1330,6 +1330,47 @@ machine(struct mne *mp)
 		outab(0x00);
 		outab(0x00);
 		opcycles = OPCY_ERR;
+		break;
+
+	case X_R800_MULTU:
+		/*
+		 * multu  a,r   -  R800 only, and only with b, c, d or e.
+		 */
+		t1 = addr(&e1);
+		comma(1);
+		t2 = addr(&e2);
+		if (mchtyp != X_R800) {
+			xerr('a', "R800 only - select it with .r800");
+			break;
+		}
+		if ((t1 == S_R8) && (e1.e_addr == A) && (t2 == S_R8) &&
+		    ((e2.e_addr == B) || (e2.e_addr == C) ||
+		     (e2.e_addr == D) || (e2.e_addr == E))) {
+			outab(0xED);
+			outab(op | (e2.e_addr<<3));
+			break;
+		}
+		aerr();
+		break;
+
+	case X_R800_MULTUW:
+		/*
+		 * multuw  hl,rr  -  R800 only, and only with bc or sp.
+		 */
+		t1 = addr(&e1);
+		comma(1);
+		t2 = addr(&e2);
+		if (mchtyp != X_R800) {
+			xerr('a', "R800 only - select it with .r800");
+			break;
+		}
+		if ((t1 == S_R16) && (e1.e_addr == HL) && (t2 == S_R16) &&
+		    ((e2.e_addr == BC) || (e2.e_addr == SP))) {
+			outab(0xED);
+			outab(op | (e2.e_addr<<4));
+			break;
+		}
+		aerr();
 		break;
 
 	default:
