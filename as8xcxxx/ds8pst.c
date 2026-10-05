@@ -339,5 +339,55 @@ struct	mne	mne[] = {
     {	NULL,	"xchd",		S_XCHD,		S_EOL,	0xD6	}
 };
 
+/*
+ * The SFRs common to every DS8xCxxx part, predefined so that
+ * hand written code can say ACC, B or PSW without including
+ * ds8xcxxx.sfr.  as8051 does the same from i51pst.c; the values
+ * here are that table's, restricted to the registers every
+ * processor in this family has.  A ptype of zero means the
+ * symbol applies to all of them.
+ */
+struct PreDef preDef[] = {
+    {	"AC",			0x00D6,	0	},
+    {	"ACC",			0x00E0,	0	},
+    {	"ACC.0",		0x00E0,	0	},
+    {	"ACC.1",		0x00E1,	0	},
+    {	"ACC.2",		0x00E2,	0	},
+    {	"ACC.3",		0x00E3,	0	},
+    {	"ACC.4",		0x00E4,	0	},
+    {	"ACC.5",		0x00E5,	0	},
+    {	"ACC.6",		0x00E6,	0	},
+    {	"ACC.7",		0x00E7,	0	},
+    {	"B",			0x00F0,	0	},
+    {	"B.0",			0x00F0,	0	},
+    {	"B.1",			0x00F1,	0	},
+    {	"B.2",			0x00F2,	0	},
+    {	"B.3",			0x00F3,	0	},
+    {	"B.4",			0x00F4,	0	},
+    {	"B.5",			0x00F5,	0	},
+    {	"B.6",			0x00F6,	0	},
+    {	"B.7",			0x00F7,	0	},
+    {	"CY",			0x00D7,	0	},
+    {	"DPH",			0x0083,	0	},
+    {	"DPL",			0x0082,	0	},
+    {	"EA",			0x00AF,	0	},
+    {	"F0",			0x00D5,	0	},
+    {	"IE",			0x00A8,	0	},
+    {	"IP",			0x00B8,	0	},
+    {	"OV",			0x00D2,	0	},
+    {	"P",			0x00D0,	0	},
+    {	"PCON",			0x0087,	0	},
+    {	"PS",			0x00BC,	0	},
+    {	"PSW",			0x00D0,	0	},
+    {	"RS0",			0x00D3,	0	},
+    {	"RS1",			0x00D4,	0	},
+    {	"SM0",			0x009F,	0	},
+    {	"SM1",			0x009E,	0	},
+    {	"SM2",			0x009D,	0	},
+    {	"SP",			0x0081,	0	},
+    {	NULL,		0x0000,	0	}
+};
+
+
 
 
