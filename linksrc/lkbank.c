@@ -335,6 +335,7 @@ setbank(void)
 		ip = b_bsp->strp;
 		getid(id, -1);
 		if (getnb() == '=') {
+			expr_ovf = 0;
 			v = expr() & a_mask;
 			for (bp = bankp; bp != NULL; bp = bp->b_bp) {
 				if (symeq(id, bp->b_id, 1))
@@ -342,6 +343,17 @@ setbank(void)
 			}
 			if (bp == NULL) {
 				fprintf(stderr,	"?ASlink-Error-No definition of bank %s\n", id);
+				lkerr++;
+			} else
+			/*
+			 * As setarea(), except that the masking here was
+			 * always explicit - which made the loss no less
+			 * silent.
+			 */
+			if (expr_ovf) {
+				fprintf(stderr,
+				"?ASlink-Error-Base Address of Bank %s Exceeds The Address Space\n",
+					bp->b_id);
 				lkerr++;
 			} else {
 				bp->b_base = v;

@@ -1118,6 +1118,8 @@ extern	char	*expr_ip;	/*	initial expression ip
 				 */
 extern	int	expr_radix;	/*	expression default radix
 				 */
+extern	int	expr_ovf;	/*	a scanned number did not fit a_mask
+				 */
 extern	int	as_msb;		/*	Assembler selected MSB
 				 */
 extern	a_uint	a_mask;		/*	Address Mask
