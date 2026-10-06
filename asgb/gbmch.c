@@ -395,7 +395,7 @@ machine(struct mne *mp)
 				}
 			} else {
 				outab(0xF0);
-				outrb(&e1, R_PAGN);
+				outrb(&e1, 0);
 			}
 			break;
 		case S_IDBC:	outab(0x0A);	break;
@@ -436,7 +436,7 @@ machine(struct mne *mp)
 					}
 				} else {
 					outab(0xF0);
-					outrb(&e1, R_PAGN);
+					outrb(&e1, 0);
 				}
 				break;
 			case S_IDBC:	outab(0x0A);	break;
@@ -496,7 +496,7 @@ machine(struct mne *mp)
 					}
 				} else {
 					outab(0xF0);
-					outrb(&e2, R_PAGN);
+					outrb(&e2, 0);
 				}
 				break;
 			case S_IDC:	outab(0xF2);	break;
@@ -545,7 +545,7 @@ machine(struct mne *mp)
 					}
 				} else {
 					outab(0xE0);
-					outrb(&e1, R_PAGN);
+					outrb(&e1, 0);
 				}
 				break;
 			case S_IDC:	outab(0xE2);	break;
@@ -810,8 +810,7 @@ machine(struct mne *mp)
 					break;
 				} else {
 					outab(0xF0);
-					e1.e_addr += 0xFF00;
-					outrb(&e1, R_PAGN);
+					outrb(&e1, 0);
 				}
 				break;
 			case S_IDC:	outab(0xF2);			break;
@@ -848,8 +847,7 @@ machine(struct mne *mp)
 				break;
 			} else {
 				outab(0xF0);
-				e2.e_addr += 0xFF00;
-				outrb(&e2, R_PAGN);
+				outrb(&e2, 0);
 			}
 			break;
 		}
@@ -867,8 +865,7 @@ machine(struct mne *mp)
 				break;
 			} else {
 				outab(0xE0);
-				e1.e_addr += 0xFF00;
-				outrb(&e1, R_PAGN);
+				outrb(&e1, 0);
 			}
 			break;
 		}
