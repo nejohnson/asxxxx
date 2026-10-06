@@ -31,5 +31,14 @@
 	push	ip
 	pop	ip
 	bool	hl
+;
+; The addressing modes too, not just the opcodes: the machine type
+; is tested in rabadr.c as well as rabmch.c, and SP relative loads
+; are where SDCC noticed.
+;
+	ld	4 (sp), hl
+	ld	hl, 4 (sp)
+	ld	0 (sp), hl
+	ldp	(hl), hl
 	add	sp,#-6
 	jp	lz,.

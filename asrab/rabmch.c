@@ -1906,6 +1906,7 @@ machine(struct mne *mp)
 	if (opcycles == OPCY_NONE) {
 		switch (mchtyp) {
 		case X_R2K:
+		case X_R3KA:
 			of = (preByte.altd || preByte.ioe || preByte.ioi) ? 1 : 0;
 			opcycles = rabpg1[cb[of + 0] & 0xFF];
 			while ((opcycles & OPCY_NONE) && (opcycles & OPCY_MASK)) {
