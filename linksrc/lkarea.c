@@ -726,6 +726,7 @@ setarea(void)
 		ip = a_bsp->strp;
 		getid(id, -1);
 		if (getnb() == '=') {
+			expr_ovf = 0;
 			v = expr();
 			for (ap = areap; ap != NULL; ap = ap->a_ap) {
 				if (symeq(id, ap->a_id, 1))
@@ -733,6 +734,20 @@ setarea(void)
 			}
 			if (ap == NULL) {
 				fprintf(stderr,	"?ASlink-Error-No definition of area %s\n", id);
+				lkerr++;
+			} else
+			/*
+			 * A base larger than the address space is not a
+			 * base this linker can honour, and masking it to
+			 * fit puts the area somewhere nobody asked for -
+			 * silently, because the map prints the address
+			 * masked too, so it reads correctly while the
+			 * placement is wrong.
+			 */
+			if (expr_ovf) {
+				fprintf(stderr,
+				"?ASlink-Error-Base Address of Area %s Exceeds The Address Space\n",
+					ap->a_id);
 				lkerr++;
 			} else {
 				ap->a_addr = v;

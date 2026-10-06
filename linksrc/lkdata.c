@@ -165,6 +165,12 @@ char	*expr_ip;	/*	initial expression ip
 			 */
 int	expr_radix;	/*	expression default radix
 			 */
+int	expr_ovf;	/*	a number scanned by term() did not fit the
+			 *	address space.  Recorded here rather than
+			 *	reported there: out of range is only an
+			 *	error in some contexts, and term() does
+			 *	not know which it is in.
+			 */
 int	as_msb;		/*	Assembler selected MSB
 			 */
 a_uint	a_mask;		/*	Address Mask
