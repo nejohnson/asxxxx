@@ -90,6 +90,7 @@ Submittable as they stand.
 | `7de9475` | `aslink` | `-a AREA =` and `-b BANK =` took whatever `expr()` returned, and `expr()` reduces every number it scans to the address space, so a base beyond the space silently became the low bits of itself and the map printed the same masked value. Checked where the digits are read, because `expr()` sign-extends and a legitimate `0xFF80` arrives as `0xFFFFFF80` |
 | `c0d155f` | `astlcs90` | `S_JP` took a register operand only after a condition and otherwise went straight to `expr()`, so `jp (hl)` assembled **with no diagnostic** as an absolute jump to an undefined global named `hl`, and linked. Wrong code, no error |
 | `ce6624f` | `asgb` | `ldh a,(nn)` tested `v1` where it meant `v2`, and `v1` is the A register in that branch, so a full I/O address was always "not in range" - while the store form, with the same two tests against a `v1` that really is the address, always worked |
+| `8b83c64` | `asgb` | a relocatable `ldh` operand could not link at all: `asgb` added `0xFF00` and emitted `R_PAGN`, which checks against a `.setdp` base `asgb` has no directive to establish, so `sdp.s_addr` was always zero. All seven sites now emit a plain low-byte relocation, which is what LDH wants - both spellings of the operand have the same low byte |
 | `ac2a167` | `asez80` | `lea` took its displacement only in the second operand, Zilog's spelling. Code generators write it as a third, which is the same instruction and the same bytes; the code already parsed the expression, it just could not step over the comma |
 
 ### Additions
@@ -148,7 +149,6 @@ Never on a branch that goes upstream.
 
 ### One measured obstacle to submitting any of it
 
-A second, unrelated one found 2026-10-06 and **not** fixed: `asgb`'s relocatable `ldh` adds `0xFF00` to the operand and emits `R_PAGN`, but `asgb` has no `.setdp`, so `sdp.s_addr` is always zero and the check cannot pass for any ordinary symbol. The vendor's own `tgb.asm` never reaches the path - its `n8` is an absolute equate. See `sdcc-8085/remaining-ports-survey.md` for the three ways out.
 
 `astest`'s golden files pin **this fork's** output, not upstream's. The
 map module column is wider because `d5e2177` took `NCPS` from 80 to 256,
