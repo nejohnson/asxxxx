@@ -86,6 +86,7 @@ Submittable as they stand.
 | `d7ee0bd` | `asxxsrc` | a manufactured symbol name took the source file name verbatim, so a file name containing a `-` produced a symbol the linker could not read back as an expression operand — `-` is also subtraction. Sanitised in `symfn()`, which is also where `18aa725` is reverted |
 | `8f3852f` | `as8xcxxx` | the predefined 8051 SFR names were missing. `ds8.h` declares `struct PreDef` and an `extern` for the table, but no table was ever defined and `minit()` never registered one, so the `extern` dangled and every name `as8xcxxx` shares with `as8051` assembled as an undefined global. Table and registration added, matching `as8051`'s values |
 | `bfac3cf` | `asrab` | the Rabbit's `add sp,n` is a signed displacement - negative allocates a stack frame - and was range checked as unsigned, so every frame allocation was refused with the correct bytes already in the listing. 190 sites in each of the six Rabbit ports |
+| `093caac` | `asrab` | the Rabbit 3000A support in `6a57c37` converted the thirty machine-type tests in `rabmch.c` and missed the four in `rabadr.c` and the cycle-count table, so under `.r3ka` the opcodes worked and the addressing modes did not |
 | `ac2a167` | `asez80` | `lea` took its displacement only in the second operand, Zilog's spelling. Code generators write it as a third, which is the same instruction and the same bytes; the code already parsed the expression, it just could not step over the comma |
 
 ### Additions
@@ -96,7 +97,7 @@ defect, so they travel separately.
 
 | Commit | Area | Addition |
 |---|---|---|
-| `5e75020`, `64281e6`, `4870877` | `astest` | a portable regression harness for the assemblers and the linker: C89 driver, `.tst` case format, `make check` / `make bless`. 37 cases |
+| `5e75020`, `64281e6`, `4870877` | `astest` | a portable regression harness for the assemblers and the linker: C89 driver, `.tst` case format, `make check` / `make bless`. 39 cases |
 | `d033ae5` | `asxxsrc` | `.function` / `.endfunc`, per-function areas that inherit the enclosing area's flags and bank |
 | `80f74d0` | `aslink` | the section collector — `-r` roots, `KEEP`, `--print-gc-sections` equivalent |
 | `a3ce67a` | `aslink` | `-o+` names every file the linker creates after the program rather than after the first object |
@@ -106,6 +107,8 @@ defect, so they travel separately.
 | `d02ee7a` | `asz80` | `tst` accepts `tst a,n` as well as `tst n`. Same instruction, same bytes; code generators emit the first |
 | `6392f48` | `asrab` | `LZ` and `LO`, the Rabbit's names for the two logical conditions, alongside the `NV` and `V` it already had. Same two encodings |
 | `d298d9b` | `asz80` | `.r800`, `multu` and `multuw`, and the IX/IY half registers with them. The ASCII R800 is a Z80 superset that `asz80` did not cover |
+| `6a57c37` | `asrab` | the Rabbit 3000A: `.r3ka`, the block-move group, `uma`/`ums`, the system/user mode group and `push`/`pop su`. The machine type was a single value compared for equality, so there was no room for a second Rabbit |
+| `614da60` | `asrab` | `ipset0`..`ipset3` beside the manual's `ipset n`. Same instruction, same two bytes |
 
 ### Not for upstream as separate patches
 
