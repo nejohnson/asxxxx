@@ -230,6 +230,17 @@ struct	mne	mne[] = {
 
     {	NULL,	".r3k",		S_CPU,		0,	X_R2K	},
     {	NULL,	".r3ka",	S_CPU,		0,	X_R3KA	},
+    {	NULL,	".r4k00",	 S_CPU,		0,	X_R4K00	},
+    {	NULL,	".r4k01",	 S_CPU,		0,	X_R4K01	},
+    {	NULL,	".r4k10",	 S_CPU,		0,	X_R4K10	},
+    {	NULL,	".r4k11",	 S_CPU,		0,	X_R4K11	},
+    {	NULL,	".r4k",	 S_CPU,		0,	X_R4K11	},
+    {	NULL,	".r5k",	 S_CPU,		0,	X_R4K10	},
+    {	NULL,	".r6k00",	 S_CPU,		0,	X_R6K00	},
+    {	NULL,	".r6k01",	 S_CPU,		0,	X_R6K01	},
+    {	NULL,	".r6k10",	 S_CPU,		0,	X_R6K10	},
+    {	NULL,	".r6k11",	 S_CPU,		0,	X_R6K11	},
+    {	NULL,	".r6k",	 S_CPU,		0,	X_R6K11	},
     {	NULL,	".r2k",		S_CPU,		0,	X_R2K	},
     {	NULL,	".hd64",	S_CPU,		0,	X_HD64	},
     {	NULL,	".z180",	S_CPU,		0,	X_HD64	},
@@ -346,6 +357,13 @@ struct	mne	mne[] = {
     {	NULL,	"ipset1",	S_INH2R,	0,	0x56	},
     {	NULL,	"ipset2",	S_INH2R,	0,	0x4E	},
     {	NULL,	"ipset3",	S_INH2R,	0,	0x5E	},
+
+    /*
+     * Rabbit 4000
+     */
+    {	NULL,	"clr",		RB_CLR,		0,	0xBF	},
+    {	NULL,	"mulu",		RB_MULU,	0,	0xA7	},
+    {	NULL,	"test",		RB_TEST,	0,	0x4C	},
 
     {	NULL,	"altd",		RB_PRE,		0,	0x76	},
     {	NULL,	"ioe",		RB_PRE,		0,	0xDB	},
