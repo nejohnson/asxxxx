@@ -88,6 +88,7 @@ Submittable as they stand.
 | `bfac3cf` | `asrab` | the Rabbit's `add sp,n` is a signed displacement - negative allocates a stack frame - and was range checked as unsigned, so every frame allocation was refused with the correct bytes already in the listing. 190 sites in each of the six Rabbit ports |
 | `093caac` | `asrab` | the Rabbit 3000A support in `6a57c37` converted the thirty machine-type tests in `rabmch.c` and missed the four in `rabadr.c` and the cycle-count table, so under `.r3ka` the opcodes worked and the addressing modes did not |
 | `7de9475` | `aslink` | `-a AREA =` and `-b BANK =` took whatever `expr()` returned, and `expr()` reduces every number it scans to the address space, so a base beyond the space silently became the low bits of itself and the map printed the same masked value. Checked where the digits are read, because `expr()` sign-extends and a legitimate `0xFF80` arrives as `0xFFFFFF80` |
+| `c0d155f` | `astlcs90` | `S_JP` took a register operand only after a condition and otherwise went straight to `expr()`, so `jp (hl)` assembled **with no diagnostic** as an absolute jump to an undefined global named `hl`, and linked. Wrong code, no error |
 | `ac2a167` | `asez80` | `lea` took its displacement only in the second operand, Zilog's spelling. Code generators write it as a third, which is the same instruction and the same bytes; the code already parsed the expression, it just could not step over the comma |
 
 ### Additions
@@ -98,7 +99,7 @@ defect, so they travel separately.
 
 | Commit | Area | Addition |
 |---|---|---|
-| `5e75020`, `64281e6`, `4870877` | `astest` | a portable regression harness for the assemblers and the linker: C89 driver, `.tst` case format, `make check` / `make bless`. 40 cases |
+| `5e75020`, `64281e6`, `4870877` | `astest` | a portable regression harness for the assemblers and the linker: C89 driver, `.tst` case format, `make check` / `make bless`. 43 cases |
 | `d033ae5` | `asxxsrc` | `.function` / `.endfunc`, per-function areas that inherit the enclosing area's flags and bank |
 | `80f74d0` | `aslink` | the section collector — `-r` roots, `KEEP`, `--print-gc-sections` equivalent |
 | `a3ce67a` | `aslink` | `-o+` names every file the linker creates after the program rather than after the first object |
@@ -110,6 +111,8 @@ defect, so they travel separately.
 | `d298d9b` | `asz80` | `.r800`, `multu` and `multuw`, and the IX/IY half registers with them. The ASCII R800 is a Z80 superset that `asz80` did not cover |
 | `6a57c37` | `asrab` | the Rabbit 3000A: `.r3ka`, the block-move group, `uma`/`ums`, the system/user mode group and `push`/`pop su`. The machine type was a single value compared for equality, so there was no room for a second Rabbit |
 | `614da60` | `asrab` | `ipset0`..`ipset3` beside the manual's `ipset n`. Same instruction, same two bytes |
+| `87502d9` | `astlcs90` | `lda` takes its displacement as one operand or as two, `lda hl,-6 (ix)` or `lda hl,ix,#-6`. Same instruction, same bytes |
+| `f36f47e` | `astlcs90` | `rrd`/`rld` with no operand, and `a(hl)` as a spelling of `(hl+a)` |
 
 ### Not for upstream as separate patches
 
