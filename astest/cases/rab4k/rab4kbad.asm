@@ -13,4 +13,3 @@
 ;
 	clr	bc
 	test	de
-	xor	hl, 4 (sp)
