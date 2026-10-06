@@ -456,6 +456,46 @@ machine(struct mne *mp)
 		t2 = addr(&e2);
 		v2 = aindx;
 
+		/*
+		 * Toshiba's manual writes the source as one operand,
+		 * "lda hl,-6 (ix)" and "lda hl,(hl+a)".  Code generators
+		 * write the displacement as a third operand instead,
+		 * "lda hl,ix,#-6" and "lda hl,hl,a", which reads like
+		 * every other three operand instruction; SDAS and SDCC
+		 * both do.  Same instruction, same bytes, so take either:
+		 * a bare register followed by a comma is the second
+		 * spelling, and what follows the comma says which form.
+		 */
+		if ((t2 == S_R16) && more()) {
+			if ((c = getnb()) == ',') {
+				c = getnb();
+				if ((ccase[c & 0x007F] == 'a') &&
+				    !(ctype[*ip & 0x007F] & (LETTER | DIGIT))) {
+					t2 = S_IHLA;
+				} else {
+					/*
+					 * Only IX, IY and SP take a
+					 * displacement.  Without this the
+					 * register index is masked down to
+					 * two bits and "lda hl,bc,#4"
+					 * encodes quietly as "lda hl,0(ix)".
+					 */
+					if ((v2 != IX) && (v2 != IY) &&
+					    (v2 != SP)) {
+						xerr('a', "Only IX+d, IY+d, or SP+d allowed.");
+					}
+					if (c != '#') {
+						unget(c);
+					}
+					clrexpr(&e2);
+					expr(&e2);
+					t2 = S_IXYS;
+				}
+			} else {
+				unget(c);
+			}
+		}
+
 		if (t1 != S_R16) {
 			xerr('a', "Requires BC,DE,HL,IX,IY, or SP as first argument");
 			qerr();
@@ -466,6 +506,9 @@ machine(struct mne *mp)
 			outrb(&e2, R_SGND);
 			break;
 		case S_IHLA:	/* rr,(HL+A) */
+			if (v2 != HL) {
+				xerr('a', "Only HL+A allowed.");
+			}
 			outab(0xF7);
 		        break;
 		default:
