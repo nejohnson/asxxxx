@@ -342,6 +342,10 @@ struct	mne	mne[] = {
     {   NULL,   "lret",         S_INH2R,	0,	0x45    },
     
     {	NULL,	"ipset",	RB_IPSET,	0,	0x46	},
+    {	NULL,	"ipset0",	S_INH2R,	0,	0x46	},
+    {	NULL,	"ipset1",	S_INH2R,	0,	0x56	},
+    {	NULL,	"ipset2",	S_INH2R,	0,	0x4E	},
+    {	NULL,	"ipset3",	S_INH2R,	0,	0x5E	},
 
     {	NULL,	"altd",		RB_PRE,		0,	0x76	},
     {	NULL,	"ioe",		RB_PRE,		0,	0xDB	},
