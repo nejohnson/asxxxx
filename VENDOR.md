@@ -89,6 +89,7 @@ Submittable as they stand.
 | `093caac` | `asrab` | the Rabbit 3000A support in `6a57c37` converted the thirty machine-type tests in `rabmch.c` and missed the four in `rabadr.c` and the cycle-count table, so under `.r3ka` the opcodes worked and the addressing modes did not |
 | `7de9475` | `aslink` | `-a AREA =` and `-b BANK =` took whatever `expr()` returned, and `expr()` reduces every number it scans to the address space, so a base beyond the space silently became the low bits of itself and the map printed the same masked value. Checked where the digits are read, because `expr()` sign-extends and a legitimate `0xFF80` arrives as `0xFFFFFF80` |
 | `c0d155f` | `astlcs90` | `S_JP` took a register operand only after a condition and otherwise went straight to `expr()`, so `jp (hl)` assembled **with no diagnostic** as an absolute jump to an undefined global named `hl`, and linked. Wrong code, no error |
+| `ce6624f` | `asgb` | `ldh a,(nn)` tested `v1` where it meant `v2`, and `v1` is the A register in that branch, so a full I/O address was always "not in range" - while the store form, with the same two tests against a `v1` that really is the address, always worked |
 | `ac2a167` | `asez80` | `lea` took its displacement only in the second operand, Zilog's spelling. Code generators write it as a third, which is the same instruction and the same bytes; the code already parsed the expression, it just could not step over the comma |
 
 ### Additions
@@ -99,7 +100,7 @@ defect, so they travel separately.
 
 | Commit | Area | Addition |
 |---|---|---|
-| `5e75020`, `64281e6`, `4870877` | `astest` | a portable regression harness for the assemblers and the linker: C89 driver, `.tst` case format, `make check` / `make bless`. 43 cases |
+| `5e75020`, `64281e6`, `4870877` | `astest` | a portable regression harness for the assemblers and the linker: C89 driver, `.tst` case format, `make check` / `make bless`. 44 cases |
 | `d033ae5` | `asxxsrc` | `.function` / `.endfunc`, per-function areas that inherit the enclosing area's flags and bank |
 | `80f74d0` | `aslink` | the section collector — `-r` roots, `KEEP`, `--print-gc-sections` equivalent |
 | `a3ce67a` | `aslink` | `-o+` names every file the linker creates after the program rather than after the first object |
@@ -146,6 +147,8 @@ Never on a branch that goes upstream.
   `abd44c1`, `8341553`, `89cf960`, `9e68e94`, `3b976de` and `7690547`.
 
 ### One measured obstacle to submitting any of it
+
+A second, unrelated one found 2026-10-06 and **not** fixed: `asgb`'s relocatable `ldh` adds `0xFF00` to the operand and emits `R_PAGN`, but `asgb` has no `.setdp`, so `sdp.s_addr` is always zero and the check cannot pass for any ordinary symbol. The vendor's own `tgb.asm` never reaches the path - its `n8` is an absolute equate. See `sdcc-8085/remaining-ports-survey.md` for the three ways out.
 
 `astest`'s golden files pin **this fork's** output, not upstream's. The
 map module column is wider because `d5e2177` took `NCPS` from 80 to 256,
