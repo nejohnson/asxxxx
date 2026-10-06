@@ -91,6 +91,7 @@ Submittable as they stand.
 | `c0d155f` | `astlcs90` | `S_JP` took a register operand only after a condition and otherwise went straight to `expr()`, so `jp (hl)` assembled **with no diagnostic** as an absolute jump to an undefined global named `hl`, and linked. Wrong code, no error |
 | `ce6624f` | `asgb` | `ldh a,(nn)` tested `v1` where it meant `v2`, and `v1` is the A register in that branch, so a full I/O address was always "not in range" - while the store form, with the same two tests against a `v1` that really is the address, always worked |
 | `8b83c64` | `asgb` | a relocatable `ldh` operand could not link at all: `asgb` added `0xFF00` and emitted `R_PAGN`, which checks against a `.setdp` base `asgb` has no directive to establish, so `sdp.s_addr` was always zero. All seven sites now emit a plain low-byte relocation, which is what LDH wants - both spellings of the operand have the same low byte |
+| `6193c78` | `asrab` | the Rabbit 4000's quad load displacement was range checked as signed, so `ld bcde,136 (sp)` was refused. A stack offset is written unsigned and an index offset is usually negative - both halves of the byte are meant |
 | `ac2a167` | `asez80` | `lea` took its displacement only in the second operand, Zilog's spelling. Code generators write it as a third, which is the same instruction and the same bytes; the code already parsed the expression, it just could not step over the comma |
 
 ### Additions
@@ -101,7 +102,7 @@ defect, so they travel separately.
 
 | Commit | Area | Addition |
 |---|---|---|
-| `5e75020`, `64281e6`, `4870877` | `astest` | a portable regression harness for the assemblers and the linker: C89 driver, `.tst` case format, `make check` / `make bless`. 44 cases |
+| `5e75020`, `64281e6`, `4870877` | `astest` | a portable regression harness for the assemblers and the linker: C89 driver, `.tst` case format, `make check` / `make bless`. 45 cases |
 | `d033ae5` | `asxxsrc` | `.function` / `.endfunc`, per-function areas that inherit the enclosing area's flags and bank |
 | `80f74d0` | `aslink` | the section collector — `-r` roots, `KEEP`, `--print-gc-sections` equivalent |
 | `a3ce67a` | `aslink` | `-o+` names every file the linker creates after the program rather than after the first object |
@@ -115,6 +116,7 @@ defect, so they travel separately.
 | `614da60` | `asrab` | `ipset0`..`ipset3` beside the manual's `ipset n`. Same instruction, same two bytes |
 | `87502d9` | `astlcs90` | `lda` takes its displacement as one operand or as two, `lda hl,-6 (ix)` or `lda hl,ix,#-6`. Same instruction, same bytes |
 | `f36f47e` | `astlcs90` | `rrd`/`rld` with no operand, and `a(hl)` as a spelling of `(hl+a)` |
+| `c9841cd`, `9d831fc` | `asrab` | the Rabbit 4000 and 6000. The machine type becomes a processor and a mode, because the 4000's two mode bits select between register mappings and several encodings differ by them. Then the instructions: the 32-bit pairs, the quad loads, the 6000's ALU against a stack slot, the 16-bit rotates, `cbm`, `clr`, `mulu`, `test` and the four conditions the 4000 carries on their own opcodes. 79 encodings verified byte-identical to SDAS |
 
 ### Not for upstream as separate patches
 
