@@ -134,6 +134,20 @@ addr(struct expr *esp)
 			if (!IS_RABBIT())
 				aerr();
 		} else	
+		/*
+		 * The Rabbit 4000's 32 bit pairs.  srch() will not take
+		 * "bc" out of "bcde" - it requires a delimiter after a
+		 * complete match - so the order here is not load bearing,
+		 * but they are looked for first for the sake of reading.
+		 */
+		if (admode(R32BCDE) != 0) {
+			indx = 0400;
+			mode = S_R32_BCDE;
+		} else
+		if (admode(R32JKHL) != 0) {
+			indx = 0400;
+			mode = S_R32_JKHL;
+		} else
 		if ((indx = admode(R16ALT)) != 0) {
 			mode = S_R16ALT;
 		} else	
@@ -286,6 +300,32 @@ struct	adsym	R2KIP[] = {
 
 struct	adsym	R2KSU[] = {
     {   "su",   SU|0400	},
+    {	"",	0000	}
+};
+
+struct	adsym	R32BCDE[] = {
+    {   "bcde", 0|0400	},
+    {	"",	0000	}
+};
+
+struct	adsym	R32JKHL[] = {
+    {   "jkhl", 0|0400	},
+    {	"",	0000	}
+};
+
+/*
+ * The Rabbit 4000 added four conditions of its own, on their own
+ * opcodes rather than in the Z80's condition field.  Only these four
+ * are here: the names the Z80 set already has keep their Z80
+ * encodings.  "v" is in both - it is PE on a Rabbit 3000 and the
+ * overflow condition on a 4000 - which is why this table is only
+ * consulted from the 4000 on.
+ */
+struct	adsym	R4KCND[] = {
+    {   "GT",   0|0400	},
+    {   "GTU",  1|0400	},
+    {   "LT",   2|0400	},
+    {   "V",    3|0400	},
     {	"",	0000	}
 };
 
