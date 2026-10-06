@@ -105,7 +105,7 @@ addr(struct expr *esp)
 				switch(indx&0xFF) {
 				case HL:
 				case SP:
-					if (mchtyp != X_R2K)
+					if (!IS_RABBIT())
 						break;
 				case IX:
 				case IY:
@@ -126,12 +126,12 @@ addr(struct expr *esp)
 		} else
 		if ((indx = admode(R8X)) != 0) {
 			mode = S_R8X;
-			if (mchtyp == X_R2K)
+			if (IS_RABBIT())
 				aerr();
 		} else
 		if ((indx = admode(R8XR2K)) != 0) {
 			mode = S_R8X;
-			if (mchtyp != X_R2K)
+			if (!IS_RABBIT())
 				aerr();
 		} else	
 		if ((indx = admode(R16ALT)) != 0) {
@@ -158,7 +158,7 @@ addr(struct expr *esp)
 				switch(indx&0xFF) {
 				case HL:
 				case SP:
-					if (mchtyp != X_R2K)
+					if (!IS_RABBIT())
 						break;
 				case IX:
 				case IY:
