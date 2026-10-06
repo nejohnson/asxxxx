@@ -28,3 +28,23 @@ link    -mxiu ; gbldh
 goldbin gbldh.hex
 expect  2
 asm     -gloaxff gbldhbad
+#
+# And the relocatable operand, which could not link at all.  asgb
+# added 0xFF00 to it and emitted R_PAGN; R4_PAGN compares against the
+# .setdp base, and asgb has no .setdp - so sdp.s_addr was always zero
+# and the check could not pass for any ordinary symbol.  The vendor's
+# own tgb.asm never reached the path: its n8 is an absolute equate, so
+# nothing was ever relocated.
+#
+# It is now a plain low byte relocation, which is what SDAS emits and
+# what the instruction actually wants: 0xFF42 and 0x42 are the same
+# byte to LDH, so there is nothing to disambiguate.  What is given up
+# is catching an out of page symbol - ASxxxx has no relocation mode
+# for "page 0 or page 0xFF", and either mode it does have would reject
+# one of the two spellings this assembler already accepts when the
+# value is absolute.  Nothing that used to be caught stops being
+# caught, because nothing could link this far.
+asm     -gloaxff gbhram
+asm     -gloaxff gbreloc
+link    -mxiu ; gbhram gbreloc
+goldbin gbhram.hex
