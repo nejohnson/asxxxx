@@ -244,6 +244,25 @@ addr(struct expr *esp)
 
 		if (admode(R8) != 0) {
 			mode = S_R8;
+			/*
+			 * "a(hl)" is how SDAS and SDCC write (HL+A), which
+			 * this assembler writes "(hl+a)".  Same two bytes.
+			 * A is a register in its own right, so the match
+			 * just made has already taken it and neither the
+			 * (HL+A) path above nor the d(IX/IY/SP) scan below
+			 * ever sees the line - which is why "a" used to end
+			 * up an undefined symbol.
+			 */
+			if ((aindx == A) && more()) {
+				p = ip;
+				if ((getnb() == LFIND) && admode(R16) &&
+				    (aindx == HL) && (getnb() == RTIND)) {
+					mode = S_IHLA;
+				} else {
+					ip = p;
+					aindx = A;
+				}
+			}
 		} else
 		if (admode(R16) != 0) {
 			mode = S_R16;

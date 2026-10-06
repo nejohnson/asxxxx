@@ -725,8 +725,19 @@ machine(struct mne *mp)
 	case S_RLD:	/* RLD */
 	case S_RRD:	/* RRD */
 	case S_SHRO:	/* RLC,RRC,RL,RR,SLA,SRA,SLL,SRL */
-		t1 = addr(&e1);
-		v1 = aindx;
+		/*
+		 * RLD and RRD rotate a digit through (HL), and Toshiba's
+		 * manual, SDAS and SDCC all write them with no operand at
+		 * all.  This assembler required one.  An omitted operand
+		 * is (HL), which is the same two bytes either way.
+		 */
+		if (((rf == S_RLD) || (rf == S_RRD)) && !more()) {
+			t1 = S_IR16;
+			v1 = HL;
+		} else {
+			t1 = addr(&e1);
+			v1 = aindx;
+		}
 
 		switch(t1) {
 		case S_R8:
