@@ -172,6 +172,7 @@
 #define	RB_CLR		107
 #define	RB_MULU		108
 #define	RB_TEST		109
+#define	RB_CBM		110
 
 /*
  * Processor Types (S_CPU)

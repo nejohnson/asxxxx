@@ -614,6 +614,7 @@ r4k(int rf, int op, struct expr *e1, struct expr *e2)
 	case RB_CLR:
 	case RB_MULU:
 	case RB_TEST:
+	case RB_CBM:
 	case S_PUSH:
 	case S_RL:
 	case S_SUB:
@@ -655,6 +656,17 @@ r4k(int rf, int op, struct expr *e1, struct expr *e2)
 	case RB_MULU:
 		r4kpfx();
 		outab(op);
+		return(1);
+
+	case RB_CBM:	/* cbm #n - the memory base mode */
+		if (getnb() == '#') {
+			outab(0xED);
+			outab(0x00);
+			expr(e1);
+			outrb(e1, 0);
+		} else {
+			xerr('a', "An immediate is required.");
+		}
 		return(1);
 
 	case RB_TEST:
@@ -741,12 +753,22 @@ r4k(int rf, int op, struct expr *e1, struct expr *e2)
 		ip = ips;
 		return(0);
 
-	case S_RL:	/* rl bc, rr bc */
-		if (((v1 = admode(R16)) != 0) && ((v1 & 0xFF) == BC) &&
-		    IS_MODE10_OR_11() && ((op == 0x10) || (op == 0x18))) {
-			r4kpfx();
-			outab((op == 0x10) ? 0x62 : 0x63);
-			return(1);
+	case S_RL:
+		/*
+		 * The 16 bit rotates: 0x50, then 0x10 for BC over DE,
+		 * then the operation - rlc 0, rrc 1, rl 2, rr 3, which is
+		 * the Z80 CB opcode shifted down.  rl de and rr de are the
+		 * earlier Rabbit's own F3 and FB, so they are left to it.
+		 */
+		if (((v1 = admode(R16)) != 0) && IS_MODE10_OR_11()) {
+			v1 &= 0xFF;
+			if (((v1 == BC) || (v1 == DE)) &&
+			    (op <= 0x18) && ((op & 0x07) == 0) &&
+			    !((v1 == DE) && (op >= 0x10))) {
+				r4kpfx();
+				outab(0x50 + ((v1 == BC) ? 0x10 : 0x00) + (op >> 3));
+				return(1);
+			}
 		}
 		ip = ips;
 		return(0);
@@ -789,9 +811,15 @@ r4k(int rf, int op, struct expr *e1, struct expr *e2)
 				outab(0x1B);
 				return(1);
 			}
-			if (t1 == S_IDSP) {
+			/*
+			 * IX, IY and SP all take a displacement here and pick the
+			 * second byte - CE/CF, DE/DF, EE/EF - while the prefix
+			 * still says which pair.
+			 */
+			if ((t1 == S_IDIX) || (t1 == S_IDIY) || (t1 == S_IDSP)) {
 				outab(jk ? 0xFD : 0xDD);
-				outab(0xEF);
+				outab(0xCF + ((t1 == S_IDIX) ? 0x00 :
+					    ((t1 == S_IDIY) ? 0x10 : 0x20)));
 				outrb(e1, R_SGND);
 				return(1);
 			}
@@ -817,9 +845,15 @@ r4k(int rf, int op, struct expr *e1, struct expr *e2)
 			outab(0x1A);
 			return(1);
 		}
-		if (t2 == S_IDSP) {
+		/*
+		 * IX, IY and SP all take a displacement here and pick the
+		 * second byte - CE/CF, DE/DF, EE/EF - while the prefix
+		 * still says which pair.
+		 */
+		if ((t2 == S_IDIX) || (t2 == S_IDIY) || (t2 == S_IDSP)) {
 			outab(jk ? 0xFD : 0xDD);
-			outab(0xEE);
+			outab(0xCE + ((t2 == S_IDIX) ? 0x00 :
+				    ((t2 == S_IDIY) ? 0x10 : 0x20)));
 			outrb(e2, R_SGND);
 			return(1);
 		}

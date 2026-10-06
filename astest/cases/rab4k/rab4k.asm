@@ -44,6 +44,16 @@ l$:
 	push	#0x1234
 	rl	bc
 	rr	bc
+	rlc	bc
+	rrc	bc
+	rlc	de
+	rrc	de
+	cbm	#0
+	cbm	#3
+	ld	-6 (ix), bcde
+	ld	bcde, -6 (ix)
+	ld	-6 (iy), jkhl
+	ld	jkhl, -6 (iy)
 	sub	hl, de
 	test	hl
 	test	bc
@@ -58,6 +68,8 @@ l$:
 ;
 ; And the instructions the earlier Rabbits have are untouched.
 ;
+	rl	de
+	rr	de
 	ldir
 	ldi
 	neg
