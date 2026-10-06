@@ -284,6 +284,11 @@ struct	adsym	R2KIP[] = {
     {	"",	0000	}
 };
 
+struct	adsym	R2KSU[] = {
+    {   "su",   SU|0400	},
+    {	"",	0000	}
+};
+
 struct	adsym	R16AF[] = {
     {	"af",	AF|0400	},
     {	"",	0000	}
