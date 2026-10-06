@@ -825,8 +825,19 @@ machine(struct mne *mp)
 
 		if ((t1 == S_R8) && (v1 == A) && (t2 == S_INDM)) {
 			if (is_abs(&e2)) {
+				/*
+				 * v2, not v1:  v1 is the A register
+				 * in this branch, so the test could
+				 * never be true and a full I/O
+				 * address - which is how the hardware
+				 * registers are written - was always
+				 * out of range.  "ldh (0xFF42),a"
+				 * below has the same two tests and
+				 * has always worked, which is what
+				 * makes it a typo rather than a rule.
+				 */
 				if (((v2 & 0xFF00) == 0x0000) ||
-			 	    ((v1 & 0xFF00) == 0xFF00)) {
+			 	    ((v2 & 0xFF00) == 0xFF00)) {
 					outab(0xF0);
 					outab(v2);
 				} else {
