@@ -38,6 +38,8 @@ char	*dsft	= "asm";
 char	imtab[3] = { 0x46, 0x56, 0x5E };
 struct  preByteType preByte;
 int	mchtyp;
+int	rabcpu;
+int	rabmode;
 
 /*
  * Opcode Cycle Definitions
@@ -527,6 +529,367 @@ static char *z80Page[7] = {
 };
 
 /*
+ * The Rabbit 4000 and 6000 forms.
+ *
+ * These are kept together rather than threaded through the cases for
+ * ld, push, cp and the rest, for one reason: every shape here is one
+ * the assembler rejected outright before, so nothing that already
+ * assembled can change meaning.  r4k() returns 1 when it has taken
+ * the line and 0 to hand it back.
+ *
+ * Two prefixes do most of the work.  The 32 bit pairs reuse the Z80's
+ * index prefixes - BCDE is 0xDD and JKHL is 0xFD in front of the
+ * opcode that does the same thing to HL - and in mode 10 a bare HL
+ * form needs 0x7F in front, because mode 10 has remapped what a bare
+ * HL means.
+ */
+
+/*
+ * Does what is left of this line mention a 32 bit pair?  Used only to
+ * decide whether a load is worth looking at properly, so a plain
+ * case insensitive search is enough.
+ */
+static int
+r4kquad(char *p)
+{
+	while (*p) {
+		if (((ccase[p[0] & 0x007F] == 'b') && (ccase[p[1] & 0x007F] == 'c') &&
+		     (ccase[p[2] & 0x007F] == 'd') && (ccase[p[3] & 0x007F] == 'e')) ||
+		    ((ccase[p[0] & 0x007F] == 'j') && (ccase[p[1] & 0x007F] == 'k') &&
+		     (ccase[p[2] & 0x007F] == 'h') && (ccase[p[3] & 0x007F] == 'l'))) {
+			return(1);
+		}
+		p++;
+	}
+	return(0);
+}
+
+static void
+r4kpfx(void)
+{
+	if (IS_MODE10()) {
+		outab(0x7F);
+	}
+}
+
+/*
+ * The byte an 8 bit immediate contributes.  Both signs are meant -
+ * "ld bcde,#-1" and "cp hl,#255" are each ordinary - so the range is
+ * -128 to 255, and outside it is an error rather than, as SDAS has
+ * it, quietly the low byte.
+ */
+static void
+r4kimm(struct expr *esp)
+{
+	a_uint v;
+
+	if (is_abs(esp)) {
+		v = esp->e_addr & a_mask;
+		if ((v > 0x00FF) && (v < (a_mask & ~((a_uint) 0x7F)))) {
+			xerr('v', "Immediate Exceeds -128 to 255.");
+		}
+		outab((int) v);
+	} else {
+		outrb(esp, 0);
+	}
+}
+
+static int
+r4k(int rf, int op, struct expr *e1, struct expr *e2)
+{
+	int t1, t2, v1, v2, jk;
+	char *ips = ip;
+
+	if (!IS_MIN_R4K()) {
+		return(0);
+	}
+
+	/*
+	 * Only the opcode classes with a Rabbit 4000 form reach the
+	 * operand scan below.  Without this every other mnemonic -
+	 * "nop" among them - has addr() run against whatever follows
+	 * it, which is nothing.
+	 */
+	switch (rf) {
+	case RB_CLR:
+	case RB_MULU:
+	case RB_TEST:
+	case S_PUSH:
+	case S_RL:
+	case S_SUB:
+	case S_ADD:
+	case S_ADC:
+	case S_SBC:
+	case S_AND:
+	case S_OR:
+	case S_LD:
+	case S_JP:
+		break;
+	case S_INH2:
+		/*
+		 * Only neg has a Rabbit 4000 form, and only with an
+		 * operand.  The rest of this class - ldir, ldi and the
+		 * others - take none, and bare neg is still the Z80's,
+		 * so neither may have addr() run against what follows.
+		 */
+		if ((op != 0x44) || !more()) {
+			return(0);
+		}
+		break;
+	default:
+		return(0);
+	}
+
+	switch (rf) {
+	case RB_CLR:
+		t1 = addr(e1);
+		v1 = (int) e1->e_addr;
+		if ((t1 == S_R16) && (v1 == HL)) {
+			r4kpfx();
+			outab(op);
+		} else {
+			xerr('a', "Only HL allowed.");
+		}
+		return(1);
+
+	case RB_MULU:
+		r4kpfx();
+		outab(op);
+		return(1);
+
+	case RB_TEST:
+		t1 = addr(e1);
+		v1 = (int) e1->e_addr;
+		if (t1 == S_R32_BCDE) {
+			outab(0xDD);
+			outab(0x5C);
+		} else
+		if ((t1 == S_R16) && (v1 == HL)) {
+			r4kpfx();
+			outab(op);
+		} else
+		if ((t1 == S_R16) && (v1 == BC)) {
+			outab(0xED);
+			outab(op);
+		} else {
+			xerr('a', "Only HL, BC or BCDE allowed.");
+		}
+		return(1);
+
+	case S_JP:
+		/*
+		 * jp gt / gtu / lt / v, which are the 4000's own and
+		 * carry their own opcodes.  Anything else is left to the
+		 * ordinary conditional jump.
+		 */
+		if ((v1 = admode(R4KCND)) != 0) {
+			v1 &= 0xFF;
+			if (getnb() == ',') {
+				r4kpfx();
+				outab(0xA2 + (v1 << 3));
+				expr(e1);
+				outrw(e1, 0);
+				return(1);
+			}
+		}
+		ip = ips;
+		return(0);
+
+	default:
+		break;
+	}
+
+	/*
+	 * From here on the line may not be a Rabbit 4000 one at all, and
+	 * addr() cannot be used to find out: it evaluates, and
+	 * evaluating an operand that turns out to belong to the ordinary
+	 * code leaves a symbol behind.  "push ip" became an undefined
+	 * global that way.  admode() only matches register names and has
+	 * no such effect, so the shape is established with that first,
+	 * and addr() is called only once the form is certain.
+	 */
+	switch (rf) {
+	case S_PUSH:
+		if (admode(R32BCDE) != 0) {
+			outab(0xDD);
+			outab((op == 0xC5) ? 0xF5 : 0xF1);
+			return(1);
+		}
+		if (admode(R32JKHL) != 0) {
+			outab(0xFD);
+			outab((op == 0xC5) ? 0xF5 : 0xF1);
+			return(1);
+		}
+		if ((op == 0xC5) && (getnb() == '#')) {
+			outab(0xED);
+			outab(0xA5);
+			expr(e1);
+			outrw(e1, 0);
+			return(1);
+		}
+		ip = ips;
+		return(0);
+
+	case S_INH2:	/* neg hl, neg bcde, neg jkhl */
+		if (admode(R32BCDE) != 0) { outab(0xDD); outab(0x4D); return(1); }
+		if (admode(R32JKHL) != 0) { outab(0xFD); outab(0x4D); return(1); }
+		if (((v1 = admode(R16)) != 0) && ((v1 & 0xFF) == HL)) {
+			r4kpfx();
+			outab(0x4D);
+			return(1);
+		}
+		ip = ips;
+		return(0);
+
+	case S_RL:	/* rl bc, rr bc */
+		if (((v1 = admode(R16)) != 0) && ((v1 & 0xFF) == BC) &&
+		    IS_MODE10_OR_11() && ((op == 0x10) || (op == 0x18))) {
+			r4kpfx();
+			outab((op == 0x10) ? 0x62 : 0x63);
+			return(1);
+		}
+		ip = ips;
+		return(0);
+
+	case S_LD:
+		/*
+		 * One side has to be a 32 bit pair, or this is an
+		 * ordinary load and none of our business.
+		 */
+		if ((t1 = admode(R32BCDE)) != 0) {
+			jk = 0;
+		} else
+		if ((t1 = admode(R32JKHL)) != 0) {
+			jk = 1;
+		} else {
+			ip = ips;
+			if (!r4kquad(ip)) {
+				return(0);
+			}
+			/* the pair is the source; the destination is next */
+			t1 = addr(e1);
+			if (getnb() != ',') { ip = ips; return(0); }
+			if (admode(R32BCDE) != 0) {
+				jk = 0;
+			} else
+			if (admode(R32JKHL) != 0) {
+				jk = 1;
+			} else {
+				ip = ips;
+				return(0);
+			}
+			if (t1 == S_INDM) {
+				r4kpfx();
+				outab(0x83 + jk);
+				outrw(e1, 0);
+				return(1);
+			}
+			if (t1 == S_IDHL) {
+				outab(jk ? 0xFD : 0xDD);
+				outab(0x1B);
+				return(1);
+			}
+			if (t1 == S_IDSP) {
+				outab(jk ? 0xFD : 0xDD);
+				outab(0xEF);
+				outrb(e1, R_SGND);
+				return(1);
+			}
+			ip = ips;
+			return(0);
+		}
+		if (getnb() != ',') { ip = ips; return(0); }
+		t2 = addr(e2);
+		if (t2 == S_IMMED) {
+			r4kpfx();
+			outab(0xA3 + jk);
+			r4kimm(e2);
+			return(1);
+		}
+		if (t2 == S_INDM) {
+			r4kpfx();
+			outab(0x93 + jk);
+			outrw(e2, 0);
+			return(1);
+		}
+		if (t2 == S_IDHL) {
+			outab(jk ? 0xFD : 0xDD);
+			outab(0x1A);
+			return(1);
+		}
+		if (t2 == S_IDSP) {
+			outab(jk ? 0xFD : 0xDD);
+			outab(0xEE);
+			outrb(e2, R_SGND);
+			return(1);
+		}
+		ip = ips;
+		return(0);
+
+	/*
+	 * <alu> hl,n(sp) on the Rabbit 6000.  The second byte follows
+	 * the Z80's ALU order - add 8A, adc 9A, sub AA, sbc BA, and CA,
+	 * or EA, cp FA - which is the operation's own bit 3 field moved
+	 * into the high nibble.  xor has no such form.
+	 */
+	case S_ADD:
+	case S_ADC:
+	case S_SBC:
+	case S_AND:
+	case S_OR:
+	case S_SUB:
+		if ((v1 = admode(R16)) == 0) { ip = ips; return(0); }
+		v1 &= 0xFF;
+		if (getnb() != ',') { ip = ips; return(0); }
+		if ((v1 == HL) && IS_MIN_R6K() && !((rf == S_SUB) && (op == 0xA8))) {
+			char *ipc = ip;
+			t2 = addr(e2);
+			if (t2 == S_IDSP) {
+				outab(0x49);
+				outab(0x8A + (((op >> 3) & 0x07) << 4));
+				outrb(e2, R_SGND);
+				return(1);
+			}
+			ip = ipc;
+		}
+		if ((rf == S_ADD) && ((v1 == IX) || (v1 == IY)) && IS_MIN_R6K()) {
+			if (getnb() == '#') {
+				outab((v1 == IX) ? 0xDD : 0xFD);
+				outab(0xC5);
+				expr(e2);
+				r4kimm(e2);
+				return(1);
+			}
+			ip = ips;
+			return(0);
+		}
+		if ((rf == S_SUB) && (v1 == HL)) {
+			if (((v2 = admode(R16)) != 0) && ((v2 & 0xFF) == DE)) {
+				if (op == 0xB8) { outab(0xED); outab(0x48); return(1); }
+				if (op == 0x90) { r4kpfx(); outab(0x55); return(1); }
+				ip = ips;
+				return(0);
+			}
+			if ((op == 0xB8) && (getnb() == '#')) {
+				r4kpfx();
+				outab(0x48);
+				expr(e2);
+				r4kimm(e2);
+				return(1);
+			}
+		}
+		ip = ips;
+		return(0);
+
+	default:
+		break;
+	}
+
+	ip = ips;
+	return(0);
+}
+
+/*
  * Process a machine op.
  */
 void
@@ -550,10 +913,31 @@ machine(struct mne *mp)
 
 	chkPreByte(mp);
 
+	if (r4k(rf, op, &e1, &e2)) {
+		return;
+	}
+
 	switch (rf) {
 	case S_CPU:
 		mchtyp = op;
 		sym[2].s_addr = op;
+		/*
+		 * Split the directive into the two things the
+		 * instructions ask about.  See rab.h.
+		 */
+		switch (op) {
+		case X_R2K:    rabcpu = R_2K;   rabmode = R_NOMODE; break;
+		case X_R3KA:   rabcpu = R_3KA;  rabmode = R_NOMODE; break;
+		case X_R4K00:  rabcpu = R_4K;   rabmode = R_MODE00; break;
+		case X_R4K01:  rabcpu = R_4K;   rabmode = R_MODE01; break;
+		case X_R4K10:  rabcpu = R_4K;   rabmode = R_MODE10; break;
+		case X_R4K11:  rabcpu = R_4K;   rabmode = R_MODE11; break;
+		case X_R6K00:  rabcpu = R_6K;   rabmode = R_MODE00; break;
+		case X_R6K01:  rabcpu = R_6K;   rabmode = R_MODE01; break;
+		case X_R6K10:  rabcpu = R_6K;   rabmode = R_MODE10; break;
+		case X_R6K11:  rabcpu = R_6K;   rabmode = R_MODE11; break;
+		default:       rabcpu = R_NONE; rabmode = R_NOMODE; break;
+		}
 		opcycles = OPCY_CPU;
 		lmode = SLIST;
 		break;
@@ -1907,6 +2291,14 @@ machine(struct mne *mp)
 		switch (mchtyp) {
 		case X_R2K:
 		case X_R3KA:
+		case X_R4K00:
+		case X_R4K01:
+		case X_R4K10:
+		case X_R4K11:
+		case X_R6K00:
+		case X_R6K01:
+		case X_R6K10:
+		case X_R6K11:
 			of = (preByte.altd || preByte.ioe || preByte.ioi) ? 1 : 0;
 			opcycles = rabpg1[cb[of + 0] & 0xFF];
 			while ((opcycles & OPCY_NONE) && (opcycles & OPCY_MASK)) {
@@ -2158,6 +2550,8 @@ minit(void)
 	if (pass == 0) {
 		mchtyp = X_R2K;
 		sym[2].s_addr = X_R2K;
+		rabcpu = R_2K;
+		rabmode = R_NOMODE;
 	}
 }
 

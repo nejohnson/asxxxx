@@ -159,21 +159,72 @@
 #define	S_CPU		88
 
 /*
- * Processor Types (S_CPU)
+ * The Rabbit 4000 pairs the 16 bit registers into 32 bit ones and
+ * reaches them with the Z80's index prefixes: BCDE is 0xDD and JKHL
+ * is 0xFD, in front of the opcode that does the same thing to HL.
  */
-#define	X_R2K		0
-#define	X_R3KA		3
-#define	X_HD64		1
-#define	X_Z80		2
+#define	S_R32_BCDE	38
+#define	S_R32_JKHL	39
 
 /*
- * This assembler covers the Rabbit, the Z80 and the HD64180/Z180.
- * IS_RABBIT() is "any Rabbit", which is what the instructions the
- * Z80 does not have are gated on.  The Rabbit 3000A added a few
- * more on top of the 2000 and 3000; those use IS_MIN_R3KA().
+ * Rabbit 4000 instructions
  */
-#define	IS_RABBIT()	((mchtyp == X_R2K) || (mchtyp == X_R3KA))
-#define	IS_MIN_R3KA()	(mchtyp == X_R3KA)
+#define	RB_CLR		107
+#define	RB_MULU		108
+#define	RB_TEST		109
+
+/*
+ * Processor Types (S_CPU)
+ *
+ * mchtyp records which directive was written, and is what goes
+ * into sym[2] for the listing.  What the instructions actually
+ * ask about is two separate things, so the directive is split
+ * into rabcpu and rabmode below.
+ */
+#define	X_R2K		0
+#define	X_HD64		1
+#define	X_Z80		2
+#define	X_R3KA		3
+#define	X_R4K00		4
+#define	X_R4K01		5
+#define	X_R4K10		6
+#define	X_R4K11		7
+#define	X_R6K00		8
+#define	X_R6K01		9
+#define	X_R6K10		10
+#define	X_R6K11		11
+
+/*
+ * This assembler covers the Rabbit, the Z80 and the HD64180/Z180,
+ * and from the Rabbit 4000 on, a processor alone does not say what
+ * an instruction encodes to: the 4000 and 6000 carry two mode bits
+ * which select between register mappings, and several encodings
+ * differ by them - mode 10 puts a 0x7F escape in front.
+ *
+ * So the directive is split in two.  rabcpu answers "which Rabbit,
+ * if any", and is ordered so that later processors compare greater;
+ * rabmode answers "which mode", and is R_NOMODE on everything
+ * before the 4000.
+ */
+#define	R_NONE		0	/* not a Rabbit at all */
+#define	R_2K		2
+#define	R_3KA		3
+#define	R_4K		4
+#define	R_6K		6
+
+#define	R_NOMODE	0
+#define	R_MODE00	1
+#define	R_MODE01	2
+#define	R_MODE10	3
+#define	R_MODE11	4
+
+#define	IS_RABBIT()		(rabcpu != R_NONE)
+#define	IS_MIN_R3KA()		(rabcpu >= R_3KA)
+#define	IS_MIN_R4K()		(rabcpu >= R_4K)
+#define	IS_MIN_R6K()		(rabcpu >= R_6K)
+#define	IS_MIN_MODE01()		(rabmode >= R_MODE01)
+#define	IS_MODE10_OR_11()	(rabmode >= R_MODE10)
+#define	IS_MODE10()		(rabmode == R_MODE10)
 
 
 /*
@@ -230,12 +281,17 @@ extern	struct	adsym	R8X[];
 extern	struct	adsym	R8XR2K[];
 extern	struct	adsym	R2KIP[];
 extern	struct	adsym	R2KSU[];
+extern	struct	adsym	R32BCDE[];
+extern	struct	adsym	R32JKHL[];
+extern	struct	adsym	R4KCND[];
 extern	struct	adsym	R16AF[];
 extern	struct	adsym	R16[];
 extern	struct	adsym	R16ALT[];
 extern	struct	adsym	CND[];
 
 extern	int		mchtyp;
+extern	int		rabcpu;
+extern	int		rabmode;
 
 	/* machine dependent functions */
 
