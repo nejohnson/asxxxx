@@ -562,7 +562,7 @@ machine(struct mne *mp)
 		/*
 		 * Rabbit Only
 		 */
-		if (mchtyp == X_R2K) {
+		if (IS_RABBIT()) {
 			switch(op) {
 			case 0x76:	preByte.altd = op;	break;
 			case 0xdb:	preByte.ioe  = op;	break;
@@ -582,14 +582,33 @@ machine(struct mne *mp)
 		/*
 		 * Rabbit Only
 		 */
-		if ((rf == S_INH1R) && (mchtyp != X_R2K))
+		if ((rf == S_INH1R) && (!IS_RABBIT()))
 			xerr('o', "A Rabbit 2000/3000 Instruction.");
 		/*
 		 * Rabbit Excluded
 		 */
-		if ((rf == S_INH1X) && (mchtyp == X_R2K))
+		if ((rf == S_INH1X) && (IS_RABBIT()))
 			xerr('o', "Not A Rabbit 2000/3000 Instruction.");
 	        outab(op);
+		break;
+
+	case RB_INH1A:
+		/*
+		 * Rabbit 3000A Only
+		 */
+		if (!IS_MIN_R3KA())
+			xerr('o', "A Rabbit 3000A Instruction.");
+		outab(op);
+		break;
+
+	case RB_INH2A:
+		/*
+		 * Rabbit 3000A Only
+		 */
+		if (!IS_MIN_R3KA())
+			xerr('o', "A Rabbit 3000A Instruction.");
+		outab(0xED);
+		outab(op);
 		break;
 
 	case S_INH2:
@@ -598,12 +617,12 @@ machine(struct mne *mp)
 		/*
 		 * Rabbit Only
 		 */
-		if ((rf == S_INH2R) && (mchtyp != X_R2K))
+		if ((rf == S_INH2R) && (!IS_RABBIT()))
 			xerr('o', "A Rabbit 2000/3000 Instruction.");
 		/*
 		 * Rabbit Excluded
 		 */
-		if ((rf == S_INH2X) && (mchtyp == X_R2K))
+		if ((rf == S_INH2X) && (IS_RABBIT()))
 			xerr('o', "Not A Rabbit 2000/3000 Instruction.");
 		outab(0xED);
 		outab(op);
@@ -625,8 +644,27 @@ machine(struct mne *mp)
 		/*
 		 * Rabbit: push/pop ip
 		 */
+		/*
+		 * Rabbit 3000A: push/pop su
+		 */
+	        if ((admode(R2KSU) & 0xFF) == SU) {
+			if (!IS_MIN_R3KA())
+				xerr('o', "A Rabbit 3000A Instruction.");
+			outab(0xed);
+			if (op == 0xc5) {	/* push su */
+				outab(0x66);
+			} else
+			if (op == 0xc1) {	/* pop  su */
+				outab(0x6e);
+			} else {
+				xerr('a', "Invalid Addressing Mode.");
+			}
+			if (preByte.altd)
+				xerr('a', "PUSH/POP SU Does Not Support ALTD.");
+			break;
+		} else
 	        if ((admode(R2KIP) & 0xFF) == IP) {
-			if (mchtyp != X_R2K)
+			if (!IS_RABBIT())
 				xerr('o', "A Rabbit 2000/3000 Instruction.");
 			outab(0xed);
 			if (op == 0xc5) {	/* push ip */
@@ -673,7 +711,7 @@ machine(struct mne *mp)
 		/*
 		 * Rabbit: Exclude rst 0x00/0x08/0x30
 		 */
-		if (mchtyp == X_R2K) {
+		if (IS_RABBIT()) {
 			switch (v1) {
 			case 0x10:
 			case 0x18:
@@ -693,7 +731,7 @@ machine(struct mne *mp)
 		/*
 		 * Rabbit Excluded
 		 */
-		if (mchtyp == X_R2K)
+		if (IS_RABBIT())
 			xerr('o', "Not A Rabbit 2000/3000 Instruction.");
 		expr(&e1);
 		abscheck(&e1);
@@ -729,7 +767,7 @@ machine(struct mne *mp)
 
 	case S_RL:
 		t1 = addr(&e1);
-		if ((mchtyp == X_R2K) && (t1 == S_R16)) {
+		if ((IS_RABBIT()) && (t1 == S_R16)) {
 			v1 = (int) e1.e_addr;
 			if (preByte.ioi || preByte.ioe) {
 				xerr('a', "Addressing Mode Does Not Support IOE Or IOI.");
@@ -809,7 +847,7 @@ machine(struct mne *mp)
 		if (preByte.ioi || preByte.ioe) {
 			xerr('a', "Addressing Mode Does Not Support IOE Or IOI.");
 		}
-		if ((mchtyp == X_R2K) && (t1 == S_R16) && (t2 == S_R16)) {
+		if ((IS_RABBIT()) && (t1 == S_R16) && (t2 == S_R16)) {
 			if (rf == S_AND) {	/* and */
 				op = 0xDC;
 			} else
@@ -953,7 +991,7 @@ machine(struct mne *mp)
                  * byte is emitted without a range check - both
                  * signs name the same byte and both are meant.
                  */
-		if ((mchtyp == X_R2K) && (rf == S_ADD) &&
+		if ((IS_RABBIT()) && (rf == S_ADD) &&
 		    (t1 == S_R16) && (e1.e_addr == SP) &&
 		    (t2 == S_IMMED)) {
 			outab(0x27);
@@ -1020,7 +1058,7 @@ machine(struct mne *mp)
 		 * ld  XPC,a
 		 */
 		if ((t1 == S_R8X) && (t2 == S_R8) && (v2 == A)) {
-			if ((mchtyp != X_R2K) && (v1 == XPC))
+			if ((!IS_RABBIT()) && (v1 == XPC))
 				xerr('a', "XPC not allowed for first argument.");
 			if (preByte.altd || preByte.ioe || preByte.ioi)
 				xerr('a', "Addressing Mode Does Not Support ALTD, IOE, Or IOI.");
@@ -1037,7 +1075,7 @@ machine(struct mne *mp)
 		 * ld  a,XPC
 		 */
 		if ((t1 == S_R8) && (v1 == A) && (t2 == S_R8X)) {
-			if ((mchtyp != X_R2K) && (v2 == XPC))
+			if ((!IS_RABBIT()) && (v2 == XPC))
 				xerr('a', "XPC not allowed for second argument.");
 			if (preByte.ioe || preByte.ioi)
 				xerr('a', "Addressing Mode Does Not Support IOE Or IOI.");
@@ -1112,7 +1150,7 @@ machine(struct mne *mp)
 		 */
 		if ((t1 == S_R16) && (v1 == HL) &&
 		   ((t2 == S_IDIX) || (t2 == S_IDHL) || (t2 == S_IDIY))) {
-			if (mchtyp != X_R2K)
+			if (!IS_RABBIT())
 				xerr('o', "A Rabbit 2000/3000 Instruction.");
 			if (t2 == S_IDHL)	outab(0xDD);
 			if (t2 == S_IDIY)	outab(0xFD); 
@@ -1126,7 +1164,7 @@ machine(struct mne *mp)
 		 * ld  iy,(sp+n)
 		 */
 		if ((t1 == S_R16) && (t2 == S_IDSP)) {
- 	        	if (mchtyp != X_R2K)
+ 	        	if (!IS_RABBIT())
 				xerr('o', "A Rabbit 2000/3000 Instruction.");
 			if (preByte.altd && ((v1 == IX) || (v1 == IY)))
 				xerr('a', "Addressing Mode Does Not Support ALTD With IX Or IY.");
@@ -1145,7 +1183,7 @@ machine(struct mne *mp)
 		 */
 	        if ((t2 == S_R16) && (v2 == HL) &&
 		   ((t1 == S_IDIX) || (t1 == S_IDHL) || (t1 == S_IDIY))) {
-			if (mchtyp != X_R2K)
+			if (!IS_RABBIT())
 				xerr('o', "A Rabbit 2000/3000 Instruction.");
 			if (preByte.altd)
 				xerr('a', "Addressing Mode Does Not Support ALTD.");
@@ -1161,7 +1199,7 @@ machine(struct mne *mp)
 		 * ld (sp+n),iy
 		 */
 		if ((t2 == S_R16) && (t1 == S_IDSP)) {
-			if (mchtyp != X_R2K)
+			if (!IS_RABBIT())
 				xerr('o', "A Rabbit 2000/3000 Instruction.");
 			if (preByte.altd || preByte.ioe || preByte.ioi)
 				xerr('a', "Addressing Mode Does Not Support ALTD, IOE Or IOI.");
@@ -1241,7 +1279,7 @@ machine(struct mne *mp)
 		 */
                 if ((t1 == S_R16) && (v1 == HL) &&
 		    (t2 == S_R16) && ((v2 == IX) || (v2 == IY))) {
-			if (mchtyp != X_R2K)
+			if (!IS_RABBIT())
 				xerr('o', "A Rabbit 2000/3000 Instruction.");
 			if (preByte.ioe || preByte.ioi)
 				xerr('a', "Addressing Mode Does Not Support IOE Or IOI.");
@@ -1258,7 +1296,7 @@ machine(struct mne *mp)
 		 */
                 if ((t2 == S_R16) && (v2 == HL) &&
 		    (t1 == S_R16) && ((v1 == IX) || (v1 == IY))) {
-			if (mchtyp != X_R2K)
+			if (!IS_RABBIT())
 				xerr('o', "A Rabbit 2000/3000 Instruction.");
 			if (preByte.altd || preByte.ioe || preByte.ioi)
 				xerr('a', "Addressing Mode Does Not Support ALTD, IOE, Or IOI.");
@@ -1279,7 +1317,7 @@ machine(struct mne *mp)
 		 * ld  hl',de
 		 */
   	        if ((t1 == S_R16ALT) && (t2 == S_R16)) {
-			if (mchtyp != X_R2K)
+			if (!IS_RABBIT())
 				xerr('o', "A Rabbit 2000/3000 Instruction.");
 			if (preByte.altd || preByte.ioe || preByte.ioi)
 				xerr('a', "Addressing Mode Does Not Support ALTD, IOE, Or IOI.");
@@ -1314,7 +1352,7 @@ machine(struct mne *mp)
 			 * ex  (sp),iy
 			 */
 			if ((t1 == S_IDSP) && (e1.e_base.e_ap == NULL) && (v1 == 0)) {
-				if (mchtyp == X_R2K) {
+				if (IS_RABBIT()) {
 					if (preByte.altd) {
 						if ((v2 == IX) || (v2 == IY))
 							xerr('a', "Addressing Mode Does Not Support ALTD With IX or IY.");
@@ -1343,7 +1381,7 @@ machine(struct mne *mp)
 			 * ex  iy,(sp)		[ex  (sp),iy]
 			 */
 			if ((t2 == S_IDSP) && (e2.e_base.e_ap == NULL) && (v2 == 0)) {
-				if (mchtyp == X_R2K) {
+				if (IS_RABBIT()) {
 					if (preByte.altd) {
 						if ((v1 == IX) || (v1 == IY))
 							xerr('a', "Addressing Mode Does Not Support ALTD With IX or IY.");
@@ -1392,7 +1430,7 @@ machine(struct mne *mp)
 				outab(0xEB);
 				break;
 			}
-			if ((mchtyp == X_R2K) && (t2 == S_R16ALT) && (v2 == HL)) {
+			if ((IS_RABBIT()) && (t2 == S_R16ALT) && (v2 == HL)) {
 				if (preByte.altd)
 					xerr('a', "Addressing Mode Does Not Support ALTD.");
 				outab(preByte.altd = 0x76);
@@ -1404,7 +1442,7 @@ machine(struct mne *mp)
 		 * ex  de',hl
 		 * ex  de',hl'
 		 */
-		if ((mchtyp == X_R2K) && (t1 == S_R16ALT) && (v1 == DE)) {
+		if ((IS_RABBIT()) && (t1 == S_R16ALT) && (v1 == DE)) {
 			if ((t2 == S_R16) && (v2 == HL)) {
 				outab(0xE3);
 				break;
@@ -1422,7 +1460,7 @@ machine(struct mne *mp)
 
 	case S_IN:
 	case S_OUT:
-		if (mchtyp == X_R2K) {
+		if (IS_RABBIT()) {
 			xerr('o', "Not A Rabbit 2000/3000 Instruction.");
 		}
 		if (rf == S_IN) {	/* in  */
@@ -1548,7 +1586,7 @@ machine(struct mne *mp)
 		break;
 
 	case S_CALL:
-		if (mchtyp == X_R2K) {
+		if (IS_RABBIT()) {
 		/*
 		 * call  n
 		 */
@@ -1705,7 +1743,7 @@ machine(struct mne *mp)
 		break;
 
 	case RB_IPSET:
-		if (mchtyp != X_R2K)
+		if (!IS_RABBIT())
 			xerr('o', "A Rabbit 2000/3000 Instruction.");
 	        v1 = (int) absexpr();
 		if (v1 > 3) {
@@ -1724,7 +1762,7 @@ machine(struct mne *mp)
 	        break;
 
 	case RB_LCALL:
-		if (mchtyp != X_R2K)
+		if (!IS_RABBIT())
 			xerr('o', "A Rabbit 2000/3000 Instruction.");
 		t1 = addr(&e1);
 		v1 = (int) e1.e_addr;
@@ -1745,7 +1783,7 @@ machine(struct mne *mp)
 		break;
 
 	case RB_LDP:
-		if (mchtyp != X_R2K)
+		if (!IS_RABBIT())
 			xerr('o', "A Rabbit 2000/3000 Instruction.");
 		t1 = addr(&e1);
 		v1 = (int) e1.e_addr;
@@ -1838,7 +1876,7 @@ machine(struct mne *mp)
 		break;
 
 	case RB_BOOL:
-		if (mchtyp != X_R2K)
+		if (!IS_RABBIT())
 			xerr('o', "A Rabbit 2000/3000 Instruction.");
 		t1 = addr(&e1);
 		v1 = (int) e1.e_addr;

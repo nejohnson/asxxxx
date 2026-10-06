@@ -229,6 +229,7 @@ struct	mne	mne[] = {
 	/* Machines */
 
     {	NULL,	".r3k",		S_CPU,		0,	X_R2K	},
+    {	NULL,	".r3ka",	S_CPU,		0,	X_R3KA	},
     {	NULL,	".r2k",		S_CPU,		0,	X_R2K	},
     {	NULL,	".hd64",	S_CPU,		0,	X_HD64	},
     {	NULL,	".z180",	S_CPU,		0,	X_HD64	},
@@ -351,6 +352,23 @@ struct	mne	mne[] = {
     {   NULL,   "ldp",          RB_LDP,		0,	0x64    },
 
     {   NULL,   "lcall",        RB_LCALL,	0,	0xCF    },
+    /*
+     * Rabbit 3000A
+     */
+    {   NULL,   "idet",		RB_INH1A,	0,	0x5B    },
+    {   NULL,   "lddsr",	RB_INH2A,	0,	0x98    },
+    {   NULL,   "ldisr",	RB_INH2A,	0,	0x90    },
+    {   NULL,   "lsddr",	RB_INH2A,	0,	0xD8    },
+    {   NULL,   "lsdr",		RB_INH2A,	0,	0xF8    },
+    {   NULL,   "lsidr",	RB_INH2A,	0,	0xD0    },
+    {   NULL,   "lsir",		RB_INH2A,	0,	0xF0    },
+    {   NULL,   "rdmode",	RB_INH2A,	0,	0x7F    },
+    {   NULL,   "setusr",	RB_INH2A,	0,	0x6F    },
+    {   NULL,   "sures",	RB_INH2A,	0,	0x7D    },
+    {   NULL,   "syscall",	RB_INH2A,	0,	0x75    },
+    {   NULL,   "uma",		RB_INH2A,	0,	0xC0    },
+    {   NULL,   "ums",		RB_INH2A,	0,	0xC8    },
+
     {   NULL,   "ljp",          RB_LCALL,	S_EOL,	0xC7    }
 
 };

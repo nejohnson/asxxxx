@@ -85,6 +85,7 @@
 #define XPC		0x67
 
 #define IP		4
+#define SU		5
 
 /*
  * Conditional definitions
@@ -161,8 +162,18 @@
  * Processor Types (S_CPU)
  */
 #define	X_R2K		0
+#define	X_R3KA		3
 #define	X_HD64		1
 #define	X_Z80		2
+
+/*
+ * This assembler covers the Rabbit, the Z80 and the HD64180/Z180.
+ * IS_RABBIT() is "any Rabbit", which is what the instructions the
+ * Z80 does not have are gated on.  The Rabbit 3000A added a few
+ * more on top of the 2000 and 3000; those use IS_MIN_R3KA().
+ */
+#define	IS_RABBIT()	((mchtyp == X_R2K) || (mchtyp == X_R3KA))
+#define	IS_MIN_R3KA()	(mchtyp == X_R3KA)
 
 
 /*
@@ -183,6 +194,12 @@
 #define RB_IPSET	102
 #define RB_LDP		103
 #define RB_LCALL	104
+
+/*
+ * Rabbit 3000A inherent mode instructions
+ */
+#define RB_INH1A	105
+#define RB_INH2A	106
 
 #define P_ALTD		0x01
 #define P_IO		0x02
@@ -212,6 +229,7 @@ extern	struct	adsym	R8[];
 extern	struct	adsym	R8X[];
 extern	struct	adsym	R8XR2K[];
 extern	struct	adsym	R2KIP[];
+extern	struct	adsym	R2KSU[];
 extern	struct	adsym	R16AF[];
 extern	struct	adsym	R16[];
 extern	struct	adsym	R16ALT[];
