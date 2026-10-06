@@ -209,6 +209,7 @@ machine(struct mne *mp)
 {
 	int op, t1, t2;
 	int rf, v1, v2;
+	int cnd;
 	struct expr e1, e2;
 	int c;
 	char id[NCPS];
@@ -751,24 +752,60 @@ machine(struct mne *mp)
 
 	case S_JP:	/* JP */
 	case S_CALL:	/* CALL */
-		if (admode(CND) != 0) {
+		/*
+		 * Leaving the condition out is the T (always) condition,
+		 * and the operand may still be a register: "jp (hl)" is
+		 * "jp t,(hl)".  So the register forms have to be looked
+		 * for here too, and not only after a condition.
+		 *
+		 * They were not, and the fall back was expr() - against
+		 * which "(hl)" is a perfectly good parenthesised
+		 * expression naming a symbol hl.  "jp (hl)" therefore
+		 * assembled, with no diagnostic, as an absolute jump to
+		 * an undefined global.
+		 */
+		if ((cnd = admode(CND)) != 0) {
 			v1 = aindx;
 			comma(1);
-			t2 = addr(&e2);
-			v2 = aindx;
-			switch(t2) {
-			case S_R16:	outab(0xE8 | v2);	break;
-			case S_XYS:	outab(0xF4 | (v2 & XYSMASK));	outrb(&e2, R_SGND);	break;
-			case S_HLA:	outab(0xF7);	break;
-			case S_MN:	outab(0xEB);	outrw(&e2, 0);	break;
-			default:	xerr('a', "Invalid 2nd argument");	qerr();	break;
+		} else {
+			v1 = T;
+		}
+		t2 = addr(&e2);
+		v2 = aindx;
+		switch(t2) {
+		/*
+		 * The register operand of a jump is an address held in
+		 * that register, and is written both ways: this
+		 * assembler's own tt90.asm has "jp t,hl", while Toshiba's
+		 * manual, SDAS and SDCC all write "jp (hl)".  Same
+		 * instruction, same two bytes, so take either.
+		 */
+		case S_IR16:
+		case S_R16:	outab(0xE8 | v2);	break;
+		case S_IXYS:
+		case S_XYS:	outab(0xF4 | (v2 & XYSMASK));	outrb(&e2, R_SGND);	break;
+		case S_IHLA:
+		case S_HLA:	outab(0xF7);	break;
+		case S_MN:
+			/*
+			 * A direct address has its own opcode when no
+			 * condition is written, and only reaches the
+			 * prefixed form when one is - including when the
+			 * condition written is T.
+			 */
+			if (cnd == 0) {
+				outab(op);
+				outrw(&e2, 0);
+			} else {
+				outab(0xEB);
+				outrw(&e2, 0);
 			}
+			break;
+		default:	xerr('a', "Invalid argument");	qerr();	break;
+		}
+		if ((t2 != S_MN) || (cnd != 0)) {
 			if (rf == S_JP)   outab((op = 0xC0 | v1));
 			if (rf == S_CALL) outab((op = 0xD0 | v1));
-		} else {	/* mn */ 
-			expr(&e2);
-			outab(op);
-			outrw(&e2, 0);
 		}
 		break;
 
