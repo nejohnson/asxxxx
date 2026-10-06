@@ -820,7 +820,7 @@ r4k(int rf, int op, struct expr *e1, struct expr *e2)
 				outab(jk ? 0xFD : 0xDD);
 				outab(0xCF + ((t1 == S_IDIX) ? 0x00 :
 					    ((t1 == S_IDIY) ? 0x10 : 0x20)));
-				outrb(e1, R_SGND);
+				outrb(e1, 0);
 				return(1);
 			}
 			ip = ips;
@@ -849,12 +849,17 @@ r4k(int rf, int op, struct expr *e1, struct expr *e2)
 		 * IX, IY and SP all take a displacement here and pick the
 		 * second byte - CE/CF, DE/DF, EE/EF - while the prefix
 		 * still says which pair.
+		 *
+		 * The displacement is a byte and is not range checked.
+		 * A stack offset is written unsigned and an index offset
+		 * is usually negative, so both halves of the byte are
+		 * meant - the same as "add sp,n".
 		 */
 		if ((t2 == S_IDIX) || (t2 == S_IDIY) || (t2 == S_IDSP)) {
 			outab(jk ? 0xFD : 0xDD);
 			outab(0xCE + ((t2 == S_IDIX) ? 0x00 :
 				    ((t2 == S_IDIY) ? 0x10 : 0x20)));
-			outrb(e2, R_SGND);
+			outrb(e2, 0);
 			return(1);
 		}
 		ip = ips;
@@ -881,7 +886,7 @@ r4k(int rf, int op, struct expr *e1, struct expr *e2)
 			if (t2 == S_IDSP) {
 				outab(0x49);
 				outab(0x8A + (((op >> 3) & 0x07) << 4));
-				outrb(e2, R_SGND);
+				outrb(e2, 0);
 				return(1);
 			}
 			ip = ipc;
