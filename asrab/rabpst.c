@@ -364,6 +364,7 @@ struct	mne	mne[] = {
     {	NULL,	"clr",		RB_CLR,		0,	0xBF	},
     {	NULL,	"mulu",		RB_MULU,	0,	0xA7	},
     {	NULL,	"test",		RB_TEST,	0,	0x4C	},
+    {	NULL,	"cbm",		RB_CBM,		0,	0x00	},
 
     {	NULL,	"altd",		RB_PRE,		0,	0x76	},
     {	NULL,	"ioe",		RB_PRE,		0,	0xDB	},
