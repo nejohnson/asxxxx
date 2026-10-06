@@ -829,8 +829,8 @@ r4k(int rf, int op, struct expr *e1, struct expr *e2)
 	/*
 	 * <alu> hl,n(sp) on the Rabbit 6000.  The second byte follows
 	 * the Z80's ALU order - add 8A, adc 9A, sub AA, sbc BA, and CA,
-	 * or EA, cp FA - which is the operation's own bit 3 field moved
-	 * into the high nibble.  xor has no such form.
+	 * or EA, cp FA, xor DA - which is the operation's own bit 3
+	 * field moved into the high nibble.
 	 */
 	case S_ADD:
 	case S_ADC:
@@ -841,7 +841,7 @@ r4k(int rf, int op, struct expr *e1, struct expr *e2)
 		if ((v1 = admode(R16)) == 0) { ip = ips; return(0); }
 		v1 &= 0xFF;
 		if (getnb() != ',') { ip = ips; return(0); }
-		if ((v1 == HL) && IS_MIN_R6K() && !((rf == S_SUB) && (op == 0xA8))) {
+		if ((v1 == HL) && IS_MIN_R6K()) {
 			char *ipc = ip;
 			t2 = addr(e2);
 			if (t2 == S_IDSP) {
@@ -867,6 +867,7 @@ r4k(int rf, int op, struct expr *e1, struct expr *e2)
 			if (((v2 = admode(R16)) != 0) && ((v2 & 0xFF) == DE)) {
 				if (op == 0xB8) { outab(0xED); outab(0x48); return(1); }
 				if (op == 0x90) { r4kpfx(); outab(0x55); return(1); }
+				if (op == 0xA8) { r4kpfx(); outab(0x54); return(1); }
 				ip = ips;
 				return(0);
 			}

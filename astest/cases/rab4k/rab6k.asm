@@ -14,5 +14,10 @@
 	and	hl, 4 (sp)
 	or	hl, 4 (sp)
 	cp	hl, 4 (sp)
+	xor	hl, 4 (sp)
 	add	ix, #0x12
 	add	iy, #0x12
+;
+; And xor against de, which is a 4000 form like sub.
+;
+	xor	hl, de
