@@ -323,6 +323,46 @@ binop(int c, a_uint v, a_uint ve)
 	return((v & s_mask) ? v | ~v_mask : v & v_mask);
 }
 
+/*)Function	a_uint	nmbr(v)
+ *
+ *		a_uint	v		the value just scanned
+ *
+ *	The function nmbr() reduces a scanned number to the address
+ *	space, the way every other value in an expression is reduced,
+ *	and records whether anything was lost.
+ *
+ *	A literal larger than the address space cannot be what was
+ *	meant, but it is not always an error: it is only wrong where
+ *	the value is an address, and term() has no way of knowing
+ *	whether it is.  So the loss is recorded in expr_ovf and left
+ *	for a caller that cares - setarea() and setbank(), where a
+ *	base that does not fit is a silent misplacement - to ask
+ *	about afterwards.
+ *
+ *	Only the three places that scan a literal call this.  An
+ *	arithmetic result is deliberately not checked: an expression
+ *	may legitimately pass outside the address space and come back,
+ *	and truncating the intermediate is the documented behaviour.
+ *
+ *	global variables:
+ *		a_uint	a_mask		address mask
+ *		int	expr_ovf	value did not fit flag
+ *		a_uint	s_mask		sign mask
+ *		a_uint	v_mask		overflow mask
+ *
+ *	side effects:
+ *		expr_ovf is set if the value did not fit.
+ */
+
+static a_uint
+nmbr(a_uint v)
+{
+	if ((v & ~a_mask) != 0) {
+		expr_ovf = 1;
+	}
+	return((v & s_mask) ? v | ~v_mask : v & v_mask);
+}
+
 /*)Function	a_uint	term(a_uint v)
  *
  *	The function term() evaluates a single constant
@@ -464,7 +504,7 @@ term(a_uint v)
 				c = get();
 			}
 			unget(c);
-			return((v & s_mask) ? v | ~v_mask : v & v_mask);
+			return(nmbr(v));
 		}
 		ip = jp;
 		c = expr_radix;
@@ -507,7 +547,7 @@ term(a_uint v)
 		if (c != '.') {
 			unget(c);
 		}
-		return((v & s_mask) ? v | ~v_mask : v & v_mask);
+		return(nmbr(v));
 	}
 	/* 2) */
 	if ((ctype[c] & RAD16) && (r == 16)) {
@@ -532,7 +572,7 @@ term(a_uint v)
 				c = get();
 			}
 			unget(c);
-			return((v & s_mask) ? v | ~v_mask : v & v_mask);
+			return(nmbr(v));
 		}
 		c = n;
 		ip = jp;
