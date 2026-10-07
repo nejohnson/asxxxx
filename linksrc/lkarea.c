@@ -207,7 +207,7 @@ newarea(void)
 				 * One module asking for an area to be
 				 * kept keeps all of it.
 				 */
-				ap->a_flag |= (int) (i & (A4_OUT | A4_KEEP));
+				ap->a_flag |= (int) (i & (A4_OUT | A4_KEEP | A4_FIT));
 			} else {
 				ap->a_flag = (int) i;
 			}
@@ -381,6 +381,182 @@ lkparea(char *id)
 	ap->a_id = strsto(id);
 }
 
+/*)Function	a_uint	fitsize(ap, upper)
+ *
+ *		area *	ap		pointer to an area structure
+ *		int	upper		non zero for an upper bound
+ *
+ *	The function fitsize() returns the size an area will have
+ *	before lnksect() has been run over it, which is what the
+ *	gap search in fitarea() has to know before it can place
+ *	anything.  The sections are overlayed or concatenated
+ *	exactly as lnksect() will do it, and a discarded section
+ *	counts for nothing, exactly as it will there.
+ *
+ *	A boundary modulus makes a section's size depend on the
+ *	address it is given, which is the thing not yet decided.
+ *	With upper set the worst case is added, for an area whose
+ *	extent has to be known before it is placed;  with upper
+ *	clear the function returns an address no gap can hold, so
+ *	an area with a boundary modulus is never fitted.
+ *
+ *	local variables:
+ *		areax *	taxp		pointer to an areax structure
+ *		a_uint	size		accumulated size
+ *
+ *	global variables:
+ *		none
+ *
+ *	functions called:
+ *		int	gcdead()	lkgc.c
+ *
+ *	side effects:
+ *		none
+ */
+
+a_uint
+fitsize(struct area *ap, int upper)
+{
+	struct areax *taxp;
+	a_uint size;
+
+	size = 0;
+	for (taxp = ap->a_axp; taxp != NULL; taxp = taxp->a_axp) {
+		if (gcdead(taxp)) {
+			continue;
+		}
+		if (taxp->a_bndry != 0) {
+			if (!upper) {
+				return (~((a_uint) 0));
+			}
+			size += taxp->a_bndry - 1;
+		}
+		if ((ap->a_flag & A4_OVR) == A4_OVR) {
+			if (taxp->a_size > size) {
+				size = taxp->a_size;
+			}
+		} else {
+			size += taxp->a_size;
+		}
+	}
+	return (size);
+}
+
+/*)Function	int	fitarea(tap, bank, rloc, bytes, pa)
+ *
+ *		area *	tap		the area looking for a gap
+ *		bank *	bank		the bank being laid out
+ *		a_uint	rloc		the address laying it down would use
+ *		int	bytes		the area's word length in bytes
+ *		a_uint *pa		where the address found is returned
+ *
+ *	The function fitarea() looks for the lowest run of free
+ *	addresses below rloc large enough to hold tap, and returns
+ *	non zero having put the address in *pa.
+ *
+ *	Free means claimed neither by an area already laid down nor
+ *	by one further down the list that has an address of its own.
+ *	An area is never offered space at or above rloc, because
+ *	that space belongs to the areas that come after it.
+ *
+ *	local variables:
+ *		area *	oap		pointer to an area structure
+ *		a_uint	size		size of the area being fitted
+ *		a_uint	lo, hi		the run being considered
+ *		a_uint	olo, ohi	an occupied run
+ *		a_uint	base		the bank's lowest address
+ *		a_uint	next		where to try next
+ *		int	obytes		the other area's word length
+ *		int	seen		tap has been passed in the list
+ *
+ *	global variables:
+ *		area *	areap		The pointer to the first
+ *					area structure of a linked list
+ *
+ *	functions called:
+ *		a_uint	fitsize()	lkarea.c
+ *
+ *	side effects:
+ *		none
+ */
+
+int
+fitarea(struct area *tap, struct bank *bank, a_uint rloc, int bytes, a_uint *pa)
+{
+	struct area *oap;
+	a_uint size, lo, hi, olo, ohi, base, next;
+	int obytes, seen;
+
+	size = fitsize(tap, 0) * bytes;
+	if (size == 0) {
+		return (0);
+	}
+	base = ((bank->b_flag & B_BASE) && bank->b_base) ? bank->b_base : 0;
+	if ((size > rloc) || (base > rloc - size)) {
+		return (0);
+	}
+
+	/*
+	 * Walk the candidate addresses upwards from the bank's base.
+	 * A candidate that overlaps something moves to the end of
+	 * whatever it ran into rather than on by one, so the first
+	 * run that comes back clear is the lowest one there is.
+	 */
+	lo = base;
+	while (lo <= rloc - size) {
+		hi = lo + size;
+		next = 0;
+		seen = 0;
+		for (oap = areap; oap != NULL; oap = oap->a_ap) {
+			if (oap == tap) {
+				seen = 1;
+				continue;
+			}
+			if (oap->a_bp != bank) {
+				continue;
+			}
+			if (seen) {
+				/*
+				 * Not laid down yet.  It claims space
+				 * only if it already knows where it
+				 * goes;  one that does not will be
+				 * given what is left over, which is
+				 * what rloc is for.
+				 */
+				if (!oap->a_bset &&
+				    ((oap->a_flag & A4_ABS) != A4_ABS)) {
+					continue;
+				}
+				ohi = fitsize(oap, 1);
+			} else {
+				/*
+				 * Laid down, so its size is final.
+				 */
+				ohi = oap->a_size;
+			}
+			obytes = 1 + (oap->a_flag & A4_WLMSK);
+			olo = oap->a_addr * obytes;
+			ohi = olo + (ohi * obytes);
+			if (ohi <= olo) {
+				continue;
+			}
+			if ((lo < ohi) && (olo < hi) && (ohi > next)) {
+				next = ohi;
+			}
+		}
+		if (next == 0) {
+			if (lo % bytes) {
+				lo += bytes - (lo % bytes);
+				continue;
+			}
+			*pa = lo / bytes;
+			return (1);
+		}
+		lo = next;
+	}
+	return (0);
+}
+
 /*)Function	void	lnkarea(void)
  *
  *	The function lnkarea() resolves all area addresses.
@@ -470,7 +646,7 @@ lkparea(char *id)
 void
 lnkarea(void)
 {
-	a_uint rloc;
+	a_uint rloc, fa;
 	int bytes;
 	char temp[NGSYM];
 	struct sym *sp;
@@ -492,10 +668,22 @@ lnkarea(void)
 				 * Relocatable sections
 				 */
 				bytes = 1 + (ap->a_flag & A4_WLMSK);
-				if (ap->a_bset == 0)
-					ap->a_addr = (rloc/bytes) + ((rloc % bytes) ? 1 : 0);
-				lnksect(ap);
-				rloc = (ap->a_addr + ap->a_size) * bytes;
+				if ((ap->a_bset == 0) &&
+				    ((ap->a_flag & A4_FIT) == A4_FIT) &&
+				    fitarea(ap, bp, rloc, bytes, &fa)) {
+					/*
+					 * It went into a gap below, so it
+					 * costs the areas that follow
+					 * nothing:  rloc stays where it was.
+					 */
+					ap->a_addr = fa;
+					lnksect(ap);
+				} else {
+					if (ap->a_bset == 0)
+						ap->a_addr = (rloc/bytes) + ((rloc % bytes) ? 1 : 0);
+					lnksect(ap);
+					rloc = (ap->a_addr + ap->a_size) * bytes;
+				}
 			}
 
 			/*

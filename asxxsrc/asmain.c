@@ -2203,6 +2203,16 @@ loop:
 					 */
 					uf |= A_KEEP;
 				} else
+				if (symeq(opt, "FIT", 1)) {
+					/*
+					 * Offers an area to a gap that an area
+					 * with an address of its own has left
+					 * behind it.  A hint:  an area that
+					 * fits no gap is laid down where it
+					 * would have been anyway.
+					 */
+					uf |= A_FIT;
+				} else
 				if (symeq(opt, "CON", 1)) {
 					uf |= A_CON;
 					con_ovr = A_CON;
@@ -2245,7 +2255,7 @@ loop:
 		}
 		if ((ap = alookup(id)) != NULL) {
 			flags = ap->a_flag;
-			ap->a_flag |= (uf & A_KEEP);
+			ap->a_flag |= (uf & (A_KEEP | A_FIT));
 			if (uf & A_BNK) {
 			 	if (flags & A_BNK) {
 					if (bp != ap->b_bp)
