@@ -422,6 +422,17 @@ normline(char *src, char *dst)
  *	a linker map, which names the files it linked and the
  *	libraries it searched;  the directory those were found in
  *	depends on where the test was run from.
+ *
+ *	The directory part sat inside a fixed width field, so taking
+ *	it away leaves padding whose length still depends on how long
+ *	the path was.  Every run of white space on such a line is
+ *	therefore squeezed to one space, which is what makes an
+ *	expected file portable between one working directory and
+ *	another - two names of different lengths produced two
+ *	different amounts of padding and the comparison failed on
+ *	something the test was not about.  Only lines that held a
+ *	path are squeezed, so column alignment stays under test
+ *	everywhere else.
  */
 
 static void
@@ -429,8 +440,9 @@ stripath(char *str)
 {
 	char buf[NLINE];
 	char *p, *q, *w;
-	int lead;
+	int lead, cut;
 
+	cut = 0;
 	p = str;
 	q = buf;
 	while (*p) {
@@ -462,27 +474,51 @@ stripath(char *str)
 			}
 			memmove(w, last, (int) (q - last));
 			q = w + (int) (q - last);
+			cut = 1;
 		}
 	}
 	*q = 0;
+
+	/*
+	 * Squeeze the padding the directory part used to occupy.
+	 */
+	if (cut) {
+		p = buf;
+		q = str;
+		while (*p) {
+			if (*p == ' ' || *p == '\t') {
+				*q++ = ' ';
+				while (*p == ' ' || *p == '\t') { p += 1; }
+			} else {
+				*q++ = *p++;
+			}
+		}
+		*q = 0;
+		return;
+	}
 	strcpy(str, buf);
 }
 
-/*)Function	int	ismap(name)
+/*)Function	int	haspath(name)
  *
  *		char *	name		file name
  *
- *	The function ismap() reports whether a file name ends in
- *	".map".  Only a map has its file specifications removed.
+ *	The function haspath() reports whether a file of this name
+ *	can contain a file specification.  A linker map names what
+ *	it linked, and a NoICE command file carries a LOAD line, so
+ *	both have their directory parts removed.  A listing does not:
+ *	a source comment can hold something that reads like a path
+ *	and must be left exactly as the assembler wrote it.
  */
 
 static int
-ismap(char *name)
+haspath(char *name)
 {
 	int n;
 
 	n = strlen(name);
-	return (n >= 4 && strcmp(name + n - 4, ".map") == 0);
+	return (n >= 4 && (strcmp(name + n - 4, ".map") == 0 ||
+			   strcmp(name + n - 4, ".noi") == 0));
 }
 
 /*)Function	int	normcmp(produced, expected, name)
@@ -512,7 +548,7 @@ normcmp(char *produced, char *expected, char *name)
 		fprintf(stdout, "astest:          missing output: %s\n", produced);
 		return (0);
 	}
-	mapf = ismap(name);
+	mapf = haspath(name);
 
 	if (blessf) {
 		if ((gp = fopen(expected, "w")) == NULL) {
