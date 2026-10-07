@@ -330,6 +330,15 @@ struct	bndry
 #define	A_KEEP	0x0200		/* Never Discard This Area */
 
 /*
+ * An area asking to be placed in a gap that an area with an
+ * address of its own has left behind it, rather than after
+ * everything already laid down.  A hint, not a requirement:
+ * an area that does not fit any gap is placed as it would
+ * have been without it.
+ */
+#define	A_FIT	0x2000		/* Fit Into A Gap If It Fits */
+
+/*
  *	The "R_" relocation constants define values used in
  *	generating the assembler relocation output data for
  *	areas, symbols, and code.

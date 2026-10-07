@@ -382,6 +382,7 @@ extern	int	ASxxxx_VERSION;
 #define	A4_OUT		0x0100		/* Output Code Flag */
 
 #define	A4_KEEP		0x0200		/* Never Discard This Area */
+#define	A4_FIT		0x2000		/* Fit Into A Gap If It Fits */
 
 /*
  *	The "R4_" relocation constants define values used in
@@ -1214,6 +1215,8 @@ extern	void		unget(int c);
 extern	void		lkparea(char *id);
 extern	void		lnkarea(void);
 extern	void		lnksect(struct area *tap);
+extern	a_uint		fitsize(struct area *ap, int upper);
+extern	int		fitarea(struct area *tap, struct bank *bank, a_uint rloc, int bytes, a_uint *pa);
 extern	void		lnkserr(char *frmt, char *str);
 extern	void		newarea(void);
 extern	void		setarea(void);
