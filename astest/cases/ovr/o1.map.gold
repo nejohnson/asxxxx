@@ -27,9 +27,19 @@ OVL                        0007        000C =          12. bytes (REL,OVR,CSEG)
 
    Value  Global      Value  Global      Value  Global      Value  Global
    -----  ------      -----  ------      -----  ------      -----  ------
-    0007  o1a      |   0007  o1b      |   0007  o1c      |   0007  o2a
-    0007  o2b
+    0007  o1a      |   0007  o1b      |   0007  o1c      |   0007  o1d
+    0007  o1e      |   0007  o2a      |   0007  o2b
 ASxxxx Linker V--.--                                                                Page 4
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+FIX                        0000        0202 =         514. bytes (ABS,OVR,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0100  f1       |   0200  f2       |   0201  f3
+ASxxxx Linker V--.--                                                                Page 5
 Hexadecimal [16-Bits]
 
 Area                       Addr        Size        Decimal Bytes (Attributes)
@@ -39,7 +49,7 @@ COD                        0013        0005 =           5. bytes (REL,CON,CSEG)
    Value  Global      Value  Global      Value  Global      Value  Global
    -----  ------      -----  ------      -----  ------      -----  ------
     0013  start    |   0016  second
-ASxxxx Linker V--.--                                                                Page 5
+ASxxxx Linker V--.--                                                                Page 6
 Hexadecimal [16-Bits]
 
 Files Linked                              [ module(s) ]
