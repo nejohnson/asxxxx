@@ -107,7 +107,7 @@ Hexadecimal [16-Bits]
 
 Files Linked                              [ module(s) ]
 
-bnkf                         [ BankFile ]
+bnkf [ BankFile ]
 
 
 ?ASlink-Error-Addresses in Area[C1] overflow Bank[CODE1] region

@@ -72,16 +72,16 @@ Hexadecimal [16-Bits]
 
 Files Linked                              [ module(s) ]
 
-libtest                       [ LibTest ]
+libtest [ LibTest ]
 
 
 Libraries Linked                          [ object file ]
 
-lib_b.lib                     [ func10 ]
-lib_a.lib                     [ func02 ]
-lib_a.lib                     [ func03 ]
-lib_b.lib                     [ func07 ]
-lib_a.lib                     [ func04 ]
+lib_b.lib [ func10 ]
+lib_a.lib [ func02 ]
+lib_a.lib [ func03 ]
+lib_b.lib [ func07 ]
+lib_a.lib [ func04 ]
 
 
 
