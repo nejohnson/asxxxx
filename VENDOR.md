@@ -77,6 +77,7 @@ Submittable as they stand.
 | `7d7548b` | `aslink` | `lkparea()` searched the area list linearly; hash the names |
 | `d5994a8` | `s19os9` | the input file was closed twice |
 | `f49765f` | `asxxsrc` | a `. = <arg>` error cleared the location counter's area |
+| `c082027` | `asxxsrc` | an `OVR` area was continued rather than restarted when a module re-entered it, so a module's overlay came out as the sum of its blocks instead of the largest — the manual's own wording ("sections of the same name will overlay each other (start at the same location)") says otherwise, and SDAS does restart. 56-target sweep byte-identical; new astest case `ovr` |
 | `0d2c37a` | `ascheck` | the `bndry` test generated the wrong area symbol names |
 | `a0a3eda` | `aslink` | a module with no `.cdb` file was treated as an error |
 | `62b5902` | `aslink` | `-l` could not find a library named by a path, and said nothing when one was missing |
