@@ -314,6 +314,9 @@ struct	bndry
 #define	A_OVR	0x0404		/* Overlaying */
 #define	A_REL	0x0800		/* Relocatable */
 #define	A_ABS	0x0808		/* Absolute */
+
+#define	IS_OVR(ap)	((((ap)->a_flag & A_OVR) == A_OVR) && \
+			 (((ap)->a_flag & A_ABS) != A_ABS))
 #define	A_NOPAG	0x1000		/* Non-Paged */
 #define	A_PAG	0x1010		/* Paged */
 
