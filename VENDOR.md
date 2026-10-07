@@ -149,15 +149,17 @@ Never on a branch that goes upstream.
   `ld --gc-sections` equivalent. Added in `6b8fdc3`, updated in
   `abd44c1`, `8341553`, `89cf960`, `9e68e94`, `3b976de` and `7690547`.
 
-### One measured obstacle to submitting any of it
+### The astest expected files: measured, and not an obstacle
 
+This section used to say that `astest`'s expected files pinned **this fork's** output rather than upstream's, that `d5e2177` (`NCPS` 80 to 256) had widened the map's module column, and that every one of them had to be regenerated against pristine `903242b` before the harness could be offered to anyone.
 
-`astest`'s golden files pin **this fork's** output, not upstream's. The
-map module column is wider because `d5e2177` took `NCPS` from 80 to 256,
-and the area and symbol listing changed again in `198f405`. Goldens have
-to be regenerated against pristine `903242b`, and the cases sorted by
-which feature patch each one travels with, before the harness can be
-offered to anyone.
+**That was wrong.** Upstream `903242b` was built and the whole suite run against it with the driver's `-T`: **no case fails on a difference in an expected file.** 15 pass outright, 14 of them comparing a linker map byte for byte; the other 30 fail or hang because the tool is missing the fix they were written for, which is what a regression test is supposed to do.
+
+`NCPS` could not have been the cause: the map columns are `%-19.19s` and `%-32.32s`, so a buffer of 80 against one of 256 cannot change a name that fits in 19 or 32 characters, and no case has one that does not.
+
+What was almost certainly seen instead was a **working directory of a different length**. A map names the files it was given, `stripath()` removed the directory part but not the padding behind it, and that padding was sized for the whole path - so `-W _astest_p` produced two fewer spaces than `-W _astest` and 29 cases failed on nothing. Fixed: a run of white space on a line that held a path is squeezed to one space, and the suite now passes from any working directory a map can hold whole. There is a bound on that which stripping cannot lift - `lkmain.c` prints the path with `%-40.40s`, so a long enough one loses the end of the file name before astest sees it - and a `-W` path over 18 characters is now refused by name rather than failing cases that have nothing wrong with them. Listings are deliberately left alone, because a source comment can hold something that reads like a path.
+
+`astest/patches.txt` records the measurement, the per-case status against upstream, and which commits each case depends on.
 
 ## Known divergences and upstream quirks
 

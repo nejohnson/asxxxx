@@ -1,0 +1,154 @@
+                        ASTEST AND THE PATCH SERIES
+                        ===========================
+
+
+WHAT THIS IS
+
+        A record of which astest cases can run against unmodified
+        upstream ASxxxx and which cannot, measured rather than
+        assumed, so that the cases can be ordered into a patch
+        series if the work here is ever offered upstream.
+
+
+HOW IT WAS MEASURED
+
+        Upstream 903242b was built into its own directory and the
+        whole suite run against it with the driver's -T option:
+
+            astest -T <pristine>/asxmak/linux/exe -R ../../../ -W _astest
+
+        The driver, the cases and the expected files are this tree's;
+        only the assemblers and the linker are upstream's.  Anything
+        that fails is therefore a difference in the tools and nothing
+        else.
+
+        Use the same -W name that `make check` uses, or at least be
+        consistent between runs.  That used to matter a great deal
+        and no longer does - see THE EXPECTED FILES ARE PORTABLE.
+
+
+THE RESULT
+
+        45 cases:  15 pass, 29 fail because the feature is not there,
+        1 hangs.
+
+        No case fails on a difference in an expected file.  Not one.
+
+        The 15 that pass test behaviour upstream already has, and 14
+        of those 15 compare a linker map.  They are byte for byte
+        identical between the two trees.
+
+        The 29 that fail report "expected exit N, got M": the tool
+        refused, or crashed, where this tree succeeds.  Two of them
+        crash upstream outright -
+
+            equtst      SIGSEGV
+            lkliberr    SIGSEGV
+
+        and one hangs forever -
+
+            badrel      no exit
+
+        which is what those three cases exist to prevent.
+
+
+THE EXPECTED FILES ARE PORTABLE
+
+        A linker map and a NoICE command file both name the files
+        they were given, and the directory part depends on where the
+        test ran.  stripath() removes it.
+
+        It used not to remove the padding behind it.  The directory
+        sat inside a fixed width field, so a working directory whose
+        name was two characters longer produced two fewer spaces, and
+        29 cases failed on nothing at all.  That is almost certainly
+        what was once mistaken for the expected files being specific
+        to this fork.  A run of white space on a line that held a
+        path is now squeezed to one space, and the suite passes
+        from any working directory a map can hold whole:  the
+        file list field is 40 columns, so a -W path over 18 is
+        refused rather than silently truncating a file name.
+
+        Only maps and NoICE files are treated this way.  A listing is
+        left exactly as the assembler wrote it, because a source
+        comment can hold something that reads like a path.
+
+
+WHAT A CASE DEPENDS ON
+
+        Two different things, and they are easy to confuse.
+
+        The commits below are the ones that touch a case's files.
+        They say which patches have to carry it.
+
+        They do not say which patch the case tests.  equtst is the
+        example: it arrived with the harness, was edited by the
+        ascheck fix 0d2c37a, and tests neither.  It tests f49765f,
+        '. = <arg>' clearing the location counter's area, which is
+        why upstream dies on it with a core dump.  A case can only
+        join a series once everything it asserts is present.
+
+        aspabs and aspbig pass upstream by construction: both assert
+        that a legitimate area is NOT reported as an overrun, and
+        upstream never reports one because it never checks.  They
+        guard 94d8c73 against false positives; aspace is the case
+        that actually discriminates.
+
+
+case        pristine  commits that touch it
+----------  -------  ----------------------------------------
+ab_ts       passes   5e75020
+ab_tm       passes   5e75020
+ab_tbm      passes   5e75020
+bndry       passes   5e75020 0d2c37a
+radix       passes   5e75020
+expr        passes   5e75020
+lib         passes   64281e6
+bank        passes   64281e6
+end05       passes   64281e6
+a34         passes   64281e6
+rl_chk      passes   64281e6
+undef       passes   64281e6
+aspabs      passes   b37cf7e
+aspbig      passes   79c25e7
+undocerr    passes   40e56a0
+
+equtst      feature  5e75020 0d2c37a
+funct       feature  d033ae5
+gc          feature  80f74d0
+gccrt       feature  80f74d0
+gckeep      feature  80f74d0
+obase       feature  a3ce67a
+obase_i     feature  a3ce67a
+optcdb      feature  a0a3eda
+libpath     feature  62b5902
+badrel      hang     c9fbd13 4870877
+lkliberr    feature  ad6cd6e
+aspace      feature  94d8c73
+abi         feature  5c4207e
+abichk      feature  5c4207e
+sll         feature  f3922a6
+undoc       feature  40e56a0
+tst         feature  d02ee7a
+sfrpre      feature  8f3852f
+rabsp       feature  bfac3cf
+rabcnd      feature  6392f48
+ez80lea     feature  ac2a167
+r800        feature  d298d9b
+rab3ka      feature  6a57c37 093caac
+rabipset    feature  614da60
+basebig     feature  7de9475
+t90jp       feature  c0d155f
+t90lda      feature  87502d9
+t90sdas     feature  f36f47e
+gbldh       feature  ce6624f 8b83c64
+rab4k       feature  c9841cd 6729f98 9d831fc
+
+
+ORDERING
+
+        Any case that passes upstream can go in the first patch.
+
+        Every other case goes no earlier than the last commit it
+        depends on - which is at least the commits listed against it,
+        and for equtst is f49765f as well.

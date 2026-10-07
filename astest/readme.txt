@@ -58,13 +58,32 @@ refused at startup instead.
 
 Two things in the output of a tool change between two runs of the
 same test:  the program version and the time of the run, both in the
-page heading written by newpag().  A linker map also names the files
-it was given, and the directory those were found in depends on where
-the test was run from.  astest removes exactly those, and nothing
-else, from the produced file and from the expected file alike.  The
+page heading written by newpag().  A linker map, and a NoICE command
+file, also name the files they were given, and the directory those
+were found in depends on where the test was run from.  astest removes
+exactly those, and nothing else, from the produced file and from the
+expected file alike.  The
 expected files are stored already normalised, so a difference
 between two of them is always a real one and 'diff' on them is
 worth reading.
+
+    The directory part sits inside a fixed width field, so taking
+    it away leaves padding whose length still depends on how long
+    the path was.  Every run of white space on such a line is
+    therefore squeezed to one space:  without it, a working
+    directory two characters longer fails most of the suite on
+    nothing at all.  Column alignment stays under test on every
+    line that did not hold a path, and a listing is never touched,
+    because a source comment can read like one.
+
+    There is a bound on this that stripping cannot lift.  A
+    linker map lays the whole path into a field 40 columns wide
+    and truncates what will not fit, so a working directory far
+    enough down a tree costs the end of the file name itself and
+    nothing afterwards gets it back.  A case id keeps to 8
+    characters and a file name to 8.3, which leaves the -W path
+    18 of the 40;  a longer one is refused by name rather than
+    failing cases that have nothing wrong with them.
 
 'make bless' writes the current output as the expected output.  It
 is a separate target and is never reached from 'make check'.
