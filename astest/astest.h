@@ -106,6 +106,18 @@
 #define	NCASE	256		/* Cases in the manifest */
 
 /*
+ * A linker map lays each file's whole path into a field 40
+ * columns wide and truncates what will not fit, so a working
+ * directory far enough down a tree costs the end of the file
+ * name itself and no amount of stripping gets it back.  A case
+ * id keeps to 8 characters and a file name to 8.3, so the
+ * longest path a map can be given is the work root, a '/', 8,
+ * a '/' and 12:  the work root has 18 columns of the 40.
+ */
+#define	NMAPF	40		/* Map file name field, lkmain.c */
+#define	NWROOT	(NMAPF - 22)	/* Longest usable -W path */
+
+/*
  * Test case step verbs.
  */
 

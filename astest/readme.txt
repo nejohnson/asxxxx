@@ -76,6 +76,15 @@ worth reading.
     line that did not hold a path, and a listing is never touched,
     because a source comment can read like one.
 
+    There is a bound on this that stripping cannot lift.  A
+    linker map lays the whole path into a field 40 columns wide
+    and truncates what will not fit, so a working directory far
+    enough down a tree costs the end of the file name itself and
+    nothing afterwards gets it back.  A case id keeps to 8
+    characters and a file name to 8.3, which leaves the -W path
+    18 of the 40;  a longer one is refused by name rather than
+    failing cases that have nothing wrong with them.
+
 'make bless' writes the current output as the expected output.  It
 is a separate target and is never reached from 'make check'.
 

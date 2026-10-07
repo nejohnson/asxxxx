@@ -1121,6 +1121,13 @@ main(int argc, char *argv[])
 		return (1);
 	}
 
+	if ((int) strlen(workroot) > NWROOT) {
+		fprintf(stderr, "?astest-Error-Working directory path '%s' exceeds %d characters\n",
+			workroot, NWROOT);
+		fprintf(stderr, "              A linker map truncates a file path to %d columns.\n", NMAPF);
+		return (1);
+	}
+
 	pathcat(path, rootpath, "astest/tests.lst");
 	if ((fp = fopen(path, "r")) == NULL) {
 		fprintf(stderr, "?astest-Error-Cannot open manifest %s\n", path);
