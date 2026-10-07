@@ -3517,10 +3517,27 @@ newdot(struct area *nap)
 
 	oap = dot.s_area;
 	oap->a_fuzz = fuzz;
-	oap->a_size = dot.s_addr;
-	fuzz = nap->a_fuzz;
-	dot.s_area = nap;
-	dot.s_addr = nap->a_size;
+	if (IS_OVR(oap)) {
+		if (oap->a_size < dot.s_addr) {
+			oap->a_size = dot.s_addr;
+		}
+	} else {
+		oap->a_size = dot.s_addr;
+	}
+	if (IS_OVR(nap)) {
+		/*
+		 * An overlay is re-entered at its start, so what the
+		 * last block in it did to the fuzz says nothing about
+		 * this one.
+		 */
+		fuzz = 0;
+		dot.s_area = nap;
+		dot.s_addr = 0;
+	} else {
+		fuzz = nap->a_fuzz;
+		dot.s_area = nap;
+		dot.s_addr = nap->a_size;
+	}
 	outall();
 }
 
