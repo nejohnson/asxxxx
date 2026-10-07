@@ -1,0 +1,51 @@
+ASxxxx Linker V--.--                                                                Page 1
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+.  .ABS.                   0000        0000 =           0. bytes (ABS,OVR,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0000  .__.ABS.
+ASxxxx Linker V--.--                                                                Page 2
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+DAT                        0000        0007 =           7. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0000  d1       |   0002  d2       |   0003  d3
+ASxxxx Linker V--.--                                                                Page 3
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+OVL                        0007        000C =          12. bytes (REL,OVR,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0007  o1a      |   0007  o1b      |   0007  o1c      |   0007  o2a
+    0007  o2b
+ASxxxx Linker V--.--                                                                Page 4
+Hexadecimal [16-Bits]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+COD                        0013        0005 =           5. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global
+   -----  ------      -----  ------      -----  ------      -----  ------
+    0013  start    |   0016  second
+ASxxxx Linker V--.--                                                                Page 5
+Hexadecimal [16-Bits]
+
+Files Linked                              [ module(s) ]
+
+o1 [ o1 ]
+o2 [ o2 ]
+
+
+
