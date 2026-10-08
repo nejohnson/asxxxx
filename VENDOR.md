@@ -103,12 +103,13 @@ defect, so they travel separately.
 
 | Commit | Area | Addition |
 |---|---|---|
-| `5e75020`, `64281e6`, `4870877` | `astest` | a portable regression harness for the assemblers and the linker: C89 driver, `.tst` case format, `make check` / `make bless`. 45 cases |
+| `5e75020`, `64281e6`, `4870877` | `astest` | a portable regression harness for the assemblers and the linker: C89 driver, `.tst` case format, `make check` / `make bless`. 47 cases |
 | `d033ae5` | `asxxsrc` | `.function` / `.endfunc`, per-function areas that inherit the enclosing area's flags and bank |
 | `80f74d0` | `aslink` | the section collector — `-r` roots, `KEEP`, `--print-gc-sections` equivalent |
 | `a3ce67a` | `aslink` | `-o+` names every file the linker creates after the program rather than after the first object |
 | `5c4207e` | `asxxsrc`, `aslink` | `.abi`, an opaque compatibility key compared between modules at link time |
 | `94d8c73` | `aslink` | report an area that runs off the end of the address space, which was silently wrapping |
+| `82c9d9e` | `asxxsrc`, `aslink` | the `FIT` area attribute: an area carrying it is offered the lowest gap an area with an address of its own has left behind, and is laid down where it would have been anyway if it fits none. A hint, so nothing that does not ask for it moves — the 56-target sweep is byte-identical. The 8051 wants it for the 24 bytes that pinning the bit bank at 0x20 strands at 0x08-0x1F; SDAS reclaims the same space with a bitmap allocator written into the linker for that one target |
 | `40e56a0` | `asz80` | `.allow_undocumented` and the IX/IY half register instructions. Upstream already classified the operands and reserved the opcode type; only the directive row and the encodings were missing |
 | `d02ee7a` | `asz80` | `tst` accepts `tst a,n` as well as `tst n`. Same instruction, same bytes; code generators emit the first |
 | `6392f48` | `asrab` | `LZ` and `LO`, the Rabbit's names for the two logical conditions, alongside the `NV` and `V` it already had. Same two encodings |
