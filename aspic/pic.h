@@ -102,6 +102,12 @@
 #define	S_MOVSS		79	/* MOVSS Instruction */
 
 /*
+ * Enhanced 14-Bit Core Instructions
+ */
+#define	S_MOVIW		80	/* MOVIW and MOVWI Instructions */
+#define	S_MOVLP		81	/* MOVLP Instruction */
+
+/*
  * Set Direct Memory Map
  */
 #define	S_SDMM	85
@@ -130,9 +136,21 @@ struct badram
 
 struct adsym
 {
-	char	a_str[2];	/* addressing string */
+	char	a_str[8];	/* addressing string */
 	int	a_val;		/* addressing mode value */
 };
+
+/*
+ * The MOVIW / MOVWI increment modes of the enhanced 14-bit core
+ * are the three low bits of the opcode:  the FSR number in bit 2
+ * and the mode in bits 1 and 0.  The fsrinc[] table carries that
+ * encoding as its addressing mode value.
+ */
+#define	S_FSRINC	0x0000		/* ++fsrn */
+#define	S_FSRDEC	0x0001		/* --fsrn */
+#define	S_FSRPSI	0x0002		/* fsrn++ */
+#define	S_FSRPSD	0x0003		/* fsrn-- */
+#define	S_FSR1		0x0004		/* fsr1 rather than fsr0 */
 
 /*
  * Extended Addressing Modes
@@ -163,7 +181,7 @@ struct adsym
 struct CpuDef
 {
    char *id;
-   a_uint opcode[5];
+   a_uint opcode[6];
 };
 
 #define	X_NOPIC		0
@@ -171,6 +189,7 @@ struct CpuDef
 #define	X_14BIT		2
 #define	X_16BIT		3
 #define	X_20BIT		4
+#define	X_14EBIT	5
 
 /*
  * CPU Fix Definition Array
@@ -197,10 +216,13 @@ extern	int		mchramchk(struct expr *esp);
 extern	void		minit(void);
 extern	void		pic12bit(struct mne *mp);
 extern	void		pic14bit(struct mne *mp);
+extern	void		pic14ebit(struct mne *mp);
 extern	void		pic16bit(struct mne *mp);
 extern	void		pic20bit(struct mne *mp);
 
 	/* picadr.c */
+extern	struct	adsym	fsrinc[];
+extern	struct	adsym	fsrreg[];
 extern	struct	adsym	regfw[];
 extern	int		addr(struct expr *esp);
 extern	int		admode(struct adsym *sp);

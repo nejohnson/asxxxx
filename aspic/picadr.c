@@ -32,6 +32,33 @@ struct adsym regfw[] = {	/* f and w */
     {	"",	0x00	}
 };
 
+/*
+ * The enhanced 14-bit core reaches memory through two file select
+ * registers, and MOVIW / MOVWI name the register and the increment
+ * together.  The increment forms are therefore searched as single
+ * strings:  a table holding a bare 'fsr0' would match the front of
+ * 'fsr0++' and take the increment for the next operand.  fsrreg[]
+ * holds the bare names for the k[fsrn] index form, where a ']'
+ * follows and no increment can.
+ */
+struct adsym fsrinc[] = {	/* moviw and movwi increment modes */
+    {	"++fsr0",	S_FSRINC		},
+    {	"++fsr1",	S_FSRINC | S_FSR1	},
+    {	"--fsr0",	S_FSRDEC		},
+    {	"--fsr1",	S_FSRDEC | S_FSR1	},
+    {	"fsr0++",	S_FSRPSI		},
+    {	"fsr1++",	S_FSRPSI | S_FSR1	},
+    {	"fsr0--",	S_FSRPSD		},
+    {	"fsr1--",	S_FSRPSD | S_FSR1	},
+    {	"",		0x00			}
+};
+
+struct adsym fsrreg[] = {	/* fsr0 and fsr1 */
+    {	"fsr0",	0x00	},
+    {	"fsr1",	S_FSR1	},
+    {	"",	0x00	}
+};
+
 /*  Classify argument as to address mode */
 int
 addr(struct expr *esp)

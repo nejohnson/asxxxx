@@ -225,6 +225,7 @@ machine(struct mne *mp)
 		case X_NOPIC:
 		case X_12BIT:
 		case X_14BIT:
+		case X_14EBIT:
 		case X_16BIT:
 			exprmasks(2);
 			/* Set "CSEG" Characteristics */
@@ -350,6 +351,7 @@ machine(struct mne *mp)
 		case X_NOPIC:					break;
 		case X_12BIT:		pic12bit(mp);		break;
 		case X_14BIT:		pic14bit(mp);		break;
+		case X_14EBIT:		pic14ebit(mp);		break;
 		case X_16BIT:		pic16bit(mp);		break;
 		case X_20BIT:		pic20bit(mp);		break;
 		default:					break;
@@ -788,6 +790,372 @@ mch14fsr(struct expr *esp)
 {
 	if ((esp->e_addr & ~((a_uint) 0x7F)) != pic_fsr) {
 		xerr('a', "FSR address mismatch.");
+	}
+}
+
+
+/*
+ * Sign Extend An Absolute Value
+ *
+ *	A literal written as a negative number reaches here
+ *	masked to a_mask, which is 16 bits on this core, so the
+ *	cast to int that pic20bit() can make is not available.
+ */
+static int
+mch14esgn(struct expr *esp)
+{
+	int v;
+
+	v = (int) esp->e_addr;
+	if (v & s_mask) {
+		v |= (int) ~a_mask;
+	} else {
+		v &= (int) a_mask;
+	}
+	return(v);
+}
+
+
+/*
+ * MOVIW and MOVWI carry two unrelated encodings.  The increment
+ * forms, which the opcode map holds, are 0000 0000 0001 0nmm and
+ * 0000 0000 0001 1nmm;  the index forms are 11 1111 0nkk kkkk and
+ * 11 1111 1nkk kkkk.  Bit 3 of the map entry picks MOVWI out of
+ * MOVIW, and picks the index base here too.
+ */
+#define	MOVWI_BIT	0x0008		/* movwi rather than moviw */
+#define	MOVIW_NDX	0x3F00		/* moviw k[fsrn] */
+#define	MOVWI_NDX	0x3F80		/* movwi k[fsrn] */
+#define	FSR1_NDX	0x0040		/* fsr1 in an index form */
+
+
+/*
+ * PIC14EBIT CPU Type
+ *
+ *	The enhanced 14-bit core of the PIC12F1xxx and PIC16F1xxx.
+ *	Everything the baseline 14-bit core assembles it assembles
+ *	the same way, CLRW apart:  0x0103 here against 0x0100
+ *	there, which is the value picFix[] already carries for the
+ *	four PIC12C67X parts.  What it adds is a second file select
+ *	register read and written through MOVIW and MOVWI, a
+ *	program counter latch loaded by MOVLP, a 5-bit MOVLB, a
+ *	relative BRA and a computed BRW, ADDFSR, CALLW, RESET, the
+ *	three shifts LSLF, LSRF and ASRF, and ADDWFC and SUBWFB.
+ *
+ *	It is a function of its own, rather than cases added to
+ *	pic14bit(), so that nothing the baseline core assembles,
+ *	or rejects, can change.
+ */
+void
+pic14ebit(struct mne *mp)
+{
+	a_uint op;
+	int c;
+	int n;
+	int t1, t2;
+	int v1;
+	int r_mode;
+	struct expr e1, e2;
+	char id[NINPUT];
+	struct area *espa;
+
+	clrexpr(&e1);
+	clrexpr(&e2);
+
+	op = mp->m_valu;
+	if (op == ~0) {			/* Undefined Instructions */
+		xerr('u', "Undefined Pic14EBit Instruction.");
+		op = 0;
+	}
+	switch (mp->m_type) {
+	case S_SDMM:
+		opcycles = OPCY_SDMM;
+		lmode = SLIST;
+		espa = NULL;
+		if (more()) {
+			expr(&e1);
+			abscheck(&e1);
+			if (e1.e_flag == 0 && e1.e_base.e_ap == NULL) {
+				if (e1.e_addr & 0x7F) {
+					xerr('b', "Page Boundary Error.");
+				}
+			}
+			e1.e_addr &= ~((a_uint) 0x7F);
+			if ((c = getnb()) == ',') {
+				getid(id, -1);
+				espa = alookup(id);
+				if (espa == NULL) {
+					xerr('u', "Undefined Area.");
+				}
+			} else {
+				unget(c);
+			}
+			pic_fsr = e1.e_addr;
+		} else {
+			pic_fsr = 0;
+		}
+		if (espa) {
+			outdp(espa, &e1, 0);
+		} else {
+			outdp(dot.s_area, &e1, 0);
+		}
+		break;
+
+	case S_FW:			/* inst f,d */
+		t1 = addr(&e1);		/* f */
+		if ((t1 != S_DIR) && (t1 != S_EXT)) {
+			xerr('a', "First argument must be an address.");
+		} else
+		if (mchramchk(&e1)) {
+			xerr('a', "First argument Ram address is invalid.");
+		}
+		comma(1);
+		t2 = addr(&e2);		/* d */
+		if (t2 == S_WREG) {
+			e2.e_addr = 0;
+		} else
+		if (t2 == S_FREG) {
+			e2.e_addr = 1;
+		} else {
+			abscheck(&e2);
+			if (e2.e_addr & ~((a_uint) 0x01)) {
+				xerr('a', "Second argument: W, F or a constant of value 0 or 1.");
+				e2.e_addr &= 0x01;
+			}
+			if (t2 == S_DIR) {
+				xerr('a', "Second argument: A direct address is invalid.");
+			}
+		}
+		if (is_abs(&e1)) {
+			mch14fsr(&e1);
+			r_mode = R_7BIT;
+		} else {
+			r_mode = R_PAGN | R_7BIT;
+		}
+		outrwm(&e1, r_mode, op + (e2.e_addr << 7));
+		break;
+
+	case S_CLRF:			/* clrf */
+	case S_F:			/* inst f */
+		t1 = addr(&e1);		/* f */
+		if ((t1 != S_DIR) && (t1 != S_EXT)) {
+			xerr('a', "Argument must be an address.");
+		} else
+		if (mchramchk(&e1)) {
+			xerr('a', "Argument Ram address is invalid.");
+		}
+		if (is_abs(&e1)) {
+			mch14fsr(&e1);
+			r_mode = R_7BIT;
+		} else {
+			r_mode = R_PAGN | R_7BIT;
+		}
+		outrwm(&e1, r_mode, op);
+		break;
+
+	case S_FBIT:			/* inst f,b */
+		t1 = addr(&e1);		/* f */
+		if ((t1 != S_DIR) && (t1 != S_EXT)) {
+			xerr('a', "First argument must be an address.");
+		} else
+		if (mchramchk(&e1)) {
+			xerr('a', "First argument Ram address is invalid.");
+		}
+		comma(1);
+		t2 = addr(&e2);		/* b */
+		if ((t2 != S_IMMED) && (t2 != S_EXT)) {
+			xerr('a', "Second argument must be a #__ or constant.");
+		}
+		abscheck(&e2);
+		if (e2.e_addr & ~((a_uint) 0x07)) {
+			xerr('a', "Second argument: Value from 0 -> 7.");
+			e2.e_addr &= 0x07;
+		}
+		if (is_abs(&e1)) {
+			mch14fsr(&e1);
+			r_mode = R_7BIT;
+		} else {
+			r_mode = R_PAGN | R_7BIT;
+		}
+		outrwm(&e1, r_mode, op + (e2.e_addr << 7));
+		break;
+
+	case S_LIT:			/* inst k */
+		t1 = addr(&e1);		/* k */
+		if ((t1 != S_IMMED) && (t1 != S_EXT)) {
+			xerr('a', "Argument must be a #__ or constant.");
+		}
+		outrwm(&e1, R_8BIT, op);
+		break;
+
+	case S_MOVLB:			/* movlb k */
+		t1 = addr(&e1);		/* k */
+		if ((t1 != S_IMMED) && (t1 != S_EXT)) {
+			xerr('a', "Argument must be a #__ or constant.");
+		}
+		if (is_abs(&e1) && (e1.e_addr & ~((a_uint) 0x1F))) {
+			xerr('a', "Argument: Value from 0 -> 31.");
+		}
+		outrwm(&e1, R_5BIT, op);
+		break;
+
+	case S_MOVLP:			/* movlp k */
+		t1 = addr(&e1);		/* k */
+		if ((t1 != S_IMMED) && (t1 != S_EXT)) {
+			xerr('a', "Argument must be a #__ or constant.");
+		}
+		if (is_abs(&e1) && (e1.e_addr & ~((a_uint) 0x7F))) {
+			xerr('a', "Argument: Value from 0 -> 127.");
+		}
+		outrwm(&e1, R_7BIT, op);
+		break;
+
+	case S_CALL:			/* inst k */
+	case S_GOTO:			/* inst k */
+		t1 = addr(&e1);		/* k */
+		if (t1 != S_EXT) {
+			xerr('a', "Argument must be an address.");
+		}
+		outrwm(&e1, R_11BIT, op);
+		break;
+
+	case S_BRA:			/* bra k */
+		/*
+		 * Relative branch, in words:  the _CODE area advances
+		 * the program counter by one for each 14-bit word, so
+		 * the offset is to the word after this one.
+		 */
+		expr(&e1);
+		if (mchpcr(&e1, &v1, 1)) {
+			if ((v1 < -256) || (v1 > 255)) {
+				xerr('a', "Branching Range Exceeded.");
+			}
+			outaw(op + (v1 & 0x1FF));
+		} else {
+			outrwm(&e1, R_PCR | R_9BIT, op);
+		}
+		if (e1.e_mode != S_USER) {
+			rerr();
+		}
+		break;
+
+	case S_ADDFSR:			/* addfsr n,k */
+		if ((t1 = admode(fsrreg)) != -1) {
+			n = (t1 & S_FSR1) ? 1 : 0;
+		} else {
+			expr(&e1);	/* n */
+			abscheck(&e1);
+			if (e1.e_addr & ~((a_uint) 0x01)) {
+				xerr('a', "First argument: fsr0, fsr1, 0 or 1.");
+				e1.e_addr &= 0x01;
+			}
+			n = (int) e1.e_addr;
+		}
+		comma(1);
+		t2 = addr(&e2);		/* k */
+		if ((t2 != S_IMMED) && (t2 != S_EXT)) {
+			xerr('a', "Second argument must be a #__ or constant.");
+		}
+		if (is_abs(&e2)) {
+			v1 = mch14esgn(&e2);
+			if ((v1 < -32) || (v1 > 31)) {
+				xerr('a', "Second argument: Value from -32 -> 31.");
+			}
+		}
+		outrwm(&e2, R_6BIT, op + (n << 6));
+		break;
+
+	case S_MOVIW:			/* moviw/movwi ++fsrn, --fsrn, */
+					/* fsrn++, fsrn-- or k[fsrn] */
+		if ((t1 = admode(fsrinc)) != -1) {
+			outaw(op + t1);
+			break;
+		}
+		op = (op & MOVWI_BIT) ? MOVWI_NDX : MOVIW_NDX;
+		t1 = addr(&e1);		/* k */
+		if ((t1 != S_IMMED) && (t1 != S_EXT)) {
+			xerr('a', "Index must be a #__ or constant.");
+		}
+		if (is_abs(&e1)) {
+			v1 = mch14esgn(&e1);
+			if ((v1 < -32) || (v1 > 31)) {
+				xerr('a', "Index: Value from -32 -> 31.");
+			}
+		}
+		n = 0;
+		if ((c = getnb()) != '[') {
+			xerr('a', "An index requires [fsr0] or [fsr1].");
+			unget(c);
+		} else {
+			if ((t2 = admode(fsrreg)) != -1) {
+				n = (t2 & S_FSR1) ? 1 : 0;
+			} else {
+				e2.e_addr = absexpr();
+				if (e2.e_addr & ~((a_uint) 0x01)) {
+					xerr('a', "Index register: fsr0, fsr1, 0 or 1.");
+				}
+				n = (int) (e2.e_addr & 0x01);
+			}
+			if ((c = getnb()) != ']') {
+				xerr('a', "Missing ']'.");
+				unget(c);
+			}
+		}
+		outrwm(&e1, R_6BIT, op + (n ? FSR1_NDX : 0));
+		break;
+
+	case S_RET:			/* return, retfie */
+	case S_CLRW:			/* clrw */
+	case S_INH:			/* inst */
+		outaw(op);
+		break;
+
+	case S_TRIS:			/* inst [k] */
+		t1 = addr(&e1);	/* k */
+		if ((t1 != S_IMMED) && (t1 != S_EXT)) {
+			xerr('a', "Argument must be a #__ or constant.");
+		}
+		abscheck(&e1);
+		if ((e1.e_addr < 5) || (e1.e_addr > 7)) {
+			xerr('a', "A value of 5, 6, or 7 is valid.");
+		}
+		outaw(op + (e1.e_addr & 0x07));
+		break;
+
+	default:
+		opcycles = OPCY_ERR;
+		xerr('a', "Internal Opcode Error.");
+		break;
+	}
+
+	if (opcycles == OPCY_NONE) {
+		v1 = ((cb[1] & 0xFF) << 8) | (cb[0] & 0xFF);
+		switch (v1 & 0x3F00) {
+		case 0x0000:
+			switch (v1 & 0x00FF) {
+			case 0x0008:	/* return */
+			case 0x0009:	/* retfie */
+			case 0x000A:	/* callw  */
+			case 0x000B:	/* brw    */
+				opcycles = 2;	break;
+			default:
+				opcycles = 1;	break;
+			}			break;
+		case 0x3200:		/* bra    */
+		case 0x3300:
+		case 0x3400:		/* retlw  */
+			opcycles = 2;	break;
+		default:
+			/*
+			 * call is 10 0kkk kkkk kkkk and goto
+			 * is 10 1kkk kkkk kkkk.
+			 */
+			if ((v1 & 0x3000) == 0x2000) {
+				opcycles = 2;
+			} else {
+				opcycles = 1;
+			}		break;
+		}
 	}
 }
 
