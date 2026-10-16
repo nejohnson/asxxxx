@@ -94,6 +94,7 @@ Submittable as they stand.
 | `8b83c64` | `asgb` | a relocatable `ldh` operand could not link at all: `asgb` added `0xFF00` and emitted `R_PAGN`, which checks against a `.setdp` base `asgb` has no directive to establish, so `sdp.s_addr` was always zero. All seven sites now emit a plain low-byte relocation, which is what LDH wants - both spellings of the operand have the same low byte |
 | `6193c78` | `asrab` | the Rabbit 4000's quad load displacement was range checked as signed, so `ld bcde,136 (sp)` was refused. A stack offset is written unsigned and an index offset is usually negative - both halves of the byte are meant |
 | `ac2a167` | `asez80` | `lea` took its displacement only in the second operand, Zilog's spelling. Code generators write it as a third, which is the same instruction and the same bytes; the code already parsed the expression, it just could not step over the comma |
+| `b711951` | `asxxsrc` | at the first line of an included file `nxtline()` copied `afn` onto itself (`strcpy-param-overlap` under ASan) and set the included file's path length `afp` without its specification `afs`, so a file included from another directory could not `.include` or `.incbin` anything beside itself. `afs` and `afp` are now made current together; `afn` stays the source file's name, which `symfn()` needs to keep manufactured symbols per module. 54-assembler sweep identical; new astest cases `incpath`, `itst`, `incsym`, the last two golded before the fix. The case needed `99b103d`, `%w`/`%s` in astest's `asm` options |
 
 ### Additions
 
@@ -166,6 +167,14 @@ What was almost certainly seen instead was a **working directory of a different 
 `astest/patches.txt` records the measurement, the per-case status against upstream, and which commits each case depends on.
 
 ## Known divergences and upstream quirks
+
+- **A diagnostic in an included file names the source file being
+  assembled**, with the line number within the included file: `line 1 of
+  itsta` for the first line of `incld1.asm`. The comment in upstream's
+  `ascheck/itst/itsta.asm` shows the included file's name instead. The
+  name is `afn`, which also prefixes the symbols the assembler
+  manufactures and so has to stay one per module; reporting the included
+  file would need a second name. Recorded by the `itst` case.
 
 - **`asmlnk.pdf` is stale.** The manual ships as four renderings of one
   fixed-width layout — `.txt`, `.rtf`, `.htm` and `.pdf` — with no source
