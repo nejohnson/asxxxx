@@ -599,8 +599,8 @@ int skpcomma(void)
  *	side effects:
  *		include file will be closed at detection of end of file.
  *		the next sequential source file may be selected.
- *		The current file specification afn[] and the path
- *		length afp may be changed.
+ *		The current file specification afs, its name afn
+ *		and the path length afp may be changed.
  *		The respective line counter will be updated.
  *
  * --------------------------------------------------------------
@@ -898,7 +898,13 @@ loop:	if (asmc == NULL) return(0);
 			goto loop;
 		} else {
 			if (incline++ == 0) {
-				strcpy(afn, asmc->afn);
+				/*
+				 * The included file's own path, for the
+				 * .include and .incbin it contains.  afn
+				 * stays the source file's name:  the
+				 * symbols symfn() makes are per module.
+				 */
+				afs = asmc->afs;
 				afp = asmc->afp;
 			}
 			srcline = incline;
