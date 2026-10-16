@@ -1,0 +1,37 @@
+
+ASxxxx-Error-<o> in line 1 of itsta
+              <o> '1 		xxx					;1'
+              <o> .org in REL area or directive / mnemonic error
+?ASxxxx-Error-<o> in line 2 of itsta
+              <o> '2 		xxx					;2'
+              <o> .org in REL area or directive / mnemonic error
+?ASxxxx-Error-<o> in line 3 of itsta
+              <o> '3 		xxx					;3'
+              <o> .org in REL area or directive / mnemonic error
+?ASxxxx-Error-<o> in line 4 of itsta
+              <o> '4 		xxx					;4'
+              <o> .org in REL area or directive / mnemonic error
+?ASxxxx-Error-<o> in line 5 of itsta
+              <o> '5 		xxx					;5'
+              <o> .org in REL area or directive / mnemonic error
+?ASxxxx-Error-<i> in line 6 of itsta
+              <i> '6 		.include	"incldx.asm"		;6'
+              <i> .include/.incbin file error or an .if/.endif mismatch
+?ASxxxx-Error-<o> in line 10 of itsta
+              <o> '10 		xxx					;10'
+              <o> .org in REL area or directive / mnemonic error
+?ASxxxx-Error-<o> in line 9 of itsta
+              <o> '9 		xxx					;9'
+              <o> .org in REL area or directive / mnemonic error
+?ASxxxx-Error-<o> in line 8 of itsta
+              <o> '8 		xxx					;8'
+              <o> .org in REL area or directive / mnemonic error
+?ASxxxx-Error-<o> in line 7 of itsta
+              <o> '7 		xxx					;7'
+              <o> .org in REL area or directive / mnemonic error
+?ASxxxx-Error-<o> in line 6 of itsta
+              <o> '6 		xxx					;6'
+              <o> .org in REL area or directive / mnemonic error
+?ASxxxx-Error-<o> in line 11 of itsta
+              <o> '11 		xxx					;11'
+              <o> .org in REL area or directive / mnemonic error

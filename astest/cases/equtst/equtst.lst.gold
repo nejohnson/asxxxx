@@ -1,0 +1,440 @@
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 1
+Hexadecimal [16-Bits]
+Assembler Equate Testing
+
+
+                              1 	.title	Assembler Equate Testing
+                              2 	.sbttl	equtst.asm
+                              3
+                              4 	;
+                              5 	;*****-----*****-----*****-----*****-----*****-----*****-----
+                              6 	;
+                              7 	; Assemble and Link as follows:
+                              8 	;
+                              9 	;	ascheck -loxff equtst
+                             10 	;	aslink -mx equtst
+                             11 	;
+                             12 	;
+                             13 	;*****-----*****-----*****-----*****-----*****-----*****-----
+                             14 	;
+                             15 	; This .asm source file attempts to test the assemblers for
+                             16 	; correct variable/symbol processing by the equate directives.
+                             17 	;
+                             18 	;*****-----*****-----*****-----*****-----*****-----*****-----
+                             19 	;
+                             20 	;	The General Equate Directives:
+                             21 	;
+                             22 	;	var	=	<arg>	a general equate which
+                             23 	;	var	.equ	<arg>	does not change the variable/
+                             24 	;	.equ	var,	<arg>	symbol type declaration.
+                             25 	;
+                             26 	;	NOTES:
+                             27 	;		If var is a local variable then its definition
+                             28 	;		is not output to the .rel file.
+                             29 	;
+                             30 	;		If var is a global variable then its definition
+                             31 	;		is output to the .rel file.
+                             32 	;
+                             33 	;		If var has not been declared global or local
+                             34 	;		then the assembler '-a' option will promote
+                             35 	;		the variable/symbol to global and output its
+                             36 	;		value to the .rel file.
+                             37 	;
+                             38 	;		If a referenced var is not defined then
+                             39 	;		the assembler '-g' option will promote
+                             40 	;		the variable/symbol to global and output its
+                             41 	;		value to the .rel file.
+                             42 	;
+                             43 	;*****-----*****-----*****-----*****-----*****-----*****-----
+                             44 	;
+                             45 	;	The Global Equate Directives:
+                             46 	;
+                             47 	;	var 	==	<arg>	an equate which defines the
+                             48 	;	var	.gblequ	<arg>	variable/symbol as global
+                             49 	;       .gblequ	var,	<arg>
+                             50 	;
+                             51 	;	NOTES:
+                             52 	;		A global is always output to the .rel file.
+                             53 	;
+                             54 	;*****-----*****-----*****-----*****-----*****-----*****-----
+                             55 	;
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 2
+Hexadecimal [16-Bits]
+Assembler Equate Testing
+equtst.asm
+
+                             56 	;	The Local Equate Directives:
+                             57 	;
+                             58 	;	var 	=:	<arg>	an equate which defines the
+                             59 	;	var	.lclequ	<arg>	variable/symbol as local
+                             60 	;       .lclequ	var,	<arg>
+                             61 	;
+                             62 	;	NOTES:
+                             63 	;		A local is never output to the .rel file.
+                             64 	;		The assembler option '-a' does not apply
+                             65 	;		to local variables/symbols.
+                             66 	;
+                             67 	;*****-----*****-----*****-----*****-----*****-----*****-----
+                             68 	;
+                             69 	;	Variable and Symbol NOTES:
+                             70 	;
+                             71 	;	In the ASxxxx assemblers the variables and
+                             72 	;	symbols are equivalent. Examples:
+                             73 	;
+                             74 	;		var = .			; The variable var
+                             75 	;					; is equivalent to the
+                             76 	;	sym:				; symbol sym.
+                             77 	;
+                             78 	;		gvar == .		; The global variable gvar
+                             79 	;					; is equivalent to the
+                             80 	;	gsym::				; global symbol gsym.
+                             81 	;
+                             82 	;
+                             83 	;	Variable/Symbol types can be changed using the .local or .globl
+                             84 	;	assembler directives:
+                             85 	;
+                             86 	;	.local	var	; The variable is set Local.
+                             87 	;       .local	sym	; The symbol is set Local.
+                             88 	;
+                             89 	;	.globl	var	; The variable is set Global.
+                             90 	;	.globl	sym	; The symbol is set Global.
+                             91 	;
+                             92 	;	Variables/Symbols that are specified as local/global using
+                             93 	;	the assembler directives are not flagged as undefined if
+                             94 	;	they are not used in the current assembly.  However even
+                             95 	;	if a global variable is unused it will be exported to the
+                             96 	;	.rel file as a global reference.  The linker will report
+                             97 	;	the undefined global variable as an error if no other
+                             98 	;	linked file defines this variable.  To suppress this link
+                             99 	;	error remove the unused global specification from the source
+                            100 	;	file or if the global is specified in a header definition
+                            101 	;	file add the following to the effected source file:
+                            102 	;
+                            103 	;	.ifndef	var
+                            104 	;	.local	var
+                            105 	;	.endif
+                            106 	;
+                            107 	;	The conditional checks that the variable/symbol has not been
+                            108 	;	used in an equate or as a label and makes the reference local
+                            109 	;	suppressing its output to the .rel file.
+                            110 	;
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 3
+Hexadecimal [16-Bits]
+Assembler Equate Testing
+equtst.asm
+
+                            111 	;	The last type specification in the source assembly determines
+                            112 	;	the variable/symbol type and whether the assembler outputs
+                            113 	;	the variable/symbol to the .rel file.
+                            114 	;
+                            115 	;*****-----*****-----*****-----*****-----*****-----*****-----
+                            116 	;
+                            117 	;	Variable Arguments:
+                            118 	;
+                            119 	;	The value of a variable is restricted to a constant
+                            120 	;	or any location within the local assembly plus/minus
+                            121 	;	a constant.  External global variables/symbols are
+                            122 	;	not allowed and will report an 'r' error (relocation)
+                            123 	;	during assembly.
+                            124 	;
+                            125 	;	You might be tempted to define a variable like
+                            126 	;
+                            127 	;	addr = xdata + 4
+                            128 	;	.word	addr
+                            129 	;
+                            130 	;	where xdata is an external data address and use this
+                            131 	;	variable as an argument in an instruction or allocation
+                            132 	;	directive.
+                            133 	;
+                            134 	;	The value of addr will be an undefine external variable + 4
+                            135 	;	(reports an 'r' error) and the allocation directive will have
+                            136 	;	a word value of 4.  This is not the desired result.
+                            137 	;
+                            138 	;	You must write the allocation as
+                            139 	;
+                            140 	;	.word	xdata + 4
+                            141 	;
+                            142 	;	or use a declaration similar to the following:
+                            143 	;
+                            144 	;	.define	xaddr,	"xdata + 4"
+                            145 	;
+                            146 	;	and use this definition in your assembly file.
+                            147 	;
+                            148 	;	.word	xaddr
+                            149 	;
+                            150 	;*****-----*****-----*****-----*****-----*****-----*****-----
+                            151 	;
+                            152
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 4
+Hexadecimal [16-Bits]
+Assembler Equate Testing
+Global Export Suppression
+
+                            154 	.sbttl	Global Export Suppression
+                            155
+                            156 	;**** From an external file. ****
+                            157 	.globl	gblvar
+                            158 	.globl	gblsym
+                            159 	;****
+                            160
+                     0001   161 	.ifndef	gblvar		; suppress export of gblvar if unused
+                            162 	.local	gblvar
+                            163 	.endif
+                            164
+   0000                     165 glbsym:				; gblsym is used.
+                            166
+                     0001   167 	.ifndef	gblsym		; suppress export of gblsym if unused
+                            168 	.local	gblsym
+                            169 	.endif
+                            170
+                            171 	;
+                            172 	;*****-----*****-----*****-----*****-----*****-----*****-----
+                            173 	;
+                            174
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 5
+Hexadecimal [16-Bits]
+Assembler Equate Testing
+Variable Usage Errors
+
+                            176 	.sbttl	Variable Usage Errors
+                            177
+                            178 	.local	lval		; A  declared Local variable
+                            179 ;	.globl	gval		; An undeclared Global variable
+                            180 	.globl	xgval		; A  declared External Global variable
+                            181
+?ASxxxx-Error-<u> in line 182 of equtst
+              <u> undefined symbol encountered during assembly
+u  0000 00 00               182 	.word	lval		;u 00 00	undefined error
+?ASxxxx-Error-<u> in line 183 of equtst
+              <u> undefined symbol encountered during assembly
+u  0002 00 00               183 	.word	gval		;u 00 00	undefined error
+   0004s00r00               184 	.word	xgval		; s00r00	-->> (.rel)  xgval Ref0000
+                            185
+?ASxxxx-Error-<u> in line 186 of equtst
+              <u> undefined symbol encountered during assembly
+u                    0002   186 	ilval = lval + 2	;u		undefined error
+?ASxxxx-Error-<u> in line 187 of equtst
+              <u> undefined symbol encountered during assembly
+u                    0004   187 	igval = gval + 4	;u		undefined error
+?ASxxxx-Error-<rx> in line 188 of equtst
+              <r> relocation error
+              <x> global argument NOT ALLOWED in an equate
+rx                   0006   188 	ixval = xgval + 6	;r		relocation error
+                            189
+                            190
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 6
+Hexadecimal [16-Bits]
+Assembler Equate Testing
+Variable Redeclaration
+
+                            192 	.sbttl	Variable Redeclaration
+                            193
+                            194 	.local	alval		; A  declared Local variable
+                            195 ;	.globl	agval		; An undeclared global variable
+                            196 	.globl	axgval		; A  declared External Global variable
+                            197
+                     0001   198 	alval == 1		; ==, Global	-->> (.rel)  alval Def0001
+                     0002   199 	agval =: 2		; =:, Local
+                     0003   200 	axgval =: 3		; =:, Local
+                            201
+                            202
+                     0004   203 	blval =: 4		; =:, Local
+                     0005   204 	bgval == 5		; ==, Global
+                     0006   205 	bxgval == 6		; ==, Global
+                            206
+                            207 	.globl	blval		;     Global	-->> (.rel)  blval Def0004
+                            208 	.local	bgval		;     Local
+                            209 	.local	bxgval		;     Local
+                            210
+                            211
+                            212 	.local	clval		; A  declared Local variable
+                            213 ;	.globl	cgval		; An undeclared global variable
+                            214 	.globl	cxgval		; A  declared External Global variable
+                            215
+                     0001   216 	clval  .gblequ	1	;     Global	-->> (.rel)  clval Def0001
+                     0002   217 	cgval  .lclequ	2	;     Local
+                     0003   218 	cxgval .lclequ	3	;     Local
+                            219
+                            220
+                     0004   221 	.lclequ	dlval, 4	;     Local
+                     0005   222 	.gblequ	dgval, 5	;     Global
+                     0006   223 	.gblequ	dxgval,	6	;     Global
+                            224
+                            225 	.globl	dlval		;     Global	-->> (.rel)  dlval Def0004
+                            226 	.local	dgval		;     Local
+                            227 	.local	dxgval		;     Local
+                            228
+                            229
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 7
+Hexadecimal [16-Bits]
+Assembler Equate Testing
+Symbol Definitions
+
+                            231 	.sbttl	Symbol Definitions
+                            232
+                            233 	; 'm'	Multiple definition error
+                            234 	; 'p'	Phase error (address changeing for same symbol)
+                            235
+?ASxxxx-Error-<m> in line 236 of equtst
+              <m> multiple definitions error or macro recursion error
+m  0006                     236 syma:				;m
+?ASxxxx-Error-<m> in line 237 of equtst
+              <m> multiple definitions error or macro recursion error
+m  0006                     237 syma:				;m
+                            238
+?ASxxxx-Error-<mp> in line 239 of equtst
+              <m> multiple definitions error or macro recursion error
+              <p> phase error: label location changing between passes 2 and 3
+mp 0006                     239 symb:	.blkb	4		;mp
+                            240
+?ASxxxx-Error-<mp> in line 241 of equtst
+              <m> multiple definitions error or macro recursion error
+              <p> phase error: label location changing between passes 2 and 3
+mp 000A                     241 symb:	.blkb	4		;mp
+                            242
+?ASxxxx-Error-<mp> in line 243 of equtst
+              <m> multiple definitions error or macro recursion error
+              <p> phase error: label location changing between passes 2 and 3
+mp 000E                     243 1$:	.blkb	4		;mp
+                            244
+?ASxxxx-Error-<mp> in line 245 of equtst
+              <m> multiple definitions error or macro recursion error
+              <p> phase error: label location changing between passes 2 and 3
+mp 0012                     245 1$:	.blkb	4		;mp
+                            246
+?ASxxxx-Error-<m> in line 247 of equtst
+              <m> multiple definitions error or macro recursion error
+m  0016                     247 2$:				;m
+?ASxxxx-Error-<m> in line 248 of equtst
+              <m> multiple definitions error or macro recursion error
+m  0016                     248 2$:	.blkb	4		;m
+                            249
+                     001A   250 	symc = .		;
+                            251
+   001A                     252 	.blkb	4
+?ASxxxx-Error-<p> in line 253 of equtst
+              <p> phase error: label location changing between passes 2 and 3
+p  001E                     253 symc:	.blkb	4		;p
+                            254
+                     0026   255 	symd = . + 4		;
+                            256
+   0022                     257 	.blkb	4
+   0026                     258 symd:	.blkb	4		;
+                            259
+                            260
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 8
+Hexadecimal [16-Bits]
+Assembler Equate Testing
+Program Counter Variable
+
+                            262 	.sbttl	Program Counter Variable
+                            263
+                            264 	.local	elval		; A  declared Local variable
+                            265 ;	.globl	egval		; An undeclared global variable
+                            266 	.globl	exgval		; A  declared External Global variable
+                            267
+                            268 	; Only '.' +/- a constant is allowed
+                            269 	; '.' with an undefined or external variable is NOT allowed
+   002As00r2A               270 	.word	.		;  s__r__
+?ASxxxx-Error-<u> in line 271 of equtst
+              <u> undefined symbol encountered during assembly
+u  002Cs00r2C               271 	.word	. + elval	;u s__r__	undefined error
+?ASxxxx-Error-<u> in line 272 of equtst
+              <u> undefined symbol encountered during assembly
+u  002Es00r2E               272 	.word	. + egval	;u s__r__	undefined error
+   0030s00r00               273 	.word	. + exgval	;r s__r__	relocation error
+                            274
+   0032                     275 1$:	.blkb	4
+                            276 	; '.' and '1$' are in the same area, their difference is a constant
+   0036 00 04               277 	.word	. - 1$		;   00 04
+                            278 	; '.' +/- a constant is always allowed
+   0038s00r3C               279 	.word	. + 4		;  s__r__
+                            280 	; A symbol in the local assembly +/- a constant is always allowed
+   003As00r36               281 	.word	1$ + 4		;  s__r_
+                            282 	; '.' and '1$' are in the same area, their difference is a constant
+   003C FF F6               283 	.word	1$ - .		;   FF F6
+                            284 	; Only '.' +/- a constant is allowed
+   003Es00r00               285 	.word	4 - .		;r  __ __	relocation error
+                            286 	; Only a symbol in the local assembly +/- a constant is allowed
+   0040s00r00               287 	.word	4 - 1$		;r  __ __	relocation error
+                            288
+                            289
+                     0046   290 	dotval == . + 4		;		-->> (.rel) dotval Def____
+                            291
+   0042                     292 syme::				;		-->> (.rel) syme Def____
+                            293
+?ASxxxx-Error-<.> in line 294 of equtst
+              <.> use ". = . + <arg>" not ". = <arg>"
+.                    0004   294 	. = 4			;.		program counter error
+                     0008   295 	. = . + 4		;
+                            296
+                            297
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 9
+Hexadecimal [16-Bits]
+Assembler Equate Testing
+Assembly Options
+
+                            299 	.sbttl	Assembly Options
+                            300
+                            301 	;
+                            302 	;*****-----*****-----*****-----*****-----*****-----*****-----
+                            303 	;
+                            304 	; When assembled and linked as follows:
+                            305 	;
+                            306 	;	ascheck -gloxff equtst
+                            307 	;	aslink -mx equtst
+                            308 	;
+                            309 	;	All non local undefined variables (symbols) will be
+                            310 	;	flagged as global and referenced in the .rel file.
+                            311 	;
+                            312 	;*****-----*****-----*****-----*****-----*****-----*****-----
+                            313 	;
+                            314 	; When assembled and linked as follows:
+                            315 	;
+                            316 	;	ascheck -gloaxff equtst
+                            317 	;	aslink -mx equtst
+                            318 	;
+                            319 	;	(1) All non local undefined variables (symbols) will be
+                            320 	;	    flagged as global and referenced in the .rel file.
+                            321 	;
+                            322 	;	(2) All non local variables and symbols will be flagged
+                            323 	;	    as global and defined in the .rel file.
+                            324 	;
+                            325 	;*****-----*****-----*****-----*****-----*****-----*****-----
+                            326 	;
+                            327
+                            328 	.end
+                            329
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                       Page 10
+Hexadecimal [16-Bits]
+Assembler Equate Testing
+Symbol Table
+
+    .__.$$$.       =   2710 L   |     .__.ABS.       =   0000 G
+    .__.CPU.       =   0000 L   |     .__.H$L.       =   0001 L
+    agval          =   0002 L   |     alval          =   0001 G
+    axgval         =   0003 L   |     bgval          =   0005 L
+    blval          =   0004 G   |     bxgval         =   0006 L
+    cgval          =   0002 L   |     clval          =   0001 G
+    cxgval         =   0003 L   |     dgval          =   0005 L
+    dlval          =   0004 G   |   0 dotval         =   0046 GR
+    dxgval         =   0006 L   |     egval              **** X
+    elval              **** LX  |     exgval             **** GX
+    gblsym             **** LX  |     gblvar             **** LX
+  0 glbsym             0000 R   |     gval               **** X
+    igval          =   0004     |     ilval          =   0002
+    ixval          =   0006     |     lval               **** LX
+  0 syma               0006 R   |   0 symb               000A R
+  0 symc           =   001E R   |   0 symd           =   0026 R
+  0 syme               0042 GR  |     xgval              **** GX
+
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                       Page 11
+Hexadecimal [16-Bits]
+Assembler Equate Testing
+Area Table
+
+[_CSEG]
+   0 _CODE            size    8   flags C180
+[_DSEG]
+   1 _DATA            size    0   flags C0C0
+

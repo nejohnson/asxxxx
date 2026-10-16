@@ -1,0 +1,215 @@
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 1
+Hexadecimal [16-Bits]
+
+
+
+                              1 		.include	"incld1.asm"		;1
+?ASxxxx-Error-<o> in line 1 of itsta
+              <o> .org in REL area or directive / mnemonic error
+o  0000                       1 		xxx					;1
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 2
+Hexadecimal [16-Bits]
+
+
+
+                              2 		.include	"incld2.asm"		;2
+                              1 							;1
+?ASxxxx-Error-<o> in line 2 of itsta
+              <o> .org in REL area or directive / mnemonic error
+o  0000                       2 		xxx					;2
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 3
+Hexadecimal [16-Bits]
+
+
+
+                              3 		.include	"incld3.asm"		;3
+                              1 							;1
+                              2 							;2
+?ASxxxx-Error-<o> in line 3 of itsta
+              <o> .org in REL area or directive / mnemonic error
+o  0000                       3 		xxx					;3
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 4
+Hexadecimal [16-Bits]
+
+
+
+                              4 		.include	"incld4.asm"		;4
+                              1 							;1
+                              2 							;2
+                              3 							;3
+?ASxxxx-Error-<o> in line 4 of itsta
+              <o> .org in REL area or directive / mnemonic error
+o  0000                       4 		xxx					;4
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 5
+Hexadecimal [16-Bits]
+
+
+
+                              5 		.include	"incld5.asm"		;5
+                              1 							;1
+                              2 							;2
+                              3 							;3
+                              4 							;4
+?ASxxxx-Error-<o> in line 5 of itsta
+              <o> .org in REL area or directive / mnemonic error
+o  0000                       5 		xxx					;5
+?ASxxxx-Error-<i> in line 6 of itsta
+              <i> .include/.incbin file error or an .if/.endif mismatch
+                              6 		.include	"incldx.asm"		;6
+                              7 							;7
+                              8 							;8
+                              9 							;9
+?ASxxxx-Error-<o> in line 10 of itsta
+              <o> .org in REL area or directive / mnemonic error
+o  0000                      10 		xxx					;10
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 6
+Hexadecimal [16-Bits]
+
+
+
+                              6 							;6
+                              7 							;7
+                              8 							;8
+?ASxxxx-Error-<o> in line 9 of itsta
+              <o> .org in REL area or directive / mnemonic error
+o  0000                       9 		xxx					;9
+                             10 							;10
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 7
+Hexadecimal [16-Bits]
+
+
+
+                              5 							;5
+                              6 							;6
+                              7 							;7
+?ASxxxx-Error-<o> in line 8 of itsta
+              <o> .org in REL area or directive / mnemonic error
+o  0000                       8 		xxx					;8
+                              9 							;9
+                             10 							;10
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 8
+Hexadecimal [16-Bits]
+
+
+
+                              4 							;4
+                              5 							;5
+                              6 							;6
+?ASxxxx-Error-<o> in line 7 of itsta
+              <o> .org in REL area or directive / mnemonic error
+o  0000                       7 		xxx					;7
+                              8 							;8
+                              9 							;9
+                             10 							;10
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                        Page 9
+Hexadecimal [16-Bits]
+
+
+
+                              3 							;3
+                              4 							;4
+                              5 							;5
+?ASxxxx-Error-<o> in line 6 of itsta
+              <o> .org in REL area or directive / mnemonic error
+o  0000                       6 		xxx					;6
+                              7 							;7
+                              8 							;8
+                              9 							;9
+                             10 							;10
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                       Page 10
+Hexadecimal [16-Bits]
+
+
+
+                              2 							;2
+                              3 							;3
+                              4 							;4
+                              5 							;5
+                              6 							;6
+                              7 							;7
+                              8 							;8
+                              9 							;9
+                             10 							;10
+?ASxxxx-Error-<o> in line 11 of itsta
+              <o> .org in REL area or directive / mnemonic error
+o  0000                      11 		xxx					;11
+                             12 ;
+                             13 ;	This is a simple test of the error reporting
+                             14 ;	for source and include files.
+                             15 ;
+                             16 ;	assemble inctst:
+                             17 ;		asxxxx itsta itstb
+                             18 ;
+                             19 ;?ASxxxx-Error-<q> in line 1 of incld1.asm
+                             20 ;              <q> missing or improper operators, terminators, or delimiters
+                             21 ;?ASxxxx-Error-<q> in line 2 of incld2.asm
+                             22 ;              <q> missing or improper operators, terminators, or delimiters
+                             23 ;?ASxxxx-Error-<q> in line 3 of incld3.asm
+                             24 ;              <q> missing or improper operators, terminators, or delimiters
+                             25 ;?ASxxxx-Error-<q> in line 4 of incld4.asm
+                             26 ;              <q> missing or improper operators, terminators, or delimiters
+                             27 ;?ASxxxx-Error-<q> in line 5 of incld5.asm
+                             28 ;              <q> missing or improper operators, terminators, or delimiters
+                             29 ;?ASxxxx-Error-<i> in line 6 of incld5.asm
+                             30 ;              <i> .include file error or an .if/.endif mismatch
+                             31 ;?ASxxxx-Error-<q> in line 10 of incld5.asm
+                             32 ;              <q> missing or improper operators, terminators, or delimiters
+                             33 ;?ASxxxx-Error-<q> in line 9 of incld4.asm
+                             34 ;              <q> missing or improper operators, terminators, or delimiters
+                             35 ;?ASxxxx-Error-<q> in line 8 of incld3.asm
+                             36 ;              <q> missing or improper operators, terminators, or delimiters
+                             37 ;?ASxxxx-Error-<q> in line 7 of incld2.asm
+                             38 ;              <q> missing or improper operators, terminators, or delimiters
+                             39 ;?ASxxxx-Error-<q> in line 6 of incld1.asm
+                             40 ;              <q> missing or improper operators, terminators, or delimiters
+                             41 ;?ASxxxx-Error-<q> in line 11 of itsta.asm
+                             42 ;              <q> missing or improper operators, terminators, or delimiters
+                             43 ;?ASxxxx-Error-<q> in line 1 of incld1.asm
+                             44 ;              <q> missing or improper operators, terminators, or delimiters
+                             45 ;?ASxxxx-Error-<q> in line 2 of incld2.asm
+                             46 ;              <q> missing or improper operators, terminators, or delimiters
+                             47 ;?ASxxxx-Error-<q> in line 3 of incld3.asm
+                             48 ;              <q> missing or improper operators, terminators, or delimiters
+                             49 ;?ASxxxx-Error-<q> in line 4 of incld4.asm
+                             50 ;              <q> missing or improper operators, terminators, or delimiters
+                             51 ;?ASxxxx-Error-<q> in line 5 of incld5.asm
+                             52 ;              <q> missing or improper operators, terminators, or delimiters
+                             53 ;?ASxxxx-Error-<i> in line 6 of incld5.asm
+                             54 ;              <i> .include file error or an .if/.endif mismatch
+                             55 ;?ASxxxx-Error-<q> in line 10 of incld5.asm
+                             56 ;              <q> missing or improper operators, terminators, or delimiters
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                       Page 11
+Hexadecimal [16-Bits]
+
+
+
+                             57 ;?ASxxxx-Error-<q> in line 9 of incld4.asm
+                             58 ;              <q> missing or improper operators, terminators, or delimiters
+                             59 ;?ASxxxx-Error-<q> in line 8 of incld3.asm
+                             60 ;              <q> missing or improper operators, terminators, or delimiters
+                             61 ;?ASxxxx-Error-<q> in line 7 of incld2.asm
+                             62 ;              <q> missing or improper operators, terminators, or delimiters
+                             63 ;?ASxxxx-Error-<q> in line 6 of incld1.asm
+                             64 ;              <q> missing or improper operators, terminators, or delimiters
+                             65 ;?ASxxxx-Error-<q> in line 11 of itstb.asm
+                             66 ;              <q> missing or improper operators, terminators, or delimiters
+                             67
+                             68
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                       Page 12
+Hexadecimal [16-Bits]
+
+Symbol Table
+
+    .__.$$$.       =   2710 L   |     .__.ABS.       =   0000 G
+    .__.CPU.       =   0000 L   |     .__.H$L.       =   0001 L
+
+ASxxxx Assembler V--.--  (ASxxxx Test Assembler)                       Page 13
+Hexadecimal [16-Bits]
+
+Area Table
+
+[_CSEG]
+   0 _CODE            size    0   flags C080
+[_DSEG]
+   1 _DATA            size    0   flags C0C0
+
