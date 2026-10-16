@@ -122,6 +122,7 @@ defect, so they travel separately.
 | `87502d9` | `astlcs90` | `lda` takes its displacement as one operand or as two, `lda hl,-6 (ix)` or `lda hl,ix,#-6`. Same instruction, same bytes |
 | `f36f47e` | `astlcs90` | `rrd`/`rld` with no operand, and `a(hl)` as a spelling of `(hl+a)` |
 | `c9841cd`, `9d831fc` | `asrab` | the Rabbit 4000 and 6000. The machine type becomes a processor and a mode, because the 4000's two mode bits select between register mappings and several encodings differ by them. Then the instructions: the 32-bit pairs, the quad loads, the 6000's ALU against a stack slot, the 16-bit rotates, `cbm`, `clr`, `mulu`, `test` and the four conditions the 4000 carries on their own opcodes. 79 encodings verified byte-identical to SDAS |
+| `7e83a3e` | `asst8` | `rrwa`/`rlwa` with the `A` left implicit, `rrwa x` for `rrwa x,a`. Same instruction, same bytes; a second operand must still be `A`. New astest case `st8rwa`, which fails before the fix |
 
 ### Not for upstream as separate patches
 
