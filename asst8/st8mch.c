@@ -1666,9 +1666,14 @@ machine(struct mne *mp)
 	case S_RWA:
 		t1 = addr(&e1);
 		v1 = rcode;
-		comma(1);
-		t2 = addr(&e2);
-		v2 = rcode;
+		/* A is implicit:  rrwa x,a  may be written  rrwa x */
+		if (comma(0)) {
+			t2 = addr(&e2);
+			v2 = rcode;
+		} else {
+			t2 = S_REG;
+			v2 = A;
+		}
 		if ((t1 != S_REG) ||
 		    (t2 != S_REG) || (v2 != A)) {
 			xerr('a', "Arguments: X,A or Y,A.");
