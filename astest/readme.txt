@@ -47,7 +47,9 @@ reads "-a name=expr" as one line, not as two.
 the input directory, for the options that need a path rather than a
 bare name:  a bare name in a command file is resolved relative to
 that file, but a file the linker creates is resolved relative to the
-directory the linker was run from.
+directory the linker was run from.  The same holds for the options of
+asm:  a path in an -i line is taken from the directory the assembler
+runs in.
 
 Nothing is quoted.  The quoting rules of the Bourne shell, cmd.exe
 and COMMAND.COM do not agree, so a path containing a space is
