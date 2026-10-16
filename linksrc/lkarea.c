@@ -483,11 +483,62 @@ fitsize(struct area *ap, int upper)
 int
 fitarea(struct area *tap, struct bank *bank, a_uint rloc, int bytes, a_uint *pa)
 {
+	return (fitrun(tap, bank, rloc, fitsize(tap, 0) * bytes, bytes, NULL, pa));
+}
+
+/*)Function	int	fitrun(tap, bank, rloc, size, bytes, upto, pa)
+ *
+ *		area *	tap		the area the run is for
+ *		bank *	bank		the bank being laid out
+ *		a_uint	rloc		the address laying it down would use
+ *		a_uint	size		the size of the run, in bytes
+ *		int	bytes		the area's word length in bytes
+ *		areax *	upto		tap's first section not yet placed,
+ *					or NULL if none of tap is placed
+ *		a_uint *pa		where the address found is returned
+ *
+ *	The function fitrun() looks for the lowest run of size free
+ *	bytes below rloc, and returns non zero having put its address
+ *	(in words) in *pa.  fitarea() asks it for room for a whole
+ *	area, lnksplit() for one section at a time.
+ *
+ *	Free means claimed neither by a section already laid down,
+ *	nor by one of tap's own sections that lnksplit() has placed
+ *	(those before upto), nor by an area further down the list
+ *	that has an address of its own.  Laid down sections are
+ *	taken one at a time, so the gaps an area split by
+ *	lnksplit() leaves between its sections are still free.
+ *
+ *	local variables:
+ *		area *	oap		pointer to an area structure
+ *		areax *	oxp		pointer to an areax structure
+ *		a_uint	lo, hi		the run being considered
+ *		a_uint	olo, ohi	an occupied run
+ *		a_uint	base		the bank's lowest address
+ *		a_uint	next		where to try next
+ *		int	obytes		the other area's word length
+ *		int	seen		tap has been passed in the list
+ *
+ *	global variables:
+ *		area *	areap		The pointer to the first
+ *					area structure of a linked list
+ *
+ *	functions called:
+ *		a_uint	fitsize()	lkarea.c
+ *		int	gcdead()	lkgc.c
+ *
+ *	side effects:
+ *		none
+ */
+
+int
+fitrun(struct area *tap, struct bank *bank, a_uint rloc, a_uint size, int bytes, struct areax *upto, a_uint *pa)
+{
 	struct area *oap;
-	a_uint size, lo, hi, olo, ohi, base, next;
+	struct areax *oxp;
+	a_uint lo, hi, olo, ohi, base, next;
 	int obytes, seen;
 
-	size = fitsize(tap, 0) * bytes;
 	if (size == 0) {
 		return (0);
 	}
@@ -508,35 +559,47 @@ fitarea(struct area *tap, struct bank *bank, a_uint rloc, int bytes, a_uint *pa)
 		next = 0;
 		seen = 0;
 		for (oap = areap; oap != NULL; oap = oap->a_ap) {
-			if (oap == tap) {
-				seen = 1;
-				continue;
-			}
 			if (oap->a_bp != bank) {
 				continue;
 			}
-			if (seen) {
-				/*
-				 * Not laid down yet.  It claims space
-				 * only if it already knows where it
-				 * goes;  one that does not will be
-				 * given what is left over, which is
-				 * what rloc is for.
-				 */
-				if (!oap->a_bset &&
-				    ((oap->a_flag & A4_ABS) != A4_ABS)) {
-					continue;
-				}
-				ohi = fitsize(oap, 1);
-			} else {
-				/*
-				 * Laid down, so its size is final.
-				 */
-				ohi = oap->a_size;
-			}
 			obytes = 1 + (oap->a_flag & A4_WLMSK);
+			if ((oap == tap) || !seen) {
+				/*
+				 * Laid down, section by section; or tap
+				 * itself, whose sections before upto are.
+				 */
+				for (oxp = oap->a_axp; oxp != NULL; oxp = oxp->a_axp) {
+					if (oap == tap) {
+						if ((upto == NULL) || (oxp == upto)) {
+							break;
+						}
+					}
+					if (gcdead(oxp) || (oxp->a_size == 0)) {
+						continue;
+					}
+					olo = oxp->a_addr * obytes;
+					ohi = olo + (oxp->a_size * obytes);
+					if ((lo < ohi) && (olo < hi) && (ohi > next)) {
+						next = ohi;
+					}
+				}
+				if (oap == tap) {
+					seen = 1;
+				}
+				continue;
+			}
+			/*
+			 * Not laid down yet.  It claims space only if it
+			 * already knows where it goes;  one that does not
+			 * will be given what is left over, which is what
+			 * rloc is for.
+			 */
+			if (!oap->a_bset &&
+			    ((oap->a_flag & A4_ABS) != A4_ABS)) {
+				continue;
+			}
 			olo = oap->a_addr * obytes;
-			ohi = olo + (ohi * obytes);
+			ohi = olo + (fitsize(oap, 1) * obytes);
 			if (ohi <= olo) {
 				continue;
 			}
@@ -678,6 +741,16 @@ lnkarea(void)
 					 */
 					ap->a_addr = fa;
 					lnksect(ap);
+				} else if ((ap->a_bset == 0) &&
+				    ((ap->a_flag & A4_FIT) == A4_FIT) &&
+				    ((ap->a_flag & A4_OVR) != A4_OVR)) {
+					/*
+					 * Too big for any gap whole: each
+					 * section takes a gap of its own if
+					 * there is one, and the rest follow
+					 * on from rloc.
+					 */
+					rloc = lnksplit(ap, bp, rloc, bytes);
 				} else {
 					if (ap->a_bset == 0)
 						ap->a_addr = (rloc/bytes) + ((rloc % bytes) ? 1 : 0);
@@ -709,6 +782,118 @@ lnkarea(void)
 			}
 		}
 	}
+}
+
+/*)Function	a_uint	lnksplit(tap, bank, rloc, bytes)
+ *
+ *		area *	tap		a FIT CON area no gap holds whole
+ *		bank *	bank		the bank being laid out
+ *		a_uint	rloc		where the area would start, in bytes
+ *		int	bytes		the area's word length in bytes
+ *
+ *	The function lnksplit() lays out a FIT area section by section:
+ *	each section goes into the lowest gap below rloc that holds it,
+ *	and the sections no gap holds are concatenated from rloc, as
+ *	lnksect() would lay out the whole area.  The area's address and
+ *	size become the span of its sections, and the new rloc - the
+ *	end of the sections laid from rloc - is returned.
+ *
+ *	The gap at 0x08-0x1F of an 8051's internal RAM, left by the
+ *	register banks above the first, is what this fills:  the data
+ *	area that will not fit there whole is made of sections that
+ *	will.  A section with a boundary, or a paged area, is not
+ *	offered a gap.
+ *
+ *	The symbols lnksect() makes for each section, m_<area>_n and
+ *	s_<area>_n, are made here too.
+ *
+ *	local variables:
+ *		areax *	taxp		pointer to an areax structure
+ *		a_uint	tail		next address from rloc, in words
+ *		a_uint	lo, hi		the span of the sections
+ *		a_uint	fa		address of a gap, in words
+ *		a_uint	bofst		boundary offset
+ *		a_uint	i		segment number
+ *		char	temp[]		symbol string
+ *		struct sym *sp		pointer to a symbol structure
+ *
+ *	global variables:
+ *		none
+ *
+ *	functions called:
+ *		int	fitrun()	lkarea.c
+ *		int	gcdead()	lkgc.c
+ *		sym *	lkpsym()	lksym.c
+ *		int	sprintf()	c_library
+ *		int	symeq()		lksym.c
+ *
+ *	side effects:
+ *		The addresses and sizes of tap and its sections are set.
+ */
+
+a_uint
+lnksplit(struct area *tap, struct bank *bank, a_uint rloc, int bytes)
+{
+	struct areax *taxp;
+	a_uint tail, lo, hi, fa, bofst, i;
+	char temp[NGSYM];
+	struct sym *sp;
+
+	tail = (rloc / bytes) + ((rloc % bytes) ? 1 : 0);
+	lo = ~((a_uint) 0);
+	hi = 0;
+	for (taxp = tap->a_axp, i=1; taxp != NULL; taxp = taxp->a_axp, i++) {
+		if (gcdead(taxp)) {
+			taxp->a_addr = tail;
+			taxp->a_size = 0;
+			continue;
+		}
+		if ((taxp->a_bndry == 0) &&
+		    ((tap->a_flag & A4_PAG) != A4_PAG) &&
+		    fitrun(tap, bank, rloc, taxp->a_size * bytes, bytes, taxp, &fa)) {
+			taxp->a_addr = fa;
+		} else {
+			bofst = 0;
+			if (taxp->a_bndry != 0) {
+				bofst = tail % taxp->a_bndry;
+				if (bofst != 0) {
+					bofst = taxp->a_bndry - bofst;
+				}
+			}
+			taxp->a_size += bofst;
+			taxp->a_addr  = tail + bofst;
+			tail += taxp->a_size;
+		}
+		if (taxp->a_size != 0) {
+			if (taxp->a_addr < lo) {
+				lo = taxp->a_addr;
+			}
+			if (taxp->a_addr + taxp->a_size > hi) {
+				hi = taxp->a_addr + taxp->a_size;
+			}
+		}
+		if (! symeq(tap->a_id, _abs_, 1)) {
+			sprintf(temp, "m_%s_%u", tap->a_id, i);
+			sp = lkpsym(temp, 1);
+			sp->s_addr = taxp->a_bndry;
+			sp->s_axp = NULL;
+			sp->s_type |= S_DEF;
+			sp->s_flag = m1flag ? 0 : 1;
+
+			sprintf(temp, "s_%s_%u", tap->a_id, i);
+			sp = lkpsym(temp, 1);
+			sp->s_addr = taxp->a_addr;
+			sp->s_axp = NULL;
+			sp->s_type |= S_DEF;
+			sp->s_flag = m1flag ? 0 : 1;
+		}
+	}
+	if (hi == 0) {
+		lo = hi = tail;
+	}
+	tap->a_addr = lo;
+	tap->a_size = hi - lo;
+	return (tail * bytes);
 }
 
 /*)Function	void	lnksect(tap)
