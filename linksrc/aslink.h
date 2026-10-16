@@ -1217,6 +1217,8 @@ extern	void		lnkarea(void);
 extern	void		lnksect(struct area *tap);
 extern	a_uint		fitsize(struct area *ap, int upper);
 extern	int		fitarea(struct area *tap, struct bank *bank, a_uint rloc, int bytes, a_uint *pa);
+extern	int		fitrun(struct area *tap, struct bank *bank, a_uint rloc, a_uint size, int bytes, struct areax *upto, a_uint *pa);
+extern	a_uint		lnksplit(struct area *tap, struct bank *bank, a_uint rloc, int bytes);
 extern	void		lnkserr(char *frmt, char *str);
 extern	void		newarea(void);
 extern	void		setarea(void);
