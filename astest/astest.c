@@ -809,7 +809,9 @@ readtst(char *path)
  *	and %s with the current source directory.  A linker option
  *	that names a directory, -k for a library path, cannot use a
  *	bare name:  only the file names in a command file are taken
- *	relative to that file.
+ *	relative to that file.  An assembler -i line that names a
+ *	file is the same:  a path in it is taken from the directory
+ *	the assembler runs in.
  */
 
 static void
@@ -867,7 +869,7 @@ static int
 runcase(char *id)
 {
 	char path[NPATH+NLINE], gpath[NPATH+NLINE], args[NLINE+NPATH+NPATH];
-	char lnk[NPATH], base[NNAME];
+	char lnk[NPATH], base[NNAME], opts[NLINE+NPATH];
 	char *p, *q;
 	FILE *fp;
 	int i, nout;
@@ -921,7 +923,8 @@ runcase(char *id)
 			 * every output of the assembler to the working
 			 * directory;  it must precede the source file
 			 * because fixrelfil() takes the first name it
-			 * is given.
+			 * is given.  %w and %s in the options are
+			 * substituted, for an -i line that names a path.
 			 */
 			q = p + strlen(p);
 			while (q > p && *(q-1) != ' ' && *(q-1) != '\t') {
@@ -933,9 +936,10 @@ runcase(char *id)
 			} else {
 				*p = 0;
 			}
+			subst(opts, p);
 			sprintf(args, "%s -o+%s/%s %s/%s",
-				p, workdir, base, srcdir, base);
-			nativepath(args + strlen(p) + 1);
+				opts, workdir, base, srcdir, base);
+			nativepath(args + strlen(opts) + 1);
 			sprintf(path, "%s/asm%d.out", workdir, nout++);
 			if (!runtool(toolname, args, path, steps[i].s_expect)) {
 				return (R_FAIL);
@@ -1012,7 +1016,7 @@ runcase(char *id)
 				*p = 0;
 			}
 			sprintf(args, "%s %s/%s", p, workdir, base);
-			nativepath(args + strlen(p) + 1);
+			nativepath(args + strlen(opts) + 1);
 			sprintf(path, "%s/scan%d.out", workdir, nout++);
 			if (!runtool("asxscn", args, path, steps[i].s_expect)) {
 				return (R_FAIL);
