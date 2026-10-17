@@ -106,6 +106,12 @@ lkout(int i)
 	 */
 	if (oflag == 3) {
 		dbx(i);
+	} else
+	/*
+	 * ELF
+	 */
+	if (oflag == 4) {
+		elf(i);
 	}
 }
 

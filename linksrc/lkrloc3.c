@@ -584,9 +584,12 @@ relr3(void)
 	 * still runs:  the .lst to .rst translation reads the
 	 * listing one line at a time as the T data is consumed,
 	 * so skipping a section would leave every listing line
-	 * after it against the wrong code.
+	 * after it against the wrong code.  A NOLOAD section is
+	 * not part of the image, so it is not written either -
+	 * except to an ELF file, which is where it is wanted.
 	 */
-	if ((oflag != 0) && !gcdead(a[aindex])) {
+	if ((oflag != 0) && !gcdead(a[aindex]) &&
+	    ((oflag == 4) || !(a[aindex]->a_bap->a_flag & A4_NOLOAD))) {
 		lkout(1);
 	}
 }

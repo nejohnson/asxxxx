@@ -200,6 +200,22 @@ main(int argc, char *argv[])
 					break;
 
 				/*
+				 * -e alone ends the input; -e+name, or
+				 * -e<n>+name with the ELF machine
+				 * number n, is ELF output.
+				 */
+				case 'e':
+				case 'E':
+					while ((*p >= '0') && (*p <= '9')) {
+						sprintf(ip + strlen(ip), "%c", *p++);
+					}
+					if (*p == '+') {
+						strcat(ip, p);
+						p += strlen(p);
+					}
+					break;
+
+				/*
 				 * Options With A Conditional (+) Option
 				 */
 
@@ -938,6 +954,21 @@ parse()
 
 				case 'e':
 				case 'E':
+					/*
+					 * -e alone ends the input.
+					 * -e+name or -e<n>+name is
+					 * ELF output, n the ELF
+					 * machine number.
+					 */
+					if (((*ip >= '0') && (*ip <= '9')) || (*ip == '+')) {
+						elfmach = 0;
+						while ((*ip >= '0') && (*ip <= '9')) {
+							elfmach = 10 * elfmach + (*ip++ - '0');
+						}
+						oflag = 4;
+						ip = filespec(ip);
+						break;
+					}
 					return(1);
 
 				case 'f':
@@ -1711,6 +1742,7 @@ char *usetxt[] = {
 	"  -i   Intel Hex as file1[.hex]",
 	"  -s   Motorola S Record as file1[.s--]",
 	"  -t   Tandy CoCo Disk BASIC binary as file1[.bin]",
+	"  -e<n>+  ELF as file1[.elf], n the ELF machine number",
 	"  -*+  -i+/-s+/-t+ Renaming Options   -*+[ ][name][.ext]",
 	"    '-*+.ext'      (or)  '-*+  .ext'      ->  file1.ext ",
 	"    '-*+name'      (or)  '-*+  name'      ->  name[.---]",
