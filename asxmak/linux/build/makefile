@@ -1351,7 +1351,7 @@ asz280 :	$(ASXX) $(ASZ280)
 # ASLINK
 ####################################################################
 
-ASLINK =	lkmain.o lkarea.o lkgc.o lkdata.o lkeval.o	\
+ASLINK =	lkmain.o lkarea.o lkgc.o lkelf.o lkdata.o lkeval.o	\
 		lkhead.o lklex.o lklibr.o lklist.o	\
 		lkrloc.o lkrloc3.o lkrloc4.o lksym.o	\
 		lknoice.o lksdcdb.o lkbank.o lkout.o
@@ -1364,7 +1364,8 @@ lkarea.o :	$(SRCLNK)lkarea.c $(SRCLNK)aslink.h
 		$(CC) $(CCFLAGS) -I$(SRCMISC) -c $< -o $(@F)
 lkgc.o   :	$(SRCLNK)lkgc.c   $(SRCLNK)aslink.h
 		$(CC) $(CCFLAGS) -c $< -o $(@F)
-
+lkelf.o  :	$(SRCLNK)lkelf.c  $(SRCLNK)aslink.h
+		$(CC) $(CCFLAGS) -c $< -o $(@F)
 lklex.o  :	$(SRCLNK)lklex.c  $(SRCLNK)aslink.h
 		$(CC) $(CCFLAGS) -I$(SRCMISC) -c $< -o $(@F)
 lksym.o  :	$(SRCLNK)lksym.c  $(SRCLNK)aslink.h
