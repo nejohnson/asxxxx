@@ -636,6 +636,8 @@ lkfopen(void)
 						outext = "hex";
 					}
 					fp = afile(bp->b_fspec, outext, 1);
+					if ((fp != NULL) && (aomfhex == NULL))
+						aomfhex = strsto(afspec);
 				} else
 				if (oflag == 2) {
 					if (outext == NULL) {

@@ -66,6 +66,11 @@ void SDCDBfopen(void)
 {
 	if (yflag) {
 		yfp = afile(outbase ? outbase : linkp->f_idp, "cdb", 1);
+		/*
+		 * The AOMF51 file is named for the .cdb, and its
+		 * module list starts with it.
+		 */
+		SaveLinkedFilePath(outbase ? outbase : linkp->f_idp);
 		if (yfp == NULL) {
 			lkexit(1);
 		}
@@ -108,6 +113,11 @@ void SDCDBcopy(char *str)
 	char line[NINPUT];
 
 	/*
+	 * Every module linked, for the AOMF51 file.
+	 */
+	SaveLinkedFilePath(str);
+
+	/*
 	 * Copy cdb file if present and requested.
 	 */
 	if (yflag && yfp) {
@@ -115,8 +125,15 @@ void SDCDBcopy(char *str)
 		 * A module compiled without debugging information has no
 		 * cdb file.  That is not a fault - the loop below simply
 		 * has nothing to copy - so the open is made silently.
+		 *
+		 * SDCC writes a module's records as name.adb, which is
+		 * what sdld copied; without it the linked .cdb has the
+		 * linker's L: records and none of the compiler's, and
+		 * SDCDB has nothing to work from.  .cdb is tried second.
 		 */
-		xfp = afile(str,"cdb",16);
+		xfp = afile(str,"adb",16);
+		if (xfp == NULL)
+			xfp = afile(str,"cdb",16);
 		if (xfp) {
 			while (fgets(line, sizeof(line), xfp) != NULL) {
 				fprintf(yfp, "%s", line);
