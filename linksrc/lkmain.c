@@ -199,6 +199,13 @@ main(int argc, char *argv[])
 					}
 					break;
 
+				case 'y':
+				case 'Y':
+					if ((*p == 'o') || (*p == 'O')) {
+						sprintf(ip+2, "%c", *p++);
+					}
+					break;
+
 				/*
 				 * -e alone ends the input; -e+name, or
 				 * -e<n>+name with the ELF machine
@@ -467,6 +474,12 @@ lkexit(int i)
 	if (hfp != NULL) fclose(hfp);
 #if SDCDB
 	if (yfp != NULL) fclose(yfp);
+	/*
+	 * The AOMF51 file is made from the .cdb and the hex file
+	 * just closed, and only from a link that succeeded.
+	 */
+	if ((i == ER_NONE) && aomfflag && CreateAOMF51())
+		i = ER_ERROR;
 #endif
 	exit(i);
 }
@@ -1104,6 +1117,15 @@ parse()
 				case 'y':
 				case 'Y':
 					yflag = 1;
+					/*
+					 * -yo:  an AOMF51 file as well.
+					 */
+					c = get();
+					if ((c == 'o') || (c == 'O')) {
+						aomfflag = 1;
+					} else {
+						unget(c);
+					}
 					break;
 #endif
 
@@ -1756,6 +1778,7 @@ char *usetxt[] = {
 #endif
 #if SDCDB
 	"  -y   SDCDB Debug output as file1[.cdb]",
+	"  -yo    and AOMF51 output as file1[.omf]",
 #endif
 	"List:",
 	"  -u   Update listing file(s) with link data as file(s)[.rst]",

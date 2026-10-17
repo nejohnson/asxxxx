@@ -1251,6 +1251,12 @@ extern	char *		new(unsigned int n);
 /* lkelf.c */
 extern	int		elfmach;
 extern	void		elf(int i);
+
+/* lkaomf51.c */
+extern	int		aomfflag;
+extern	char *		aomfhex;
+extern	void		SaveLinkedFilePath(char * filepath);
+extern	int		CreateAOMF51(void);
 extern	struct	sym *	newsym(void);
 extern	void		prcsym(void);
 extern	char *		strsto(char *str);
