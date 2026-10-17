@@ -66,6 +66,11 @@ void SDCDBfopen(void)
 {
 	if (yflag) {
 		yfp = afile(outbase ? outbase : linkp->f_idp, "cdb", 1);
+		/*
+		 * The AOMF51 file is named for the .cdb, and its
+		 * module list starts with it.
+		 */
+		SaveLinkedFilePath(outbase ? outbase : linkp->f_idp);
 		if (yfp == NULL) {
 			lkexit(1);
 		}
@@ -106,6 +111,11 @@ void SDCDBcopy(char *str)
 {
 	FILE * xfp;
 	char line[NINPUT];
+
+	/*
+	 * Every module linked, for the AOMF51 file.
+	 */
+	SaveLinkedFilePath(str);
 
 	/*
 	 * Copy cdb file if present and requested.
