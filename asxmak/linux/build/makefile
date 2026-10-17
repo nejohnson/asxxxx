@@ -56,6 +56,9 @@ ASXXXX =	as1802		\
 		asscmp		\
 		asst6		\
 		asst7		\
+		aspdk13		\
+		aspdk14		\
+		aspdk15		\
 		asst8		\
 		asst9		\
 		assx		\
@@ -145,6 +148,10 @@ SRCRS08=	$(ASXBAS)asrs08/
 SRCSCMP=	$(ASXBAS)asscmp/
 SRCST6=		$(ASXBAS)asst6/
 SRCST7=		$(ASXBAS)asst7/
+SRCPDK=		$(ASXBAS)aspdk/
+SRCPDK13=	$(ASXBAS)aspdk13/
+SRCPDK14=	$(ASXBAS)aspdk14/
+SRCPDK15=	$(ASXBAS)aspdk15/
 SRCST8=		$(ASXBAS)asst8/
 SRCST9=		$(ASXBAS)asst9/
 SRCSX=		$(ASXBAS)assx/
@@ -1205,6 +1212,55 @@ asst7 :		$(ASXX) $(ASST7)
 		cp asst7 $(DSTEXE)asst7
 		strip $(DSTEXE)asst7
 		chmod 755 $(DSTEXE)asst7
+
+
+####################################################################
+# ASPDK13, ASPDK14, ASPDK15
+####################################################################
+
+ASPDK =		pdkcom.o pdkadr.o pdkmch.o
+
+pdkcom.o :	$(SRCPDK)pdkcom.c $(SRCPDK)pdk.h $(SRCASX)asxxxx.h
+		$(CC) $(CCFLAGS) -I$(SRCASX) -I$(SRCMISC) -c $< -o $(@F)
+pdkadr.o :	$(SRCPDK)pdkadr.c $(SRCPDK)pdk.h $(SRCASX)asxxxx.h
+		$(CC) $(CCFLAGS) -I$(SRCASX) -I$(SRCMISC) -c $< -o $(@F)
+pdkmch.o :	$(SRCPDK)pdkmch.c $(SRCPDK)pdk.h $(SRCASX)asxxxx.h
+		$(CC) $(CCFLAGS) -I$(SRCASX) -I$(SRCMISC) -c $< -o $(@F)
+
+ASPDK13 =	pdk13pst.o pdk13mch.o
+ASPDK14 =	pdk14pst.o pdk14mch.o
+ASPDK15 =	pdk15pst.o pdk15mch.o
+
+pdk13pst.o :	$(SRCPDK13)pdk13pst.c $(SRCPDK)pdk.h $(SRCASX)asxxxx.h
+		$(CC) $(CCFLAGS) -I$(SRCASX) -I$(SRCMISC) -I$(SRCPDK) -c $< -o $(@F)
+pdk13mch.o :	$(SRCPDK13)pdk13mch.c $(SRCPDK)pdk.h $(SRCASX)asxxxx.h
+		$(CC) $(CCFLAGS) -I$(SRCASX) -I$(SRCMISC) -I$(SRCPDK) -c $< -o $(@F)
+pdk14pst.o :	$(SRCPDK14)pdk14pst.c $(SRCPDK)pdk.h $(SRCASX)asxxxx.h
+		$(CC) $(CCFLAGS) -I$(SRCASX) -I$(SRCMISC) -I$(SRCPDK) -c $< -o $(@F)
+pdk14mch.o :	$(SRCPDK14)pdk14mch.c $(SRCPDK)pdk.h $(SRCASX)asxxxx.h
+		$(CC) $(CCFLAGS) -I$(SRCASX) -I$(SRCMISC) -I$(SRCPDK) -c $< -o $(@F)
+pdk15pst.o :	$(SRCPDK15)pdk15pst.c $(SRCPDK)pdk.h $(SRCASX)asxxxx.h
+		$(CC) $(CCFLAGS) -I$(SRCASX) -I$(SRCMISC) -I$(SRCPDK) -c $< -o $(@F)
+pdk15mch.o :	$(SRCPDK15)pdk15mch.c $(SRCPDK)pdk.h $(SRCASX)asxxxx.h
+		$(CC) $(CCFLAGS) -I$(SRCASX) -I$(SRCMISC) -I$(SRCPDK) -c $< -o $(@F)
+
+aspdk13 :	$(ASXX) $(ASPDK) $(ASPDK13)
+		$(LD) $(LDFLAGS) -o aspdk13 $(ASXX) $(ASPDK) $(ASPDK13)
+		cp aspdk13 $(DSTEXE)aspdk13
+		strip $(DSTEXE)aspdk13
+		chmod 755 $(DSTEXE)aspdk13
+
+aspdk14 :	$(ASXX) $(ASPDK) $(ASPDK14)
+		$(LD) $(LDFLAGS) -o aspdk14 $(ASXX) $(ASPDK) $(ASPDK14)
+		cp aspdk14 $(DSTEXE)aspdk14
+		strip $(DSTEXE)aspdk14
+		chmod 755 $(DSTEXE)aspdk14
+
+aspdk15 :	$(ASXX) $(ASPDK) $(ASPDK15)
+		$(LD) $(LDFLAGS) -o aspdk15 $(ASXX) $(ASPDK) $(ASPDK15)
+		cp aspdk15 $(DSTEXE)aspdk15
+		strip $(DSTEXE)aspdk15
+		chmod 755 $(DSTEXE)aspdk15
 
 
 ####################################################################
