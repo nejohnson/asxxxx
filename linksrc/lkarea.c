@@ -205,9 +205,10 @@ newarea(void)
 				/*
 				 * Merge the Output Code and Keep flags.
 				 * One module asking for an area to be
-				 * kept keeps all of it.
+				 * kept keeps all of it, and likewise
+				 * for FIT and NOLOAD.
 				 */
-				ap->a_flag |= (int) (i & (A4_OUT | A4_KEEP | A4_FIT));
+				ap->a_flag |= (int) (i & (A4_OUT | A4_KEEP | A4_FIT | A4_NOLOAD));
 			} else {
 				ap->a_flag = (int) i;
 			}
@@ -562,6 +563,12 @@ fitrun(struct area *tap, struct bank *bank, a_uint rloc, a_uint size, int bytes,
 			if (oap->a_bp != bank) {
 				continue;
 			}
+			if (oap->a_flag & A4_NOLOAD) {
+				/*
+				 * Holds no addresses in the bank.
+				 */
+				continue;
+			}
 			obytes = 1 + (oap->a_flag & A4_WLMSK);
 			if ((oap == tap) || !seen) {
 				/*
@@ -731,6 +738,16 @@ lnkarea(void)
 				 * Relocatable sections
 				 */
 				bytes = 1 + (ap->a_flag & A4_WLMSK);
+				if (ap->a_flag & A4_NOLOAD) {
+					/*
+					 * Not loaded:  placed from 0 on
+					 * its own, costing the bank
+					 * nothing, so rloc stays put.
+					 */
+					if (ap->a_bset == 0)
+						ap->a_addr = 0;
+					lnksect(ap);
+				} else
 				if ((ap->a_bset == 0) &&
 				    ((ap->a_flag & A4_FIT) == A4_FIT) &&
 				    fitarea(ap, bp, rloc, bytes, &fa)) {

@@ -387,6 +387,9 @@ lstahdr(struct area *xp, struct bank *yp)
 	} else {
 		fprintf(mfp, ",CSEG");
 	}
+	if (xp->a_flag & A4_NOLOAD) {
+		fprintf(mfp, ",NOLOAD");
+	}
 	fprintf(mfp, ")\n");
 
 	if ((xp->a_flag & A4_PAG) == A4_PAG) {

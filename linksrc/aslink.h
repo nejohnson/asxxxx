@@ -383,6 +383,7 @@ extern	int	ASxxxx_VERSION;
 
 #define	A4_KEEP		0x0200		/* Never Discard This Area */
 #define	A4_FIT		0x2000		/* Fit Into A Gap If It Fits */
+#define	A4_NOLOAD	0x0020		/* Not Loaded */
 
 /*
  *	The "R4_" relocation constants define values used in
@@ -632,6 +633,9 @@ struct	area
 	int	a_bset;		/* Area base address set */
 	int	a_flag;		/* Flags */
 	char *	a_id;		/* Name */
+	char *	a_image;	/* ELF output:  the area's linked bytes */
+	char *	a_used;		/* ELF output:  which of them are set */
+	a_uint	a_imagesize;	/* ELF output:  the size of both */
 };
 
 /*
@@ -1243,6 +1247,10 @@ extern	void		lkasym(void);
 extern	int		hash(char *p, int cflag);
 extern	struct	sym *	lkpsym(char *id, int f);
 extern	char *		new(unsigned int n);
+
+/* lkelf.c */
+extern	int		elfmach;
+extern	void		elf(int i);
 extern	struct	sym *	newsym(void);
 extern	void		prcsym(void);
 extern	char *		strsto(char *str);

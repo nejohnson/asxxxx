@@ -612,9 +612,13 @@ lkfopen(void)
 				/*
 				 * Scan file specifications for
 				 * identical file already opened.
+				 * An ELF file holds the whole
+				 * program, so every bank shares
+				 * the one file.
 				 */
 				for (tbp = bankp; tbp != NULL; tbp = tbp->b_bp) {
-					if (symeq(tbp->b_fspec, bp->b_fspec, 1)) {
+					if ((oflag == 4) ||
+					    symeq(tbp->b_fspec, bp->b_fspec, 1)) {
 						if (tbp->b_ofp != NULL) {
 							bp->b_ofp = tbp->b_ofp;
 							bp->b_ofspec = tbp->b_ofspec;
@@ -647,6 +651,12 @@ lkfopen(void)
 				if (oflag == 3) {
 					if (outext == NULL) {
 						outext = "bin";
+					}
+					fp = afile(bp->b_fspec, outext, 3);
+				} else
+				if (oflag == 4) {
+					if (outext == NULL) {
+						outext = "elf";
 					}
 					fp = afile(bp->b_fspec, outext, 3);
 				}
