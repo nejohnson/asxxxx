@@ -1973,6 +1973,57 @@ loop:
 		}
 		break;
 
+	case S_LEB128:
+		/*
+		 * .uleb128 and .sleb128 write each value as a DWARF
+		 * LEB128 number:  seven bits to a byte, least significant
+		 * first, the top bit of every byte but the last set.  The
+		 * length depends on the value, so the value has to be
+		 * known here - an absolute expression.
+		 *
+		 * The value is taken as 32 bits, whatever the width of
+		 * the target's addresses:  the expression evaluator
+		 * sign-extends a negative result to that width, so -2
+		 * reaches here as 0xFFFFFFFE.  .sleb128 takes bit 31 as
+		 * the sign and stops once what is left is all sign and
+		 * the last byte's bit 6 agrees; .uleb128 writes all 32
+		 * bits, as SDAS does - which is what SDCC's DWARF relies
+		 * on when it gives .uleb128 a negative CFA offset.
+		 */
+		do {
+			a_uint v;
+			int b, last;
+
+			v = absexpr() & (a_uint) 0xFFFFFFFFl;
+			if ((mp->m_valu == O_SLEB) && (v & (a_uint) 0x80000000l)) {
+				/*
+				 * Negative:  work on the complement, which
+				 * shifts down to zero, and complement each
+				 * byte back on the way out.
+				 */
+				v = ~v & (a_uint) 0xFFFFFFFFl;
+				do {
+					b = (int) (v & 0x7F);
+					v >>= 7;
+					last = (v == 0) && ((b & 0x40) == 0);
+					b = ~b & 0x7F;
+					outab(last ? b : (b | 0x80));
+				} while (!last);
+			} else {
+				do {
+					b = (int) (v & 0x7F);
+					v >>= 7;
+					if (mp->m_valu == O_SLEB)
+						last = (v == 0) && ((b & 0x40) == 0);
+					else
+						last = (v == 0);
+					outab(last ? b : (b | 0x80));
+				} while (!last);
+			}
+		} while ((c = getnb()) == ',');
+		unget(c);
+		break;
+
 	case S_ABI:
 		/*
 		 * .abi <text> records a string that every module linked
@@ -2213,6 +2264,15 @@ loop:
 					 */
 					uf |= A_FIT;
 				} else
+				if (symeq(opt, "NOLOAD", 1)) {
+					/*
+					 * Not part of the program's image:
+					 * debugging information, which an
+					 * ELF file carries and nothing
+					 * loads.
+					 */
+					uf |= A_NOLOAD;
+				} else
 				if (symeq(opt, "CON", 1)) {
 					uf |= A_CON;
 					con_ovr = A_CON;
@@ -2255,7 +2315,7 @@ loop:
 		}
 		if ((ap = alookup(id)) != NULL) {
 			flags = ap->a_flag;
-			ap->a_flag |= (uf & (A_KEEP | A_FIT));
+			ap->a_flag |= (uf & (A_KEEP | A_FIT | A_NOLOAD));
 			if (uf & A_BNK) {
 			 	if (flags & A_BNK) {
 					if (bp != ap->b_bp)

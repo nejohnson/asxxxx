@@ -116,6 +116,8 @@ struct	mne	mne[] = {
     {	NULL,	".sbttl",	S_HEADER,	0,	O_SBTTL	},
     {	NULL,	".module",	S_MODUL,	0,	0	},
     {	NULL,	".abi",	S_ABI,	0,	0	},
+    {	NULL,	".uleb128",	S_LEB128,	0,	O_ULEB	},
+    {	NULL,	".sleb128",	S_LEB128,	0,	O_SLEB	},
     {	NULL,	".include",	S_INCL,		0,	I_CODE	},
     {	NULL,	".incbin",	S_INCL,		0,	I_BNRY	},
     {	NULL,	".area",	S_AREA,		0,	0	},

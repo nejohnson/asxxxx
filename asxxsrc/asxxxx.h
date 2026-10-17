@@ -339,6 +339,15 @@ struct	bndry
 #define	A_FIT	0x2000		/* Fit Into A Gap If It Fits */
 
 /*
+ * An area that is not part of the program's image:  it takes no
+ * room in its bank, is placed from address 0 on its own, and is
+ * left out of the hex and S-record output.  Its contents are
+ * there for a tool that reads the linked file - DWARF debugging
+ * information - and are written only to an ELF file.
+ */
+#define	A_NOLOAD 0x0020		/* Not Loaded */
+
+/*
  *	The "R_" relocation constants define values used in
  *	generating the assembler relocation output data for
  *	areas, symbols, and code.
@@ -646,7 +655,12 @@ struct	sym
 /*			28  */	/* Spare Definition */
 #define	S_ABI		29	/* .abi */
 
-#define S_DIREOL	30	/* Assembler Directive End Of List */
+#define	S_LEB128	30	/* .uleb128, .sleb128 */
+
+#define	  O_ULEB     0		/* .uleb128 */
+#define	  O_SLEB     1		/* .sleb128 */
+
+#define S_DIREOL	31	/* Assembler Directive End Of List */
 
 /*
  *	The tsym structure is a linked list of temporary
