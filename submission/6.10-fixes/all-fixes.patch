@@ -1,0 +1,2693 @@
+diff --git a/as8xcxxx/ds8mch.c b/as8xcxxx/ds8mch.c
+index 1c35c70..086810b 100644
+--- a/as8xcxxx/ds8mch.c
++++ b/as8xcxxx/ds8mch.c
+@@ -917,6 +917,12 @@ mchpcr(struct expr *esp, int *v, int n)
+ void
+ minit(void)
+ {
++	struct sym	*sp;
++	struct PreDef	*pd;
++	int i;
++	char pid[8];
++	char *p;
++
+ 	/*
+ 	 * Byte Order
+ 	 */
+@@ -927,6 +933,41 @@ minit(void)
+ 		ds8_bytes = 0;
+ 		mchtyp = X_DS8XCXXX;
+ 		sym[2].s_addr = X_DS8XCXXX;
++
++		/*
++		 * First time only:
++		 *	add the pre-defined symbols to the table
++		 *	as local symbols.  A ptype of zero selects a
++		 *	symbol common to every processor.
++		 */
++		pd = preDef;
++		while (pd->id) {
++			if ((pd->ptype != 0) && (pd->ptype != mchtyp)) {
++				pd++;
++				continue;
++			}
++			strcpy(pid, pd->id);
++			for (i=0; i<2; i++) {
++				/*
++				 * i == 0,  Create Upper Case Symbols
++				 * i == 1,  Create Lower Case Symbols
++				 */
++				if (i == 1) {
++					p = pid;
++					while (*p) {
++						*p = ccase[*p & 0x007F];
++						p++;
++					}
++				}
++				sp = lookup(pid);
++				if (sp->s_type == S_NEW) {
++					sp->s_addr = pd->value;
++					sp->s_type = S_USER;
++					sp->s_flag = S_LCL | S_ASG;
++				}
++			}
++			pd++;
++		}
+ 	}
+ }
+ 
+diff --git a/as8xcxxx/ds8pst.c b/as8xcxxx/ds8pst.c
+index 46033f0..4885243 100644
+--- a/as8xcxxx/ds8pst.c
++++ b/as8xcxxx/ds8pst.c
+@@ -336,5 +336,55 @@ struct	mne	mne[] = {
+     {	NULL,	"xchd",		S_XCHD,		S_EOL,	0xD6	}
+ };
+ 
++/*
++ * The SFRs common to every DS8xCxxx part, predefined so that
++ * hand written code can say ACC, B or PSW without including
++ * ds8xcxxx.sfr.  as8051 does the same from i51pst.c; the values
++ * here are that table's, restricted to the registers every
++ * processor in this family has.  A ptype of zero means the
++ * symbol applies to all of them.
++ */
++struct PreDef preDef[] = {
++    {	"AC",			0x00D6,	0	},
++    {	"ACC",			0x00E0,	0	},
++    {	"ACC.0",		0x00E0,	0	},
++    {	"ACC.1",		0x00E1,	0	},
++    {	"ACC.2",		0x00E2,	0	},
++    {	"ACC.3",		0x00E3,	0	},
++    {	"ACC.4",		0x00E4,	0	},
++    {	"ACC.5",		0x00E5,	0	},
++    {	"ACC.6",		0x00E6,	0	},
++    {	"ACC.7",		0x00E7,	0	},
++    {	"B",			0x00F0,	0	},
++    {	"B.0",			0x00F0,	0	},
++    {	"B.1",			0x00F1,	0	},
++    {	"B.2",			0x00F2,	0	},
++    {	"B.3",			0x00F3,	0	},
++    {	"B.4",			0x00F4,	0	},
++    {	"B.5",			0x00F5,	0	},
++    {	"B.6",			0x00F6,	0	},
++    {	"B.7",			0x00F7,	0	},
++    {	"CY",			0x00D7,	0	},
++    {	"DPH",			0x0083,	0	},
++    {	"DPL",			0x0082,	0	},
++    {	"EA",			0x00AF,	0	},
++    {	"F0",			0x00D5,	0	},
++    {	"IE",			0x00A8,	0	},
++    {	"IP",			0x00B8,	0	},
++    {	"OV",			0x00D2,	0	},
++    {	"P",			0x00D0,	0	},
++    {	"PCON",			0x0087,	0	},
++    {	"PS",			0x00BC,	0	},
++    {	"PSW",			0x00D0,	0	},
++    {	"RS0",			0x00D3,	0	},
++    {	"RS1",			0x00D4,	0	},
++    {	"SM0",			0x009F,	0	},
++    {	"SM1",			0x009E,	0	},
++    {	"SM2",			0x009D,	0	},
++    {	"SP",			0x0081,	0	},
++    {	NULL,		0x0000,	0	}
++};
++
++
+ 
+ 
+diff --git a/ascheck/bndry/b_areas_1.asm b/ascheck/bndry/b_areas_1.asm
+index 4795c7b..4e20249 100644
+--- a/ascheck/bndry/b_areas_1.asm
++++ b/ascheck/bndry/b_areas_1.asm
+@@ -79,8 +79,8 @@ Area_1_1:
+ 	.word	8$ - 0$		; 00 03
+ 	.word	9$ - 0$		; 00 04
+ 
+-	.word	b_Area_2_1	; 00 02
+-	.word	s_Area_2
++	.word	m_Area_2_1	; 00 02
++	.word	a_Area_2
+ 	.word	l_Area_2
+ Area_2_1:
+ 
+diff --git a/ascheck/bndry/b_areas_2.asm b/ascheck/bndry/b_areas_2.asm
+index 8812f70..4353c9b 100644
+--- a/ascheck/bndry/b_areas_2.asm
++++ b/ascheck/bndry/b_areas_2.asm
+@@ -85,8 +85,8 @@ Area_1_2:
+ 	.word	9$ - 0$		; 00 10
+ 	.word	10$ - 0$	; 00 12
+ 
+-	.word	b_Area_2_2	; 00 48
+-	.word	s_Area_2
++	.word	m_Area_2_2	; 00 48
++	.word	a_Area_2
+ 	.word	l_Area_2
+ Area_2_2:
+ 
+diff --git a/ascheck/bndry/b_areas_3.asm b/ascheck/bndry/b_areas_3.asm
+index 7c283de..0c9375d 100644
+--- a/ascheck/bndry/b_areas_3.asm
++++ b/ascheck/bndry/b_areas_3.asm
+@@ -85,8 +85,8 @@ Area_1_3:
+ 	.word	9$ - 0$		; 00 15
+ 	.word	10$ - 0$	; 00 16
+ 
+-	.word	b_Area_2_3	; 00 48
+-	.word	s_Area_2
++	.word	m_Area_2_3	; 00 48
++	.word	a_Area_2
+ 	.word	l_Area_2
+ Area_2_3:
+ 
+diff --git a/asgb/gbmch.c b/asgb/gbmch.c
+index 0d30c86..9bd78b1 100644
+--- a/asgb/gbmch.c
++++ b/asgb/gbmch.c
+@@ -395,7 +395,7 @@ machine(struct mne *mp)
+ 				}
+ 			} else {
+ 				outab(0xF0);
+-				outrb(&e1, R_PAGN);
++				outrb(&e1, 0);
+ 			}
+ 			break;
+ 		case S_IDBC:	outab(0x0A);	break;
+@@ -436,7 +436,7 @@ machine(struct mne *mp)
+ 					}
+ 				} else {
+ 					outab(0xF0);
+-					outrb(&e1, R_PAGN);
++					outrb(&e1, 0);
+ 				}
+ 				break;
+ 			case S_IDBC:	outab(0x0A);	break;
+@@ -496,7 +496,7 @@ machine(struct mne *mp)
+ 					}
+ 				} else {
+ 					outab(0xF0);
+-					outrb(&e2, R_PAGN);
++					outrb(&e2, 0);
+ 				}
+ 				break;
+ 			case S_IDC:	outab(0xF2);	break;
+@@ -545,7 +545,7 @@ machine(struct mne *mp)
+ 					}
+ 				} else {
+ 					outab(0xE0);
+-					outrb(&e1, R_PAGN);
++					outrb(&e1, 0);
+ 				}
+ 				break;
+ 			case S_IDC:	outab(0xE2);	break;
+@@ -810,8 +810,7 @@ machine(struct mne *mp)
+ 					break;
+ 				} else {
+ 					outab(0xF0);
+-					e1.e_addr += 0xFF00;
+-					outrb(&e1, R_PAGN);
++					outrb(&e1, 0);
+ 				}
+ 				break;
+ 			case S_IDC:	outab(0xF2);			break;
+@@ -825,8 +824,19 @@ machine(struct mne *mp)
+ 
+ 		if ((t1 == S_R8) && (v1 == A) && (t2 == S_INDM)) {
+ 			if (is_abs(&e2)) {
++				/*
++				 * v2, not v1:  v1 is the A register
++				 * in this branch, so the test could
++				 * never be true and a full I/O
++				 * address - which is how the hardware
++				 * registers are written - was always
++				 * out of range.  "ldh (0xFF42),a"
++				 * below has the same two tests and
++				 * has always worked, which is what
++				 * makes it a typo rather than a rule.
++				 */
+ 				if (((v2 & 0xFF00) == 0x0000) ||
+-			 	    ((v1 & 0xFF00) == 0xFF00)) {
++			 	    ((v2 & 0xFF00) == 0xFF00)) {
+ 					outab(0xF0);
+ 					outab(v2);
+ 				} else {
+@@ -837,8 +847,7 @@ machine(struct mne *mp)
+ 				break;
+ 			} else {
+ 				outab(0xF0);
+-				e2.e_addr += 0xFF00;
+-				outrb(&e2, R_PAGN);
++				outrb(&e2, 0);
+ 			}
+ 			break;
+ 		}
+@@ -856,8 +865,7 @@ machine(struct mne *mp)
+ 				break;
+ 			} else {
+ 				outab(0xE0);
+-				e1.e_addr += 0xFF00;
+-				outrb(&e1, R_PAGN);
++				outrb(&e1, 0);
+ 			}
+ 			break;
+ 		}
+diff --git a/asrab/rabmch.c b/asrab/rabmch.c
+index fa8f2be..56af0f2 100644
+--- a/asrab/rabmch.c
++++ b/asrab/rabmch.c
+@@ -945,12 +945,19 @@ machine(struct mne *mp)
+ 		}
+                 /*
+                  * add  sp,n	[sp,#n]
++                 *
++                 * n is a signed displacement: negative to
++                 * allocate a stack frame, positive to free one.
++                 * Checking it as unsigned refused every frame
++                 * allocation, which is the common case, so the
++                 * byte is emitted without a range check - both
++                 * signs name the same byte and both are meant.
+                  */
+ 		if ((mchtyp == X_R2K) && (rf == S_ADD) &&
+ 		    (t1 == S_R16) && (e1.e_addr == SP) &&
+ 		    (t2 == S_IMMED)) {
+ 			outab(0x27);
+-			outrb(&e2, R_USGN);
++			outrb(&e2, 0);
+ 			break;
+                 }
+ 		xerr('a', "Invalid Addressing Mode.");
+diff --git a/astlcs90/t90mch.c b/astlcs90/t90mch.c
+index 27acec1..26f0247 100644
+--- a/astlcs90/t90mch.c
++++ b/astlcs90/t90mch.c
+@@ -209,6 +209,7 @@ machine(struct mne *mp)
+ {
+ 	int op, t1, t2;
+ 	int rf, v1, v2;
++	int cnd;
+ 	struct expr e1, e2;
+ 	int c;
+ 	char id[NCPS];
+@@ -751,24 +752,60 @@ machine(struct mne *mp)
+ 
+ 	case S_JP:	/* JP */
+ 	case S_CALL:	/* CALL */
+-		if (admode(CND) != 0) {
++		/*
++		 * Leaving the condition out is the T (always) condition,
++		 * and the operand may still be a register: "jp (hl)" is
++		 * "jp t,(hl)".  So the register forms have to be looked
++		 * for here too, and not only after a condition.
++		 *
++		 * They were not, and the fall back was expr() - against
++		 * which "(hl)" is a perfectly good parenthesised
++		 * expression naming a symbol hl.  "jp (hl)" therefore
++		 * assembled, with no diagnostic, as an absolute jump to
++		 * an undefined global.
++		 */
++		if ((cnd = admode(CND)) != 0) {
+ 			v1 = aindx;
+ 			comma(1);
+-			t2 = addr(&e2);
+-			v2 = aindx;
+-			switch(t2) {
+-			case S_R16:	outab(0xE8 | v2);	break;
+-			case S_XYS:	outab(0xF4 | (v2 & XYSMASK));	outrb(&e2, R_SGND);	break;
+-			case S_HLA:	outab(0xF7);	break;
+-			case S_MN:	outab(0xEB);	outrw(&e2, 0);	break;
+-			default:	xerr('a', "Invalid 2nd argument");	qerr();	break;
++		} else {
++			v1 = T;
++		}
++		t2 = addr(&e2);
++		v2 = aindx;
++		switch(t2) {
++		/*
++		 * The register operand of a jump is an address held in
++		 * that register, and is written both ways: this
++		 * assembler's own tt90.asm has "jp t,hl", while Toshiba's
++		 * manual, SDAS and SDCC all write "jp (hl)".  Same
++		 * instruction, same two bytes, so take either.
++		 */
++		case S_IR16:
++		case S_R16:	outab(0xE8 | v2);	break;
++		case S_IXYS:
++		case S_XYS:	outab(0xF4 | (v2 & XYSMASK));	outrb(&e2, R_SGND);	break;
++		case S_IHLA:
++		case S_HLA:	outab(0xF7);	break;
++		case S_MN:
++			/*
++			 * A direct address has its own opcode when no
++			 * condition is written, and only reaches the
++			 * prefixed form when one is - including when the
++			 * condition written is T.
++			 */
++			if (cnd == 0) {
++				outab(op);
++				outrw(&e2, 0);
++			} else {
++				outab(0xEB);
++				outrw(&e2, 0);
+ 			}
++			break;
++		default:	xerr('a', "Invalid argument");	qerr();	break;
++		}
++		if ((t2 != S_MN) || (cnd != 0)) {
+ 			if (rf == S_JP)   outab((op = 0xC0 | v1));
+ 			if (rf == S_CALL) outab((op = 0xD0 | v1));
+-		} else {	/* mn */ 
+-			expr(&e2);
+-			outab(op);
+-			outrw(&e2, 0);
+ 		}
+ 		break;
+ 
+diff --git a/asxdoc/asmlnk.rtf b/asxdoc/asmlnk.rtf
+index 6f167f4..f0134a2 100644
+--- a/asxdoc/asmlnk.rtf
++++ b/asxdoc/asmlnk.rtf
+@@ -1444,13 +1444,13 @@
+ \par
+                 .module name \par
+ \par
+-           The  .module  directive causes the name to be included in the\par
+-        assemblers output file as an identifier for this particular  ob-\par
+-        ject module.  The name may be from 1 to 79 characters in length.\par
+-        The name may not have any embedded white space (spaces or tabs).\par
+-        Only  one  identifier is allowed per assembled module.  The main\par
+-        use of this directive  is  to  allow  the  linker  to  report  a\par
+-        modules'  use  of undefined symbols.  At link time all undefined\par
++           The .module directive causes the name to be included  in  the\par
++        assemblers output file as  an  identifier  for  this  particular\par
++        object module.  The name may be from  1  to  255  characters  in\par
++        length.  The name may not have any embedded white space  (spaces\par
++        or tabs).  Only one identifier is allowed per assembled  module.\par
++        The main use of this directive is to allow the linker to  report\par
++        a modules' use of undefined symbols.  At link time all undefined\par
+         symbols are  reported  and  the  modules  referencing  them  are\par
+         listed.  \par
+ \par
+@@ -2115,7 +2115,7 @@
+         ing multiple programming and data sections.   The  name  is  the\par
+         area  label used by the assembler and the linker to collect code\par
+         from various separately assembled modules into one section.  The\par
+-        name may be from 1 to 79 characters in length.  \par
++        name may be from 1 to 255 characters in length.  \par
+ \par
+            The options are specified within parenthesis and separated by\par
+         commas as shown in the following example:  \par
+@@ -2270,7 +2270,7 @@
+                         tion.   This  name  may  be  the  same  as   any\par
+                         user-defined  symbol  or  area as the bank names\par
+                         are independent  of  all  symbols,  labels,  and\par
+-                        areas.   The name may be from 1 to 79 characters\par
++                        areas.  The name may be from 1 to 255 characters\par
+                         in length.  \par
+ \par
+                 options specify the parameters of the bank:  \par
+@@ -3973,6 +3973,10 @@
+ \par
+               <i>   Caused  by  an  .include file error or an .if/.endif\par
+                     mismatch.  \par
++\par
++              <k>   Numerical conversion error:  invalid digit.  \par
++\par
++              <l>   Identifier too long:  the name has been truncated.  \par
+ \par
+               <m>   Multiple  definitions  of  the  same label, multiple\par
+                     .module directives, multiple conflicting  attributes\par
+@@ -4001,17 +4005,19 @@
+ \par
+               <u>   Undefined symbol encountered during assembly.  \par
+ \par
+-              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  \par
+-\par
+-\par
+-           Most  assemblers  now include more descriptive error messages\par
+-        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to\par
+ \page\par
+ \par
+         THE ASSEMBLER                                          PAGE 1-68\par
+         ERRORS\par
+ \par
+ \par
++              <v>   Value out of range:  signed or unsigned argument.  \par
++\par
++              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  \par
++\par
++\par
++           Most  assemblers  now include more descriptive error messages\par
++        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to\par
+         provide the expanded error messages will show three lines on the\par
+         stdout device as shown by this error:  \par
+ \par
+@@ -4054,18 +4060,18 @@
+              1.  Error field (first two characters of line) \par
+ \par
+              2.  Current location counter \par
++\page\par
+ \par
+-             3.  Generated code in byte format \par
++        THE ASSEMBLER                                          PAGE 1-69\par
++        LISTING FILE\par
+ \par
+-             4.  Opcode cycles count \par
+ \par
+-             5.  Source text line number \par
+ \par
+-\page\par
++             3.  Generated code in byte format \par
+ \par
+-        THE ASSEMBLER                                          PAGE 1-69\par
+-        LISTING FILE\par
++             4.  Opcode cycles count \par
+ \par
++             5.  Source text line number \par
+ \par
+              6.  Source text \par
+ \par
+@@ -4108,18 +4114,18 @@
+         characters:  \par
+ \par
+              1.  *   paged relocation \par
+-\par
+-             2.  u   low  byte of unsigned word or unsigned byte \par
+-\par
+-             3.  v   high byte of unsigned word \par
+-\par
+-             4.  p   PCR low  byte of word relocation or PCR byte \par
+ \par
+ \page\par
+ \par
+         THE ASSEMBLER                                          PAGE 1-70\par
+         LISTING FILE\par
+ \par
++\par
++             2.  u   low  byte of unsigned word or unsigned byte \par
++\par
++             3.  v   high byte of unsigned word \par
++\par
++             4.  p   PCR low  byte of word relocation or PCR byte \par
+ \par
+              5.  q   PCR high byte of word relocation \par
+ \par
+diff --git a/asxdoc/asmlnk.txt b/asxdoc/asmlnk.txt
+index 83f74bf..cf21249 100644
+--- a/asxdoc/asmlnk.txt
++++ b/asxdoc/asmlnk.txt
+@@ -1442,13 +1442,13 @@
+ 
+                 .module name 
+ 
+-           The  .module  directive causes the name to be included in the
+-        assemblers output file as an identifier for this particular  ob-
+-        ject module.  The name may be from 1 to 79 characters in length.
+-        The name may not have any embedded white space (spaces or tabs).
+-        Only  one  identifier is allowed per assembled module.  The main
+-        use of this directive  is  to  allow  the  linker  to  report  a
+-        modules'  use  of undefined symbols.  At link time all undefined
++           The .module directive causes the name to be included  in  the
++        assemblers output file as  an  identifier  for  this  particular
++        object module.  The name may be from  1  to  255  characters  in
++        length.  The name may not have any embedded white space  (spaces
++        or tabs).  Only one identifier is allowed per assembled  module.
++        The main use of this directive is to allow the linker to  report
++        a modules' use of undefined symbols.  At link time all undefined
+         symbols are  reported  and  the  modules  referencing  them  are
+         listed.  
+ 
+@@ -2113,7 +2113,7 @@
+         ing multiple programming and data sections.   The  name  is  the
+         area  label used by the assembler and the linker to collect code
+         from various separately assembled modules into one section.  The
+-        name may be from 1 to 79 characters in length.  
++        name may be from 1 to 255 characters in length.  
+ 
+            The options are specified within parenthesis and separated by
+         commas as shown in the following example:  
+@@ -2268,7 +2268,7 @@
+                         tion.   This  name  may  be  the  same  as   any
+                         user-defined  symbol  or  area as the bank names
+                         are independent  of  all  symbols,  labels,  and
+-                        areas.   The name may be from 1 to 79 characters
++                        areas.  The name may be from 1 to 255 characters
+                         in length.  
+ 
+                 options specify the parameters of the bank:  
+@@ -3972,6 +3972,10 @@
+               <i>   Caused  by  an  .include file error or an .if/.endif
+                     mismatch.  
+ 
++              <k>   Numerical conversion error:  invalid digit.  
++
++              <l>   Identifier too long:  the name has been truncated.  
++
+               <m>   Multiple  definitions  of  the  same label, multiple
+                     .module directives, multiple conflicting  attributes
+                     in  an  .area or .bank directive or the use of .hilo
+@@ -3999,17 +4003,19 @@
+ 
+               <u>   Undefined symbol encountered during assembly.  
+ 
+-              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  
+-
+-
+-           Most  assemblers  now include more descriptive error messages
+-        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to
+ 
+ 
+         THE ASSEMBLER                                          PAGE 1-68
+         ERRORS
+ 
+ 
++              <v>   Value out of range:  signed or unsigned argument.  
++
++              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  
++
++
++           Most  assemblers  now include more descriptive error messages
++        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to
+         provide the expanded error messages will show three lines on the
+         stdout device as shown by this error:  
+ 
+@@ -4052,18 +4058,18 @@
+              1.  Error field (first two characters of line) 
+ 
+              2.  Current location counter 
++
+ 
+-             3.  Generated code in byte format 
++        THE ASSEMBLER                                          PAGE 1-69
++        LISTING FILE
+ 
+-             4.  Opcode cycles count 
+ 
+-             5.  Source text line number 
+ 
+-
++             3.  Generated code in byte format 
+ 
+-        THE ASSEMBLER                                          PAGE 1-69
+-        LISTING FILE
++             4.  Opcode cycles count 
+ 
++             5.  Source text line number 
+ 
+              6.  Source text 
+ 
+@@ -4107,18 +4113,18 @@
+ 
+              1.  *   paged relocation 
+ 
+-             2.  u   low  byte of unsigned word or unsigned byte 
+-
+-             3.  v   high byte of unsigned word 
+-
+-             4.  p   PCR low  byte of word relocation or PCR byte 
+-
+ 
+ 
+         THE ASSEMBLER                                          PAGE 1-70
+         LISTING FILE
+ 
+ 
++             2.  u   low  byte of unsigned word or unsigned byte 
++
++             3.  v   high byte of unsigned word 
++
++             4.  p   PCR low  byte of word relocation or PCR byte 
++
+              5.  q   PCR high byte of word relocation 
+ 
+              6.  r   low  byte relocation or byte relocation 
+diff --git a/asxhtml/asmlnk.htm b/asxhtml/asmlnk.htm
+index 6faa99b..9ae8605 100644
+--- a/asxhtml/asmlnk.htm
++++ b/asxhtml/asmlnk.htm
+@@ -1436,13 +1436,13 @@
+ 
+                 .module name 
+ 
+-           The  .module  directive causes the name to be included in the
+-        assemblers output file as an identifier for this particular  ob-
+-        ject module.  The name may be from 1 to 79 characters in length.
+-        The name may not have any embedded white space (spaces or tabs).
+-        Only  one  identifier is allowed per assembled module.  The main
+-        use of this directive  is  to  allow  the  linker  to  report  a
+-        modules'  use  of undefined symbols.  At link time all undefined
++           The .module directive causes the name to be included  in  the
++        assemblers output file as  an  identifier  for  this  particular
++        object module.  The name may be from  1  to  255  characters  in
++        length.  The name may not have any embedded white space  (spaces
++        or tabs).  Only one identifier is allowed per assembled  module.
++        The main use of this directive is to allow the linker to  report
++        a modules' use of undefined symbols.  At link time all undefined
+         symbols are  reported  and  the  modules  referencing  them  are
+         listed.  
+ 
+@@ -2107,7 +2107,7 @@
+         ing multiple programming and data sections.   The  name  is  the
+         area  label used by the assembler and the linker to collect code
+         from various separately assembled modules into one section.  The
+-        name may be from 1 to 79 characters in length.  
++        name may be from 1 to 255 characters in length.  
+ 
+            The options are specified within parenthesis and separated by
+         commas as shown in the following example:  
+@@ -2262,7 +2262,7 @@
+                         tion.   This  name  may  be  the  same  as   any
+                         user-defined  symbol  or  area as the bank names
+                         are independent  of  all  symbols,  labels,  and
+-                        areas.   The name may be from 1 to 79 characters
++                        areas.  The name may be from 1 to 255 characters
+                         in length.  
+ 
+                 options specify the parameters of the bank:  
+@@ -3966,6 +3966,10 @@
+               <i>   Caused  by  an  .include file error or an .if/.endif
+                     mismatch.  
+ 
++              <k>   Numerical conversion error:  invalid digit.  
++
++              <l>   Identifier too long:  the name has been truncated.  
++
+               <m>   Multiple  definitions  of  the  same label, multiple
+                     .module directives, multiple conflicting  attributes
+                     in  an  .area or .bank directive or the use of .hilo
+@@ -3993,17 +3997,19 @@
+ 
+               <u>   Undefined symbol encountered during assembly.  
+ 
+-              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  
+-
+-
+-           Most  assemblers  now include more descriptive error messages
+-        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to
+ 
+ 
+         THE ASSEMBLER                                          PAGE 1-68
+         ERRORS
+ 
+ 
++              <v>   Value out of range:  signed or unsigned argument.  
++
++              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  
++
++
++           Most  assemblers  now include more descriptive error messages
++        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to
+         provide the expanded error messages will show three lines on the
+         stdout device as shown by this error:  
+ 
+@@ -4046,18 +4052,18 @@
+              1.  Error field (first two characters of line) 
+ 
+              2.  Current location counter 
++
+ 
+-             3.  Generated code in byte format 
++        THE ASSEMBLER                                          PAGE 1-69
++        LISTING FILE
+ 
+-             4.  Opcode cycles count 
+ 
+-             5.  Source text line number 
+ 
+-
++             3.  Generated code in byte format 
+ 
+-        THE ASSEMBLER                                          PAGE 1-69
+-        LISTING FILE
++             4.  Opcode cycles count 
+ 
++             5.  Source text line number 
+ 
+              6.  Source text 
+ 
+@@ -4101,18 +4107,18 @@
+ 
+              1.  *   paged relocation 
+ 
+-             2.  u   low  byte of unsigned word or unsigned byte 
+-
+-             3.  v   high byte of unsigned word 
+-
+-             4.  p   PCR low  byte of word relocation or PCR byte 
+-
+ 
+ 
+         THE ASSEMBLER                                          PAGE 1-70
+         LISTING FILE
+ 
+ 
++             2.  u   low  byte of unsigned word or unsigned byte 
++
++             3.  v   high byte of unsigned word 
++
++             4.  p   PCR low  byte of word relocation or PCR byte 
++
+              5.  q   PCR high byte of word relocation 
+ 
+              6.  r   low  byte relocation or byte relocation 
+diff --git a/asxhtml/asmlnk.rtf b/asxhtml/asmlnk.rtf
+index 6f167f4..f0134a2 100644
+--- a/asxhtml/asmlnk.rtf
++++ b/asxhtml/asmlnk.rtf
+@@ -1444,13 +1444,13 @@
+ \par
+                 .module name \par
+ \par
+-           The  .module  directive causes the name to be included in the\par
+-        assemblers output file as an identifier for this particular  ob-\par
+-        ject module.  The name may be from 1 to 79 characters in length.\par
+-        The name may not have any embedded white space (spaces or tabs).\par
+-        Only  one  identifier is allowed per assembled module.  The main\par
+-        use of this directive  is  to  allow  the  linker  to  report  a\par
+-        modules'  use  of undefined symbols.  At link time all undefined\par
++           The .module directive causes the name to be included  in  the\par
++        assemblers output file as  an  identifier  for  this  particular\par
++        object module.  The name may be from  1  to  255  characters  in\par
++        length.  The name may not have any embedded white space  (spaces\par
++        or tabs).  Only one identifier is allowed per assembled  module.\par
++        The main use of this directive is to allow the linker to  report\par
++        a modules' use of undefined symbols.  At link time all undefined\par
+         symbols are  reported  and  the  modules  referencing  them  are\par
+         listed.  \par
+ \par
+@@ -2115,7 +2115,7 @@
+         ing multiple programming and data sections.   The  name  is  the\par
+         area  label used by the assembler and the linker to collect code\par
+         from various separately assembled modules into one section.  The\par
+-        name may be from 1 to 79 characters in length.  \par
++        name may be from 1 to 255 characters in length.  \par
+ \par
+            The options are specified within parenthesis and separated by\par
+         commas as shown in the following example:  \par
+@@ -2270,7 +2270,7 @@
+                         tion.   This  name  may  be  the  same  as   any\par
+                         user-defined  symbol  or  area as the bank names\par
+                         are independent  of  all  symbols,  labels,  and\par
+-                        areas.   The name may be from 1 to 79 characters\par
++                        areas.  The name may be from 1 to 255 characters\par
+                         in length.  \par
+ \par
+                 options specify the parameters of the bank:  \par
+@@ -3973,6 +3973,10 @@
+ \par
+               <i>   Caused  by  an  .include file error or an .if/.endif\par
+                     mismatch.  \par
++\par
++              <k>   Numerical conversion error:  invalid digit.  \par
++\par
++              <l>   Identifier too long:  the name has been truncated.  \par
+ \par
+               <m>   Multiple  definitions  of  the  same label, multiple\par
+                     .module directives, multiple conflicting  attributes\par
+@@ -4001,17 +4005,19 @@
+ \par
+               <u>   Undefined symbol encountered during assembly.  \par
+ \par
+-              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  \par
+-\par
+-\par
+-           Most  assemblers  now include more descriptive error messages\par
+-        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to\par
+ \page\par
+ \par
+         THE ASSEMBLER                                          PAGE 1-68\par
+         ERRORS\par
+ \par
+ \par
++              <v>   Value out of range:  signed or unsigned argument.  \par
++\par
++              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  \par
++\par
++\par
++           Most  assemblers  now include more descriptive error messages\par
++        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to\par
+         provide the expanded error messages will show three lines on the\par
+         stdout device as shown by this error:  \par
+ \par
+@@ -4054,18 +4060,18 @@
+              1.  Error field (first two characters of line) \par
+ \par
+              2.  Current location counter \par
++\page\par
+ \par
+-             3.  Generated code in byte format \par
++        THE ASSEMBLER                                          PAGE 1-69\par
++        LISTING FILE\par
+ \par
+-             4.  Opcode cycles count \par
+ \par
+-             5.  Source text line number \par
+ \par
+-\page\par
++             3.  Generated code in byte format \par
+ \par
+-        THE ASSEMBLER                                          PAGE 1-69\par
+-        LISTING FILE\par
++             4.  Opcode cycles count \par
+ \par
++             5.  Source text line number \par
+ \par
+              6.  Source text \par
+ \par
+@@ -4108,18 +4114,18 @@
+         characters:  \par
+ \par
+              1.  *   paged relocation \par
+-\par
+-             2.  u   low  byte of unsigned word or unsigned byte \par
+-\par
+-             3.  v   high byte of unsigned word \par
+-\par
+-             4.  p   PCR low  byte of word relocation or PCR byte \par
+ \par
+ \page\par
+ \par
+         THE ASSEMBLER                                          PAGE 1-70\par
+         LISTING FILE\par
+ \par
++\par
++             2.  u   low  byte of unsigned word or unsigned byte \par
++\par
++             3.  v   high byte of unsigned word \par
++\par
++             4.  p   PCR low  byte of word relocation or PCR byte \par
+ \par
+              5.  q   PCR high byte of word relocation \par
+ \par
+diff --git a/asxhtml/asmlnk.txt b/asxhtml/asmlnk.txt
+index 83f74bf..cf21249 100644
+--- a/asxhtml/asmlnk.txt
++++ b/asxhtml/asmlnk.txt
+@@ -1442,13 +1442,13 @@
+ 
+                 .module name 
+ 
+-           The  .module  directive causes the name to be included in the
+-        assemblers output file as an identifier for this particular  ob-
+-        ject module.  The name may be from 1 to 79 characters in length.
+-        The name may not have any embedded white space (spaces or tabs).
+-        Only  one  identifier is allowed per assembled module.  The main
+-        use of this directive  is  to  allow  the  linker  to  report  a
+-        modules'  use  of undefined symbols.  At link time all undefined
++           The .module directive causes the name to be included  in  the
++        assemblers output file as  an  identifier  for  this  particular
++        object module.  The name may be from  1  to  255  characters  in
++        length.  The name may not have any embedded white space  (spaces
++        or tabs).  Only one identifier is allowed per assembled  module.
++        The main use of this directive is to allow the linker to  report
++        a modules' use of undefined symbols.  At link time all undefined
+         symbols are  reported  and  the  modules  referencing  them  are
+         listed.  
+ 
+@@ -2113,7 +2113,7 @@
+         ing multiple programming and data sections.   The  name  is  the
+         area  label used by the assembler and the linker to collect code
+         from various separately assembled modules into one section.  The
+-        name may be from 1 to 79 characters in length.  
++        name may be from 1 to 255 characters in length.  
+ 
+            The options are specified within parenthesis and separated by
+         commas as shown in the following example:  
+@@ -2268,7 +2268,7 @@
+                         tion.   This  name  may  be  the  same  as   any
+                         user-defined  symbol  or  area as the bank names
+                         are independent  of  all  symbols,  labels,  and
+-                        areas.   The name may be from 1 to 79 characters
++                        areas.  The name may be from 1 to 255 characters
+                         in length.  
+ 
+                 options specify the parameters of the bank:  
+@@ -3972,6 +3972,10 @@
+               <i>   Caused  by  an  .include file error or an .if/.endif
+                     mismatch.  
+ 
++              <k>   Numerical conversion error:  invalid digit.  
++
++              <l>   Identifier too long:  the name has been truncated.  
++
+               <m>   Multiple  definitions  of  the  same label, multiple
+                     .module directives, multiple conflicting  attributes
+                     in  an  .area or .bank directive or the use of .hilo
+@@ -3999,17 +4003,19 @@
+ 
+               <u>   Undefined symbol encountered during assembly.  
+ 
+-              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  
+-
+-
+-           Most  assemblers  now include more descriptive error messages
+-        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to
+ 
+ 
+         THE ASSEMBLER                                          PAGE 1-68
+         ERRORS
+ 
+ 
++              <v>   Value out of range:  signed or unsigned argument.  
++
++              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  
++
++
++           Most  assemblers  now include more descriptive error messages
++        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to
+         provide the expanded error messages will show three lines on the
+         stdout device as shown by this error:  
+ 
+@@ -4052,18 +4058,18 @@
+              1.  Error field (first two characters of line) 
+ 
+              2.  Current location counter 
++
+ 
+-             3.  Generated code in byte format 
++        THE ASSEMBLER                                          PAGE 1-69
++        LISTING FILE
+ 
+-             4.  Opcode cycles count 
+ 
+-             5.  Source text line number 
+ 
+-
++             3.  Generated code in byte format 
+ 
+-        THE ASSEMBLER                                          PAGE 1-69
+-        LISTING FILE
++             4.  Opcode cycles count 
+ 
++             5.  Source text line number 
+ 
+              6.  Source text 
+ 
+@@ -4107,18 +4113,18 @@
+ 
+              1.  *   paged relocation 
+ 
+-             2.  u   low  byte of unsigned word or unsigned byte 
+-
+-             3.  v   high byte of unsigned word 
+-
+-             4.  p   PCR low  byte of word relocation or PCR byte 
+-
+ 
+ 
+         THE ASSEMBLER                                          PAGE 1-70
+         LISTING FILE
+ 
+ 
++             2.  u   low  byte of unsigned word or unsigned byte 
++
++             3.  v   high byte of unsigned word 
++
++             4.  p   PCR low  byte of word relocation or PCR byte 
++
+              5.  q   PCR high byte of word relocation 
+ 
+              6.  r   low  byte relocation or byte relocation 
+diff --git a/asxhtml/asxs02.htm b/asxhtml/asxs02.htm
+index ccfc1e5..f3026d4 100644
+--- a/asxhtml/asxs02.htm
++++ b/asxhtml/asxs02.htm
+@@ -90,13 +90,13 @@ Format:
+ 
+         .module name 
+ 
+-   The  .module  directive causes the name to be included in the
+-assemblers output file as an identifier for this particular  ob-
+-ject module.  The name may be from 1 to 79 characters in length.
+-The name may not have any embedded white space (spaces or tabs).
+-Only  one  identifier is allowed per assembled module.  The main
+-use of this directive  is  to  allow  the  linker  to  report  a
+-modules'  use  of undefined symbols.  At link time all undefined
++   The .module directive causes the name to be included  in  the
++assemblers output file as  an  identifier  for  this  particular
++object module.  The name may be from  1  to  255  characters  in
++length.  The name may not have any embedded white space  (spaces
++or tabs).  Only one identifier is allowed per assembled  module.
++The main use of this directive is to allow the linker to  report
++a modules' use of undefined symbols.  At link time all undefined
+ symbols are  reported  and  the  modules  referencing  them  are
+ listed.  
+ 
+@@ -793,7 +793,7 @@ where:  name    represents the symbolic name of the program sec-
+ ing multiple programming and data sections.   The  name  is  the
+ area  label used by the assembler and the linker to collect code
+ from various separately assembled modules into one section.  The
+-name may be from 1 to 79 characters in length.  
++name may be from 1 to 255 characters in length.  
+ 
+    The options are specified within parenthesis and separated by
+ commas as shown in the following example:  
+@@ -933,7 +933,7 @@ where:  name    represents  the  symbolic  name of the bank sec-
+                 tion.   This  name  may  be  the  same  as   any
+                 user-defined  symbol  or  area as the bank names
+                 are independent  of  all  symbols,  labels,  and
+-                areas.   The name may be from 1 to 79 characters
++                areas.  The name may be from 1 to 255 characters
+                 in length.  
+ 
+         options specify the parameters of the bank:  
+diff --git a/asxhtml/asxs03.htm b/asxhtml/asxs03.htm
+index 5d3d42a..0b09fd7 100644
+--- a/asxhtml/asxs03.htm
++++ b/asxhtml/asxs03.htm
+@@ -285,6 +285,10 @@ error message for the <*> error code.
+       &lt;i&gt;   Caused  by  an  .include file error or an .if/.endif
+             mismatch.  
+ 
++      &lt;k&gt;   Numerical conversion error:  invalid digit.  
++
++      &lt;l&gt;   Identifier too long:  the name has been truncated.  
++
+       &lt;m&gt;   Multiple  definitions  of  the  same label, multiple
+             .module directives, multiple conflicting  attributes
+             in  an  .area or .bank directive or the use of .hilo
+@@ -312,6 +316,8 @@ error message for the <*> error code.
+ 
+       &lt;u&gt;   Undefined symbol encountered during assembly.  
+ 
++      &lt;v&gt;   Value out of range:  signed or unsigned argument.  
++
+       &lt;z&gt;   Divide by 0 or Modulus by 0 error:  result is 0.  
+ 
+ 
+diff --git a/asxxsrc/asdata.c b/asxxsrc/asdata.c
+index ab5dabd..f190e2a 100644
+--- a/asxxsrc/asdata.c
++++ b/asxxsrc/asdata.c
+@@ -388,9 +388,13 @@ char	*ex[NERR];	/*	array of error string pointers
+ char	*ip;		/*	pointer into the assembler-source
+ 			 *	text line in ib[]
+ 			 */
+-char	ib[NINPUT*2];	/*	assembler-source text line for processing
++char	*ib;		/*	assembler-source text line for processing
++			 *	dynamically sized, ibsize bytes
+ 			 */
+-char	ic[NINPUT*2];	/*	assembler-source text line for listing
++char	*ic;		/*	assembler-source text line for listing
++			 *	dynamically sized, ibsize bytes
++			 */
++int	ibsize;		/*	current allocated size of ib[]/ic[]
+ 			 */
+ char	*il;		/*	pointer to the assembler-source
+ 			 *	text line to be listed
+diff --git a/asxxsrc/asexpr.c b/asxxsrc/asexpr.c
+index 66c7f68..56e6803 100644
+--- a/asxxsrc/asexpr.c
++++ b/asxxsrc/asexpr.c
+@@ -370,7 +370,7 @@ exprscan(struct expr *esp, char *bgn, char *end)
+ 					/*
+ 					 * Create symbol name
+ 					 */
+-					sprintf(nbufr, "%.32s.%.80s.%d$", asmc->afn, sp->s_id, n);
++					sprintf(nbufr, "%.32s.%.80s.%d$", symfn(), sp->s_id, n);
+ 					while (tp) {
+ 						if (tp->t_num == n) {
+ 							/*
+@@ -389,11 +389,11 @@ exprscan(struct expr *esp, char *bgn, char *end)
+ 					sp = slookup(sbufr);
+ 					if (sp != NULL) {
+ 						if (sp == &dot) {
+-							sprintf(nbufr, "%.32s_%d", asmc->afn, ++rlsym);
++							sprintf(nbufr, "%.32s_%d", symfn(), ++rlsym);
+ 							sp = newsym(nbufr, sbufr, sp->s_area, sp->s_addr);
+ 							s = nbufr;
+ 						} else {
+-							sprintf(nbufr, "%.32s.%.80s", asmc->afn, sbufr);
++							sprintf(nbufr, "%.32s.%.80s", symfn(), sbufr);
+ 							if ((sp->s_flag & S_GBL) == 0) {
+ 								sp = newsym(nbufr, sbufr, sp->s_area, sp->s_addr);
+ 								s = nbufr;
+@@ -482,6 +482,55 @@ newsym(char *str, char *id, struct area *ap, a_uint addr)
+ 	return(sp);
+ }
+ 
++/*)Function	char *	symfn()
++ *
++ *	The function symfn() returns the current source file's name with
++ *	every character that may not appear in an identifier replaced by
++ *	'_', truncated to the 32 characters the names built from it use.
++ *
++ *	Those names are manufactured rather than written by anyone: a local
++ *	symbol or an expression symbol is made unique across modules by
++ *	prefixing it with the file's name.  A file name may contain
++ *	characters an identifier may not, and a dash is both the common one
++ *	and an operator, so a name like
++ *
++ *		S my-file.__str_1 =D 0011
++ *
++ *	is written into a .rel file where the linker must read it back as an
++ *	operand of an expression and cannot tell it from a subtraction.  The
++ *	assembler is the only thing that ever puts a dash there, so it is
++ *	the right place to not put one.
++ *
++ *	local variables:
++ *		char *	p		pointer to the file name
++ *		int	i		character index
++ *
++ *	global variables:
++ *		asmf *	asmc		current input file
++ *		char	ctype[]		character type array
++ *
++ *	functions called:
++ *		none
++ *
++ *	side effects:
++ *		none
++ */
++
++char *
++symfn(void)
++{
++	static char fn[33];
++	char *p;
++	int i;
++
++	p = asmc->afn;
++	for (i=0; (i < (int) (sizeof(fn)-1)) && p[i]; i++) {
++		fn[i] = (ctype[p[i] & 0x7F] & (LETTER|DIGIT)) ? p[i] : '_';
++	}
++	fn[i] = '\0';
++	return(fn);
++}
++
+ /*)Function	void	exprsym(struct expr *esp, char *str)
+  *
+  *		struct expr *	esp	pointer to the expression to modify
+@@ -525,7 +574,7 @@ exprsym(struct expr *esp, char *str)
+ 	/*
+ 	 * Create a new symbol
+ 	 */
+-	sprintf(bufr, "%.32s_%d", asmc->afn, ++rlsym);
++	sprintf(bufr, "%.32s_%d", symfn(), ++rlsym);
+ 	sp = lookup(bufr);
+ 	if ((sp->s_type == S_NEW) && (sp->s_flag == 0)) {
+ 		sp->s_id = strsto(bufr);
+diff --git a/asxxsrc/aslex.c b/asxxsrc/aslex.c
+index febb62c..2c46610 100644
+--- a/asxxsrc/aslex.c
++++ b/asxxsrc/aslex.c
+@@ -98,6 +98,7 @@ void
+ getid(char *id, int c)
+ {
+ 	char *p;
++	int trunc;
+ 
+ 	if (c < 0) {
+ 		c = getnb();
+@@ -105,12 +106,18 @@ getid(char *id, int c)
+ 			qerr();
+ 	}
+ 	p = id;
++	trunc = 0;
+ 	do {
+-		if (p < &id[NCPS-1])
++		if (p < &id[NCPS-1]) {
+ 			*p++ = c;
++		} else {
++			trunc = 1;
++		}
+ 	} while (ctype[c=get()] & (LETTER|DIGIT));
+ 	unget(c);
+ 	*p++ = 0;
++	if (trunc)
++		err('l');
+ }
+ 
+ /*)Function	void	getst(id, c)
+@@ -160,6 +167,7 @@ void
+ getst(char *id, int c)
+ {
+ 	char *p;
++	int trunc;
+ 
+ 	if (c < 0) {
+ 		c = getnb();
+@@ -167,12 +175,18 @@ getst(char *id, int c)
+ 			qerr();
+ 	}
+ 	p = id;
++	trunc = 0;
+ 	do {
+-		if (p < &id[NCPS-1])
++		if (p < &id[NCPS-1]) {
+ 			*p++ = c;
++		} else {
++			trunc = 1;
++		}
+ 	} while (ctype[c=get()] & ~(SPACE|ILL) & 0xFF);
+ 	unget(c);
+ 	*p++ = 0;
++	if (trunc)
++		err('l');
+ }
+ 
+ /*)Function	int	getdstr(str, slen)
+@@ -585,8 +599,8 @@ int skpcomma(void)
+  *	side effects:
+  *		include file will be closed at detection of end of file.
+  *		the next sequential source file may be selected.
+- *		The current file specification afn[] and the path
+- *		length afp may be changed.
++ *		The current file specification afs, its name afn
++ *		and the path length afp may be changed.
+  *		The respective line counter will be updated.
+  *
+  * --------------------------------------------------------------
+@@ -672,6 +686,78 @@ int skpcomma(void)
+  *
+  */
+ 
++/*)Function	char *	fgetline(FILE *fp)
++ *
++ *	The function fgetline() reads one complete line of text from
++ *	the file fp into the global buffer ib[], growing ib[] (and
++ *	the parallel listing-copy buffer ic[]) as needed so that no
++ *	source line length limit is imposed here beyond available
++ *	memory.  A line that does not fit in the current ib[]/ic[]
++ *	allocation causes both to be doubled in size (updating ibsize)
++ *	and reading to continue where the previous fgets() left off,
++ *	repeating until the line's terminating newline (or end of
++ *	file) is read.
++ *
++ *	fgetline() returns a pointer to ib[] after a successful read,
++ *	or a NULL pointer at end of file.
++ *
++ *	local variables:
++ *		int	len	length of the partial line read so far
++ *		char *	nib	realloc()'d ib[] pointer
++ *		char *	nic	realloc()'d ic[] pointer
++ *
++ *	global variables:
++ *		char *	ib	assembler-source text line buffer
++ *		char *	ic	assembler-source text line buffer (listing copy)
++ *		int	ibsize	current allocated size of ib[]/ic[]
++ *		char *	il	pointer to whichever of ib[]/ic[] is used
++ *				for listing (selected by -b(b), bflag)
++ *		int	bflag	-b(b) listing mode flag
++ *
++ *	functions called:
++ *		void	asexit()	asmain.c
++ *		char *	fgets()		c_library
++ *		void *	realloc()	c_library
++ *		int	strlen()	c_library
++ *
++ *	side effects:
++ *		ib[], ic[], and ibsize may grow to accomodate a source
++ *		line longer than any seen so far.  main() sets il to
++ *		point at ib[] or ic[] once, before the pass loop starts,
++ *		so il is refreshed here whenever ib[]/ic[] are moved by
++ *		realloc() to keep it from going stale.
++ */
++
++char *
++fgetline(FILE *fp)
++{
++	int len;
++	char *nib, *nic;
++
++	if (fgets(ib, ibsize, fp) == NULL) {
++		return NULL;
++	}
++	len = strlen(ib);
++	while ((len == (ibsize - 1)) && (ib[len-1] != '\n')) {
++		nib = realloc(ib, ibsize * 2);
++		nic = realloc(ic, ibsize * 2);
++		if ((nib == NULL) || (nic == NULL)) {
++			fprintf(stderr, "?ASxxxx-Error-Cannot allocate memory for a long input line.\n\n");
++			asexit(ER_FATAL);
++		}
++		ib = nib;
++		ic = nic;
++		ibsize *= 2;
++		il = bflag ? ib : ic;
++		if (fgets(ib + len, ibsize - len, fp) == NULL) {
++			break;
++		}
++		len = strlen(ib);
++	}
++	return ib;
++}
++
++
+ int
+ nxtline(void)
+ {
+@@ -728,7 +814,7 @@ loop:	if (asmc == NULL) return(0);
+ 		break;
+ 
+ 	case T_ASM:
+-		if (fgets(ib, NINPUT, asmc->fp) == NULL) {
++		if (fgetline(asmc->fp) == NULL) {
+ 			if (trcflags & TRC_ASM) {
+ 				if ((pass == 2) && (lfp != NULL)) {
+ 					fprintf(lfp, ";A<< %s\n", asmc->afs);
+@@ -768,7 +854,7 @@ loop:	if (asmc == NULL) return(0);
+ 		break;
+ 
+ 	case T_INCL:
+-		if (fgets(ib, NINPUT, asmc->fp) == NULL) {
++		if (fgetline(asmc->fp) == NULL) {
+ 			if (trcflags & TRC_INC) {
+ 				if ((pass == 2) && (lfp != NULL)) {
+ 					fprintf(lfp, ";I<< (%d) %s\n", incfil, asmc->afs);
+@@ -812,7 +898,13 @@ loop:	if (asmc == NULL) return(0);
+ 			goto loop;
+ 		} else {
+ 			if (incline++ == 0) {
+-				strcpy(afn, asmc->afn);
++				/*
++				 * The included file's own path, for the
++				 * .include and .incbin it contains.  afn
++				 * stays the source file's name:  the
++				 * symbols symfn() makes are per module.
++				 */
++				afs = asmc->afs;
+ 				afp = asmc->afp;
+ 			}
+ 			srcline = incline;
+@@ -820,7 +912,7 @@ loop:	if (asmc == NULL) return(0);
+ 		break;
+ 
+ 	case T_MACRO:
+-		if (fgetm(ib, NINPUT, asmc->fp) == NULL) {
++		if (fgetm(ib, ibsize, asmc->fp) == NULL) {
+ 			nfp = (struct macrofp *) asmc->fp;
+ 			np = nfp->np;
+ 			if (trcflags & TRC_MCR) {
+diff --git a/asxxsrc/asmain.c b/asxxsrc/asmain.c
+index 32bed86..1162046 100644
+--- a/asxxsrc/asmain.c
++++ b/asxxsrc/asmain.c
+@@ -218,6 +218,18 @@ main(int argc, char *argv[])
+ 	relfil = "";
+ 	relext = "rel";
+ 
++	/*
++	 * Allocate the initial assembler-source text line buffers.
++	 * ib[]/ic[] are grown (see fgetline() in aslex.c) as needed
++	 * to accomodate source lines longer than this starting size.
++	 */
++	ibsize = NINPUT*2;
++	if (((ib = malloc(ibsize)) == NULL) ||
++	    ((ic = malloc(ibsize)) == NULL)) {
++		fprintf(stderr, "?ASxxxx-Error-Cannot allocate memory for input line buffer.\n\n");
++		exit(ER_FATAL);
++	}
++
+ 	asmc = NULL;
+ 	asmp = NULL;
+ 	for (i=1; i<argc; ++i) {
+@@ -3103,6 +3115,19 @@ equate(char *id, struct expr *e1, a_uint equtype)
+ 	if (e1->e_flag && (e1->e_base.e_sp->s_type == S_NEW)) {
+ 		rerr();
+ 		xerr('x', "global argument NOT ALLOWED in an equate");
++	} else
++	if ((sp == &dot) && (e1->e_base.e_ap == NULL)) {
++		/*
++		 * A direct assignment of an absolute value to the
++		 * current location counter, '. = 4' rather than
++		 * '. = . + 4', has already been reported as a '.'
++		 * error above.  Do not go on to record the area of
++		 * the value, which for an absolute expression is
++		 * none:  the location counter must always have an
++		 * area, and newdot() dereferences it at the end of
++		 * the pass.
++		 */
++		;
+ 	} else {
+ 		sp->s_area = e1->e_base.e_ap;
+ 	}
+@@ -3359,10 +3384,27 @@ newdot(struct area *nap)
+ 
+ 	oap = dot.s_area;
+ 	oap->a_fuzz = fuzz;
+-	oap->a_size = dot.s_addr;
+-	fuzz = nap->a_fuzz;
+-	dot.s_area = nap;
+-	dot.s_addr = nap->a_size;
++	if (IS_OVR(oap)) {
++		if (oap->a_size < dot.s_addr) {
++			oap->a_size = dot.s_addr;
++		}
++	} else {
++		oap->a_size = dot.s_addr;
++	}
++	if (IS_OVR(nap)) {
++		/*
++		 * An overlay is re-entered at its start, so what the
++		 * last block in it did to the fuzz says nothing about
++		 * this one.
++		 */
++		fuzz = 0;
++		dot.s_area = nap;
++		dot.s_addr = 0;
++	} else {
++		fuzz = nap->a_fuzz;
++		dot.s_area = nap;
++		dot.s_addr = nap->a_size;
++	}
+ 	outall();
+ }
+ 
+diff --git a/asxxsrc/assubr.c b/asxxsrc/assubr.c
+index ce025a4..a87549a 100644
+--- a/asxxsrc/assubr.c
++++ b/asxxsrc/assubr.c
+@@ -263,6 +263,7 @@ char *errors[] = {
+ 	"<e> .error/.assume programmed error",
+ 	"<i> .include/.incbin file error or an .if/.endif mismatch",
+ 	"<k> numerical conversion error",
++	"<l> identifier too long, name truncated",
+ 	"<m> multiple definitions error or macro recursion error",
+ 	"<n> .endm, .mexit, or .narg outside of a macro",
+ 	"<o> .org in REL area or directive / mnemonic error",
+diff --git a/asxxsrc/asxxxx.h b/asxxsrc/asxxxx.h
+index 31dcd73..89ae2fd 100644
+--- a/asxxsrc/asxxxx.h
++++ b/asxxsrc/asxxxx.h
+@@ -314,6 +314,9 @@ struct	bndry
+ #define	A_OVR	0x0404		/* Overlaying */
+ #define	A_REL	0x0800		/* Relocatable */
+ #define	A_ABS	0x0808		/* Absolute */
++
++#define	IS_OVR(ap)	((((ap)->a_flag & A_OVR) == A_OVR) && \
++			 (((ap)->a_flag & A_ABS) != A_ABS))
+ #define	A_NOPAG	0x1000		/* Non-Paged */
+ #define	A_PAG	0x1010		/* Paged */
+ 
+@@ -1204,9 +1207,13 @@ extern	int	exmode;		/*	expanded error code mode
+ extern	char	*ip;		/*	pointer into the assembler-source
+ 				 *	text line in ib[]
+ 				 */
+-extern	char	ib[NINPUT*2];	/*	assembler-source text line for processing
++extern	char	*ib;		/*	assembler-source text line for processing
++				 *	dynamically sized, ibsize bytes
++				 */
++extern	char	*ic;		/*	assembler-source text line for listing
++				 *	dynamically sized, ibsize bytes
+ 				 */
+-extern	char	ic[NINPUT*2];	/*	assembler-source text line for listing
++extern	int	ibsize;		/*	current allocated size of ib[]/ic[]
+ 				 */
+ extern	char	*il;		/*	pointer to the assembler-source
+ 				 *	text line to be listed
+@@ -1329,6 +1336,7 @@ extern	void		popmstk(struct mcrdef *np);
+ extern	void		chopcrlf(char *str);
+ extern	int		comma(int flag);
+ extern	char		endline(void);
++extern	char *		fgetline(FILE *fp);
+ extern	int		get(void);
+ extern	int		getdlm(void);
+ extern	void		getdstr(char *str, int slen);
+@@ -1381,6 +1389,7 @@ extern	void		exprx(struct expr *esp, int n);
+ extern	void		exprmasks(int n);
+ extern	void		exprscan(struct expr *esp, char *end, char *bgn);
+ extern	void		exprsym(struct expr *esp, char *str);
++extern	char *		symfn(void);
+ extern	int		is_abs(struct expr *esp);
+ extern	int		is_digit(int c, int r);
+ extern	struct sym *	newsym(char *str, char *id, struct area *ap, a_uint addr);
+diff --git a/asz80/t80.asm b/asz80/t80.asm
+index f458789..34cd3f2 100644
+--- a/asz80/t80.asm
++++ b/asz80/t80.asm
+@@ -1160,3 +1160,19 @@ jr5:
+ 	tstio	 n			;ED 74 20
+ 	;***********************************************************
+ 
++	.page
++	;***********************************************************
++	; 8085 Codes
++	;***********************************************************
++
++;	.8080
++	.8085
++
++	;***********************************************************
++	; load register pair with immediate data
++	ld	bc,#nn			;01 84 05
++	ld	de,#nn			;11 84 05
++	ld	hl,#nn			;21 84 05
++	ld	sp,#nn			;31 84 05
++	;***********************************************************
++
+diff --git a/asz80/z80mch.c b/asz80/z80mch.c
+index 139b1e4..456fad4 100644
+--- a/asz80/z80mch.c
++++ b/asz80/z80mch.c
+@@ -433,7 +433,7 @@ static char i85pg1[256] = {
+ /*--*--* 0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F */
+ /*--*--* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+ /*00*/   4,10, 7, 6, 4, 4, 7, 4,UN,10, 7, 6, 4, 4, 7, 4,
+-/*10*/   7,UN, 7, 6, 4, 4, 7, 4,UN,10, 7, 6, 4, 4, 7, 4,
++/*10*/   7,10, 7, 6, 4, 4, 7, 4,UN,10, 7, 6, 4, 4, 7, 4,
+ /*20*/   4,10,16, 6, 4, 4, 7, 4,UN,10,16, 6, 4, 4, 7, 4,
+ /*30*/   4,10,13, 6,10,10,10, 4,UN,10,13, 6, 4, 4, 7, 4,
+ /*40*/   4, 4, 4, 4, 4, 4, 4, 7, 4, 4, 4, 4, 4, 4, 7, 4,
+@@ -597,6 +597,14 @@ machine(struct mne *mp)
+ 			xerr('a', "Invalid Addressing Mode.");
+ 		break;
+ 
++	/*
++	 * sll is an undocumented instruction but the only one of its
++	 * group, so it shares the shift/rotate code rather than having
++	 * its own.  Without this label S_RL_UNDOCD, which z80pst.c does
++	 * assign to sll, reaches no case at all and the assembler
++	 * reports an Internal Opcode Error for a mnemonic in its table.
++	 */
++	case S_RL_UNDOCD:
+ 	case S_RL:
+ 		t1 = 0;
+ 		t2 = addr(&e2);
+diff --git a/linksrc/aslink.h b/linksrc/aslink.h
+index 7f6c171..d0e7d3e 100644
+--- a/linksrc/aslink.h
++++ b/linksrc/aslink.h
+@@ -175,10 +175,42 @@
+  * relocatable binary file.
+  */
+ 
+-#define NCPS		80	/* characters per symbol */
++/*
++ * NCPS must match the assemblers' NCPS in asxxsrc/asxxxx.h.  Both
++ * getid() in lklex.c and getid() in aslex.c silently truncate an
++ * identifier at NCPS-1 characters; if the linker's limit is the
++ * smaller of the two it will truncate names the assembler wrote
++ * out in full, and two distinct symbols sharing a long prefix
++ * then collapse into one.
++ */
++#define NCPS		256	/* characters per symbol */
++
++/*
++ * Buffer size for a linker-generated symbol name derived from an
++ * area name, as built by lnkarea()/lnksect() in lkarea.c:
++ *
++ *	"a_<area>"  "l_<area>"  "m_<area>_<n>"  "s_<area>_<n>"
++ *
++ * NCPS covers the area name itself (up to NCPS-1 characters plus
++ * its terminating NUL, as bounded by getid() in lklex.c).  The
++ * remaining 16 characters cover the 2-character prefix, the '_'
++ * separator and the decimal section index, which is at most 10
++ * digits for a 32-bit unsigned value.
++ */
++#define	NGSYM	    (NCPS + 16)	/* generated symbol name length */
++
+ #define	NINPUT		512	/* Input buffer size */
+ #define	NHASH	     (1 << 6)	/* Buckets in hash table */
+ #define	HMASK	    (NHASH - 1)	/* Hash mask */
++
++/*
++ * Buckets in the area name hash table used by lkparea().  A
++ * program compiled with one area per function has as many areas
++ * as it has functions, so this is sized for thousands of them
++ * rather than for the handful a hand written program defines.
++ */
++#define	NAHASH	    (1 << 9)	/* Buckets in area hash table */
++#define	AHMASK	   (NAHASH - 1)	/* Area hash mask */
+ #define	NLPP		60	/* Lines per page */
+ #define	NMAX		78	/* IXX/SXX/DBX Buffer Length */
+ #define		IXXMAXBYTES	32	/* NMAX > (2 * IXXMAXBYTES) */
+@@ -483,6 +515,7 @@ struct	head
+ 	int	h_nmode;	/* # of modes */
+ 	struct	mode  **m_list;	/* Mode list */
+ 	char *	m_id;		/* Module name */
++	char *	h_lspc;		/* Library file, if the module came from one */
+ };
+ 
+ /*
+@@ -586,7 +619,9 @@ struct	bank
+ struct	area
+ {
+ 	struct	area	*a_ap;	/* Area link */
++	struct	area	*a_hp;	/* Area name hash link, see lkparea() */
+ 	struct	areax	*a_axp;	/* Area extension link */
++	struct	areax	*a_axtp;/* Area extension list tail */
+ 	struct	bank	*a_bp;	/* Bank link */
+ 	FILE *	a_ofp;		/* Area File Handle */
+ 	a_uint	a_addr;		/* Beginning address of area */
+@@ -619,6 +654,8 @@ struct	areax
+ 	a_uint	a_addr;		/* Beginning address of section */
+ 	a_uint	a_size;		/* Size of the area in section */
+ 	a_uint	a_bndry;	/* Boundary for this A directive */
++	struct	sym	*a_syp;	/* Symbol list head, see lkasym() */
++	struct	sym	*a_sytp;/* Symbol list tail, see lkasym() */
+ };
+ 
+ /*
+@@ -636,6 +673,7 @@ struct	areax
+ struct	sym
+ {
+ 	struct	sym	*s_sp;	/* Symbol link */
++	struct	sym	*s_alp;	/* Next symbol of the same areax, see lkasym() */
+ 	struct	areax	*s_axp;	/* Symbol area link */
+ 	char	s_type;		/* Symbol subtype */
+ 	char	s_flag;		/* Flag byte */
+@@ -1033,6 +1071,8 @@ extern	char	*expr_ip;	/*	initial expression ip
+ 				 */
+ extern	int	expr_radix;	/*	expression default radix
+ 				 */
++extern	int	expr_ovf;	/*	a scanned number did not fit a_mask
++				 */
+ extern	int	as_msb;		/*	Assembler selected MSB
+ 				 */
+ extern	a_uint	a_mask;		/*	Address Mask
+@@ -1141,10 +1181,12 @@ extern	void		setbank(void);
+ 
+ /* lkhead.c */
+ extern	void		module(void);
++extern	char *		lkmfile(struct head *thp);
+ extern	void		newhead(void);
+ extern	void		newmode(void);
+ 
+ /* lksym.c */
++extern	void		lkasym(void);
+ extern	int		hash(char *p, int cflag);
+ extern	struct	sym *	lkpsym(char *id, int f);
+ extern	char *		new(unsigned int n);
+@@ -1252,12 +1294,13 @@ extern	void		relerr4(char *str);
+ extern	void		relerp4(char *str);
+ 
+ /* lklibr.c */
+-extern	void		addfile(char *path, char *libfil);
++extern	int		addfile(char *path, char *libfil);
+ extern	void		addlib(void);
+ extern	void		addpath(void);
+ extern	int		fndsym(char *name);
+ extern	void		library(void);
+ extern	void		loadfile(char *filspc);
++extern	char *		lblibspc;	/* Library being loaded, or NULL */
+ extern	void		search(void);
+ 
+ /* lkout.c */
+diff --git a/linksrc/lkarea.c b/linksrc/lkarea.c
+index 2e47a87..471816f 100644
+--- a/linksrc/lkarea.c
++++ b/linksrc/lkarea.c
+@@ -246,12 +246,11 @@ newarea(void)
+ 	}
+ 
+ 	/*
+-	 * Place pointer in header area list
++	 * Place pointer in header area list.  lkparea() has just
++	 * appended this A directive's areax to the area, so the
++	 * area's recorded tail is the areax wanted here.
+ 	 */
+-	taxp = ap->a_axp;
+-	while (taxp->a_axp) {
+-		taxp = taxp->a_axp;
+-	}
++	taxp = ap->a_axtp;
+ 	narea = hp->h_narea;
+ 	halp = hp->a_list;
+ 	for (k=0; k < narea ;++k) {
+@@ -298,36 +297,83 @@ newarea(void)
+  *		will terminate the linker.
+  */
+ 
++/*
++ *	The area name hash table, the tail of the linked area
++ *	structures, and a hash of an area name.
++ */
++static	struct	area *	ahash[NAHASH];
++static	struct	area *	areatp;
++
++/*)Function	int	aname(id)
++ *
++ *		char *	id		pointer to the area name string
++ *
++ *	The function aname() hashes an area name into the ahash[]
++ *	table.  Area names are always matched without regard to
++ *	case, by symeq(id, ap->a_id, 1) in lkparea(), so the hash
++ *	folds case through ccase[] to match.
++ *
++ *	This is deliberately not the hash() of lksym.c.  That
++ *	function sums the characters of a name, which for names
++ *	sharing a long common prefix takes only a small number of
++ *	distinct values - measured over the ten thousand area names
++ *	of a one-area-per-function program it reaches just 84 of
++ *	them, however many buckets it is given.  Multiplying as it
++ *	goes mixes the whole name into the result instead.
++ *
++ *	local variables:
++ *		a_uint	h		computed hash value
++ *
++ *	global variables:
++ *		char	ccase[]		an array of characters which
++ *					perform the case translation
++ *
++ *	functions called:
++ *		none
++ *
++ *	side effects:
++ *		none
++ */
++
++static int
++aname(char *id)
++{
++	a_uint h;
++
++	h = 0;
++	while (*id) {
++		h = (h * 31) + (a_uint) (ccase[*id++ & 0x007F] & 0x00FF);
++	}
++	return ((int) (h & AHMASK));
++}
++
+ void
+ lkparea(char *id)
+ {
+-	struct area *tap;
+-	struct areax *taxp;
++	int h;
+ 
+-	ap = areap;
++	h = aname(id);
+ 	axp = (struct areax *) new (sizeof(struct areax));
+-	while (ap) {
++	for (ap = ahash[h]; ap != NULL; ap = ap->a_hp) {
+ 		if (symeq(id, ap->a_id, 1)) {
+-			taxp = ap->a_axp;
+-			while (taxp->a_axp)
+-				taxp = taxp->a_axp;
+-			taxp->a_axp = axp;
++			ap->a_axtp->a_axp = axp;
++			ap->a_axtp = axp;
+ 			axp->a_bap = ap;
+ 			axp->a_bhp = hp;
+ 			return;
+ 		}
+-		ap = ap->a_ap;
+ 	}
+ 	ap = (struct area *) new (sizeof(struct area));
+ 	if (areap == NULL) {
+ 		areap = ap;
+ 	} else {
+-		tap = areap;
+-		while (tap->a_ap)
+-			tap = tap->a_ap;
+-		tap->a_ap = ap;
++		areatp->a_ap = ap;
+ 	}
++	areatp = ap;
++	ap->a_hp = ahash[h];
++	ahash[h] = ap;
+ 	ap->a_axp = axp;
++	ap->a_axtp = axp;
+ 	axp->a_bap = ap;
+ 	axp->a_bhp = hp;
+ 	ap->a_id = strsto(id);
+@@ -424,7 +470,7 @@ lnkarea(void)
+ {
+ 	a_uint rloc;
+ 	int bytes;
+-	char temp[NCPS+2];
++	char temp[NGSYM];
+ 	struct sym *sp;
+ 
+ 	for (bp = bankp; bp != NULL; bp = bp->b_bp) {
+@@ -516,7 +562,7 @@ lnksect(struct area *tap)
+ 	a_uint size, addr;
+ 	struct areax *taxp;
+ 	a_uint bofst, i;
+-	char temp[NCPS+2];
++	char temp[NGSYM];
+ 	struct sym *sp;
+ 
+ 	size = 0;
+@@ -626,6 +672,7 @@ setarea(void)
+ 		ip = a_bsp->strp;
+ 		getid(id, -1);
+ 		if (getnb() == '=') {
++			expr_ovf = 0;
+ 			v = expr();
+ 			for (ap = areap; ap != NULL; ap = ap->a_ap) {
+ 				if (symeq(id, ap->a_id, 1))
+@@ -634,6 +681,20 @@ setarea(void)
+ 			if (ap == NULL) {
+ 				fprintf(stderr,	"?ASlink-Error-No definition of area %s\n", id);
+ 				lkerr++;
++			} else
++			/*
++			 * A base larger than the address space is not a
++			 * base this linker can honour, and masking it to
++			 * fit puts the area somewhere nobody asked for -
++			 * silently, because the map prints the address
++			 * masked too, so it reads correctly while the
++			 * placement is wrong.
++			 */
++			if (expr_ovf) {
++				fprintf(stderr,
++				"?ASlink-Error-Base Address of Area %s Exceeds The Address Space\n",
++					ap->a_id);
++				lkerr++;
+ 			} else {
+ 				ap->a_addr = v;
+ 				ap->a_bset = 1;
+diff --git a/linksrc/lkbank.c b/linksrc/lkbank.c
+index 0dc6bd6..339c562 100644
+--- a/linksrc/lkbank.c
++++ b/linksrc/lkbank.c
+@@ -335,6 +335,7 @@ setbank(void)
+ 		ip = b_bsp->strp;
+ 		getid(id, -1);
+ 		if (getnb() == '=') {
++			expr_ovf = 0;
+ 			v = expr() & a_mask;
+ 			for (bp = bankp; bp != NULL; bp = bp->b_bp) {
+ 				if (symeq(id, bp->b_id, 1))
+@@ -343,6 +344,17 @@ setbank(void)
+ 			if (bp == NULL) {
+ 				fprintf(stderr,	"?ASlink-Error-No definition of bank %s\n", id);
+ 				lkerr++;
++			} else
++			/*
++			 * As setarea(), except that the masking here was
++			 * always explicit - which made the loss no less
++			 * silent.
++			 */
++			if (expr_ovf) {
++				fprintf(stderr,
++				"?ASlink-Error-Base Address of Bank %s Exceeds The Address Space\n",
++					bp->b_id);
++				lkerr++;
+ 			} else {
+ 				bp->b_base = v;
+ 				bp->b_flag = B_BASE;
+diff --git a/linksrc/lkdata.c b/linksrc/lkdata.c
+index 9038bfb..b356c26 100644
+--- a/linksrc/lkdata.c
++++ b/linksrc/lkdata.c
+@@ -146,6 +146,12 @@ char	*expr_ip;	/*	initial expression ip
+ 			 */
+ int	expr_radix;	/*	expression default radix
+ 			 */
++int	expr_ovf;	/*	a number scanned by term() did not fit the
++			 *	address space.  Recorded here rather than
++			 *	reported there: out of range is only an
++			 *	error in some contexts, and term() does
++			 *	not know which it is in.
++			 */
+ int	as_msb;		/*	Assembler selected MSB
+ 			 */
+ a_uint	a_mask;		/*	Address Mask
+diff --git a/linksrc/lkeval.c b/linksrc/lkeval.c
+index 526e8ca..a2ab3be 100644
+--- a/linksrc/lkeval.c
++++ b/linksrc/lkeval.c
+@@ -84,6 +84,29 @@ eval(void)
+ 
+ 	c = getnb();
+ 	v = 0;
++	/*
++	 * Every field eval() reads comes from a machine generated .rel
++	 * file and is a number in the current radix.  A character that is
++	 * neither a digit nor the end of the line means the file is not
++	 * one:  it is corrupt, or it was written in a radix other than the
++	 * one its header asked for.
++	 *
++	 * This has to be caught here rather than left to the callers.  The
++	 * loop below would not run, unget() would put the character back
++	 * unread, and eval() would return 0 having consumed nothing - so
++	 * the 'while (more())' loops that read these records would call it
++	 * again on the same character, and again, without end.
++	 */
++	if ((digit(c, radix) < 0) && (c != '\0') && (c != ';')) {
++		fprintf(stderr,
++			"?ASlink-Error-Invalid digit 0x%02X in object record,"
++			" radix %d\n", c & 0xFF, radix);
++		if (cfp != NULL) {
++			fprintf(stderr, "              file : %s\n", cfp->f_idp);
++		}
++		fprintf(stderr, "              line : %s\n", ib);
++		lkexit(ER_FATAL);
++	}
+ 	while ((n = digit(c, radix)) >= 0) {
+ 		v = v*radix + n;
+ 		c = get();
+@@ -300,6 +323,46 @@ binop(int c, a_uint v, a_uint ve)
+ 	return((v & s_mask) ? v | ~v_mask : v & v_mask);
+ }
+ 
++/*)Function	a_uint	nmbr(v)
++ *
++ *		a_uint	v		the value just scanned
++ *
++ *	The function nmbr() reduces a scanned number to the address
++ *	space, the way every other value in an expression is reduced,
++ *	and records whether anything was lost.
++ *
++ *	A literal larger than the address space cannot be what was
++ *	meant, but it is not always an error: it is only wrong where
++ *	the value is an address, and term() has no way of knowing
++ *	whether it is.  So the loss is recorded in expr_ovf and left
++ *	for a caller that cares - setarea() and setbank(), where a
++ *	base that does not fit is a silent misplacement - to ask
++ *	about afterwards.
++ *
++ *	Only the three places that scan a literal call this.  An
++ *	arithmetic result is deliberately not checked: an expression
++ *	may legitimately pass outside the address space and come back,
++ *	and truncating the intermediate is the documented behaviour.
++ *
++ *	global variables:
++ *		a_uint	a_mask		address mask
++ *		int	expr_ovf	value did not fit flag
++ *		a_uint	s_mask		sign mask
++ *		a_uint	v_mask		overflow mask
++ *
++ *	side effects:
++ *		expr_ovf is set if the value did not fit.
++ */
++
++static a_uint
++nmbr(a_uint v)
++{
++	if ((v & ~a_mask) != 0) {
++		expr_ovf = 1;
++	}
++	return((v & s_mask) ? v | ~v_mask : v & v_mask);
++}
++
+ /*)Function	a_uint	term(a_uint v)
+  *
+  *	The function term() evaluates a single constant
+@@ -441,7 +504,7 @@ term(a_uint v)
+ 				c = get();
+ 			}
+ 			unget(c);
+-			return((v & s_mask) ? v | ~v_mask : v & v_mask);
++			return(nmbr(v));
+ 		}
+ 		ip = jp;
+ 		c = expr_radix;
+@@ -484,7 +547,7 @@ term(a_uint v)
+ 		if (c != '.') {
+ 			unget(c);
+ 		}
+-		return((v & s_mask) ? v | ~v_mask : v & v_mask);
++		return(nmbr(v));
+ 	}
+ 	/* 2) */
+ 	if ((ctype[c] & RAD16) && (r == 16)) {
+@@ -509,7 +572,7 @@ term(a_uint v)
+ 				c = get();
+ 			}
+ 			unget(c);
+-			return((v & s_mask) ? v | ~v_mask : v & v_mask);
++			return(nmbr(v));
+ 		}
+ 		c = n;
+ 		ip = jp;
+diff --git a/linksrc/lkhead.c b/linksrc/lkhead.c
+index d482a24..ac36694 100644
+--- a/linksrc/lkhead.c
++++ b/linksrc/lkhead.c
+@@ -39,6 +39,52 @@
+  *	lkhead.c contains no local variables.
+  */
+ 
++/*)Function	char *	lkmfile(thp)
++ *
++ *		struct head *thp	module header
++ *
++ *	The function lkmfile() returns the name of the file a module was
++ *	read from, for use in a diagnostic.
++ *
++ *	A module named in the link script has an lfile and is reported by
++ *	its path.  A module pulled from a library has none:  loadfile() in
++ *	lklibr.c opens the library member directly, so it never becomes the
++ *	current lfile, and lkmain.c has already cleared cfp for the library
++ *	pass by then.  Such a module is reported by its library instead.
++ *	The remaining case, a header with neither, cannot arise today but is
++ *	given a name rather than a NULL:  every caller is in the middle of
++ *	printing an error, and taking the linker down while it does so -
++ *	which is what dereferencing h_lfile unconditionally used to do -
++ *	loses the diagnostic the user was about to be given.
++ *
++ *	local variables:
++ *		none
++ *
++ *	global variables:
++ *		none
++ *
++ *	functions called:
++ *		none
++ *
++ *	side effects:
++ *		none
++ */
++
++char *
++lkmfile(struct head *thp)
++{
++	if (thp == NULL) {
++		return "<unknown>";
++	}
++	if (thp->h_lfile != NULL) {
++		return thp->h_lfile->f_idp;
++	}
++	if (thp->h_lspc != NULL) {
++		return thp->h_lspc;
++	}
++	return "<library>";
++}
++
+ /*)Function	void	newhead(void)
+  *
+  *	The function newhead() creates a head structure.  All head
+@@ -112,6 +158,7 @@ newhead(void)
+ 	 * Initialize the header
+ 	 */
+ 	hp->h_lfile = cfp;		/* Set file pointer */
++	hp->h_lspc = lblibspc;		/* Library, if this came from one */
+ 	hp->m_id = "";			/* No Module */
+ 	/*
+ 	 * Scan for Parameters	 
+diff --git a/linksrc/lklex.c b/linksrc/lklex.c
+index 0f9b628..1c4096e 100644
+--- a/linksrc/lklex.c
++++ b/linksrc/lklex.c
+@@ -85,21 +85,60 @@
+  *		input text line.
+  */
+ 
++/*)Function	void	iderr(id)
++ *
++ *		char *	id		the truncated identifier
++ *
++ *	The function iderr() reports an identifier that was too
++ *	long to be scanned in full by getid().  The
++ *	name the linker retains is not the name the assembler
++ *	wrote, so it may collide with an unrelated identifier
++ *	sharing the same first NCPS-1 characters - binding a
++ *	reference to the wrong symbol, or merging two areas.
++ *	Neither outcome is detectable later, so the truncation
++ *	itself has to be reported here.
++ *
++ *	global variables:
++ *		int	lkerr		error flag
++ *
++ *	functions called:
++ *		int	fprintf()	c_library
++ *
++ *	side effects:
++ *		The error is reported and the error flag is set.
++ */
++
++static void
++iderr(char *id)
++{
++	fprintf(stderr,
++		"?ASlink-Error-Identifier longer than %d characters, truncated to %s\n",
++		NCPS-1, id);
++	lkerr++;
++}
++
+ void
+ getid(char *id, int c)
+ {
+ 	char *p;
++	int trunc;
+ 
+ 	if (c < 0) {
+ 		c = getnb();
+ 	}
+ 	p = id;
++	trunc = 0;
+ 	do {
+-		if (p < &id[NCPS-1])
++		if (p < &id[NCPS-1]) {
+ 			*p++ = c;
++		} else {
++			trunc = 1;
++		}
+ 	} while (ctype[c=get()] & (LETTER|DIGIT));
+ 	unget(c);
+ 	*p++ = 0;
++	if (trunc)
++		iderr(id);
+ }
+ 
+ /*)Function	void	getfid(str, c)
+diff --git a/linksrc/lklibr.c b/linksrc/lklibr.c
+index 1cd1ffc..06d7ed8 100644
+--- a/linksrc/lklibr.c
++++ b/linksrc/lklibr.c
+@@ -30,6 +30,15 @@
+ 
+ #include "aslink.h"
+ 
++/*
++ * The library object file currently being read, or NULL when the modules
++ * being read came from the link script.  A library member is opened here
++ * with fopen() rather than reached through the script's file list, so it
++ * never becomes the current lfile and its header carries no h_lfile - see
++ * lkmfile() in lkhead.c.
++ */
++char	*lblibspc = NULL;
++
+ /*)Module	lklibr.c
+  *
+  *	The module lklibr.c contains the functions which
+@@ -122,15 +131,29 @@ void
+ addlib(void)
+ {
+ 	struct lbpath *lbph;
++	int found;
+ 
+ 	unget(getnb());
+ 
+ 	if (lbphead == NULL) {
+-		addfile(NULL,ip);
+-		return;
+-	}	
+-	for (lbph=lbphead; lbph; lbph=lbph->next) {
+-		addfile(lbph->path,ip);
++		found = addfile(NULL,ip);
++	} else {
++		found = 0;
++		for (lbph=lbphead; lbph; lbph=lbph->next) {
++			found |= addfile(lbph->path,ip);
++		}
++		/*
++		 * None of the -k paths held it.  The -l argument may be a
++		 * path in its own right, relative to the current directory
++		 * rather than to any library path.
++		 */
++		if (found == 0) {
++			found = addfile(NULL,ip);
++		}
++	}
++	if (found == 0) {
++		fprintf(stderr,
++			"?ASlink-Warning-Cannot find library file %s\n", ip);
+ 	}
+ }
+ 
+@@ -172,13 +195,14 @@ addlib(void)
+  *		An lbname structure may be created.
+  */
+ 
+-void
++int
+ addfile(char *path, char *libfil)
+ {
+ 	FILE *fp;
+ 	char *str, *strend;
+ 	char *p, *q;
+ 	struct lbname *lbnh, *lbn;
++	int found = 0;
+ 
+ 	if ((path != NULL) && (strchr(libfil,':') == NULL)){
+ 		str = (char *) malloc (strlen(path) + strlen(libfil) + 5);
+@@ -202,6 +226,7 @@ addfile(char *path, char *libfil)
+ 	}
+ 	if ((fp = fopen(str, "r")) != NULL) {
+ 		fclose(fp);
++		found = 1;
+ 		lbnh = (struct lbname *) new (sizeof(struct lbname));
+ 		if (lbnhead == NULL) {
+ 			lbnhead = lbnh;
+@@ -211,8 +236,21 @@ addfile(char *path, char *libfil)
+ 				lbn = lbn->next;
+ 			lbn->next = lbnh;
+ 		}
+-		if ((path != NULL) && (strchr(libfil,':') == NULL)){
+-			lbnh->path = path;
++		/*
++		 * The names inside a library are relative to the library
++		 * itself, so the path fndsym() prefixes to them is the
++		 * directory the library was actually found in - which is
++		 * not the -k path whenever the -l argument carried a
++		 * directory of its own, and is not the current directory
++		 * when the library was found without a -k path at all.
++		 */
++		p = str + strlen(str);
++		while ((p != str) && (*(p-1) != '\\') && (*(p-1) != '/')) {
++			p -= 1;
++		}
++		if (p != str) {
++			lbnh->path = (char *) new ((int) (p - str) + 1);
++			strncpy(lbnh->path, str, (int) (p - str));
+ 		}
+ 		lbnh->libfil = (char *) new (strlen(libfil) + 1);
+ 		strcpy(lbnh->libfil,libfil);
+@@ -221,6 +259,7 @@ addfile(char *path, char *libfil)
+ 	} else {
+ 		free(str);
+ 	}
++	return(found);
+ }
+ 
+ /*)Function	void	search(void)
+@@ -566,11 +605,13 @@ loadfile(char *filspc)
+ 	char str[NINPUT];
+ 
+ 	if ((fp = fopen(filspc,"r")) != NULL) {
++		lblibspc = filspc;
+ 		while (fgets(str, NINPUT, fp) != NULL) {
+ 			chopcrlf(str);
+ 			ip = str;
+ 			link();
+ 		}
++		lblibspc = NULL;
+ 		fclose(fp);
+ 	}
+ }
+diff --git a/linksrc/lklist.c b/linksrc/lklist.c
+index 34136a6..dd2b304 100644
+--- a/linksrc/lklist.c
++++ b/linksrc/lklist.c
+@@ -165,6 +165,55 @@ dgt(int rdx, char *str, int n)
+ 	return(1);
+ }
+ 
++/*
++ *	The map symbol reference used to sort an area's symbols into
++ *	address order.  m_addr is the symbol's relocated address,
++ *	m_seq the order in which the symbol was collected, used to
++ *	break ties so the sort is stable.
++ */
++struct	msym
++{
++	struct	sym *m_sp;	/* Symbol */
++	a_uint	m_addr;		/* Relocated address */
++	int	m_seq;		/* Collection order */
++};
++
++/*)Function	int	msymcmp(p1, p2)
++ *
++ *		void *	p1		pointer to a struct msym
++ *		void *	p2		pointer to a struct msym
++ *
++ *	The function msymcmp() is the qsort() comparison function
++ *	ordering an area's symbols by ascending relocated address,
++ *	symbols sharing an address keeping their collection order.
++ *
++ *	local variables:
++ *		msym *	m1		pointer to the first symbol
++ *		msym *	m2		pointer to the second symbol
++ *
++ *	global variables:
++ *		none
++ *
++ *	functions called:
++ *		none
++ *
++ *	side effects:
++ *		none
++ */
++
++static int
++msymcmp(const void *p1, const void *p2)
++{
++	const struct msym *m1 = (const struct msym *) p1;
++	const struct msym *m2 = (const struct msym *) p2;
++
++	if (m1->m_addr < m2->m_addr) return (-1);
++	if (m1->m_addr > m2->m_addr) return ( 1);
++	if (m1->m_seq  < m2->m_seq ) return (-1);
++	if (m1->m_seq  > m2->m_seq ) return ( 1);
++	return (0);
++}
++
+ /*)Function	void	slew(xp, yp)
+  *
+  *		area *	xp		pointer to an area structure
+@@ -406,29 +455,27 @@ void
+ lstarea(struct area *xp, struct bank *yp)
+ {
+ 	struct areax *oxp;
+-	int i, j, n;
++	int i, n;
+ 	char *frmt, *ptr;
+ 	int nmsym;
+-	a_uint a0, ai, aj;
++	a_uint aj;
+ 	struct sym *sp;
+-	struct sym **p;
++	struct msym *p;
+ 
+ 	/*
+-	 * Find number of symbols in area
++	 * Find number of symbols in area.  The symbols of each
++	 * section are reached through the index lkasym() built,
++	 * so this costs one walk of this area's own symbols
++	 * rather than a scan of the whole symbol table per
++	 * section.
+ 	 */
+ 	nmsym = 0;
+-	oxp = xp->a_axp;
+-	while (oxp) {
+-		for (i=0; i<NHASH; i++) {
+-			sp = symhash[i];
+-			while (sp != NULL) {
+-				if ((oxp == sp->s_axp) && !sp->s_flag && !(sp->s_type & S_HID)) {
+-					++nmsym;
+-				}
+-				sp = sp->s_sp;
++	for (oxp = xp->a_axp; oxp != NULL; oxp = oxp->a_axp) {
++		for (sp = oxp->a_syp; sp != NULL; sp = sp->s_alp) {
++			if (!sp->s_flag && !(sp->s_type & S_HID)) {
++				++nmsym;
+ 			}
+ 		}
+-		oxp = oxp->a_axp;
+ 	}
+ 
+ 	if ((nmsym == 0) && (xp->a_size == 0)) {
+@@ -443,47 +490,32 @@ lstarea(struct area *xp, struct bank *yp)
+ 	}
+ 
+ 	/*
+-	 * Allocate space for an array of pointers to symbols
++	 * Allocate space for an array of symbol references
+ 	 * and load array.
+ 	 */
+-	if ( (p = (struct sym **) malloc (nmsym*sizeof(struct sym *))) == NULL) {
++	if ( (p = (struct msym *) malloc (nmsym*sizeof(struct msym))) == NULL) {
+ 		fprintf(mfp, "Insufficient space to build Map Segment.\n");
+ 		return;
+ 	}
+ 	nmsym = 0;
+-	oxp = xp->a_axp;
+-	while (oxp) {
+-		for (i=0; i<NHASH; i++) {
+-			sp = symhash[i];
+-			while (sp != NULL) {
+-				if ((oxp == sp->s_axp) && !sp->s_flag && !(sp->s_type & S_HID)) {
+-					p[nmsym++] = sp;
+-				}
+-				sp = sp->s_sp;
++	for (oxp = xp->a_axp; oxp != NULL; oxp = oxp->a_axp) {
++		for (sp = oxp->a_syp; sp != NULL; sp = sp->s_alp) {
++			if (!sp->s_flag && !(sp->s_type & S_HID)) {
++				p[nmsym].m_sp   = sp;
++				p[nmsym].m_addr = sp->s_addr + oxp->a_addr;
++				p[nmsym].m_seq  = nmsym;
++				nmsym += 1;
+ 			}
+ 		}
+-		oxp = oxp->a_axp;
+ 	}
+ 
+ 	/*
+-	 * Bubble Sort of Addresses in Symbol Table Array
++	 * Sort the symbols into ascending address order.  m_seq
++	 * carries the order the symbols were collected in so that
++	 * qsort(), which is not required to be stable, still
++	 * orders symbols sharing an address as the collection did.
+ 	 */
+-	j = 1;
+-	while (j) {
+-		j = 0;
+-		sp = p[0];
+-		a0 = sp->s_addr + sp->s_axp->a_addr;
+-		for (i=1; i<nmsym; ++i) {
+-			sp = p[i];
+-			ai = sp->s_addr + sp->s_axp->a_addr;
+-			if (a0 > ai) {
+-				j = 1;
+-				p[i] = p[i-1];
+-				p[i-1] = sp;
+-			}
+-			a0 = ai;
+-		}
+-	}
++	qsort(p, nmsym, sizeof(struct msym), msymcmp);
+ 
+ 	/*
+ 	 * Repeat Counter
+@@ -521,7 +553,7 @@ lstarea(struct area *xp, struct bank *yp)
+ 			fprintf(mfp, "%s", frmt);
+ 		}
+ 
+-		sp = p[i];
++		sp = p[i].m_sp;
+ 		aj = (sp->s_addr + sp->s_axp->a_addr) & a_mask;
+ #ifdef	LONGINT
+ 		switch(a_bytes) {
+diff --git a/linksrc/lkmain.c b/linksrc/lkmain.c
+index 4486f81..5e0f4f2 100644
+--- a/linksrc/lkmain.c
++++ b/linksrc/lkmain.c
+@@ -687,6 +687,7 @@ link(void)
+  *		FILE *	afile()		lkmain.c
+  *		int	fprintf()	c_library
+  *		void	lkexit()	lkmain.c
++ *		void	lkasym()	lksym.c
+  *		void	lstarea()	lklist.c
+  *		void	newpag()	lklist.c
+  *		void	symdef()	lksym.c
+@@ -713,6 +714,12 @@ map(void)
+ 		lkexit(ER_FATAL);
+ 	}
+ 
++	/*
++	 * Index the symbols by the areax defining them so that
++	 * lstarea() need not scan the whole symbol table per area.
++	 */
++	lkasym();
++
+ 	/*
+ 	 * Output Map Bank/Area Lists
+ 	 */
+@@ -1455,6 +1462,11 @@ setgbl(void)
+  *
+  *	side effects:
+  *		File is opened for read or write.
++ *
++ *	The wf argument is a bit field:  1 selects write, 2 binary,
++ *	4 downgrades a failure to open from an error to a warning,
++ *	8 keeps an extension already present in fn, and 16 reports
++ *	nothing at all - for a file whose absence is not a fault.
+  */
+ 
+ FILE *
+@@ -1524,6 +1536,9 @@ afile(char *fn, char *ft, int wf)
+ 	case 3:	frmt = "wb";	break;
+ 	}
+ 	if ((fp = fopen(afspec, frmt)) == NULL) {
++		if (wf & 16) {
++			;
++		} else
+ 		if (wf & 4) {
+ 			fprintf(stderr, "?ASlink-Warning-<cannot %s> : \"%s\"\n", (frmt[0] == 'w')?"create":"open", afspec);
+ 		} else {
+diff --git a/linksrc/lknoice.c b/linksrc/lknoice.c
+index 10114c1..92bb50b 100644
+--- a/linksrc/lknoice.c
++++ b/linksrc/lknoice.c
+@@ -240,7 +240,7 @@ NoICEmagic(void)
+ void
+ DefineNoICE( char *name, a_uint value, struct bank *yp )
+ {
+-	char token1[NCPS];			/* parse for file.function.symbol */
++	char token1[NGSYM];			/* parse for file.function.symbol */
+ 	char token2[NCPS];
+ 	char token3[NCPS];
+ 	char sep1, sep2;
+diff --git a/linksrc/lkrloc3.c b/linksrc/lkrloc3.c
+index 98748d2..b6dde02 100644
+--- a/linksrc/lkrloc3.c
++++ b/linksrc/lkrloc3.c
+@@ -864,7 +864,7 @@ errdmp3(FILE *fptr, char *str)
+ "         file              module            area                   offset\n");
+ 	fprintf(fptr,
+ "  Refby  %-14.14s    %-14.14s    %-14.14s    ",
+-			hp->h_lfile->f_idp,
++			lkmfile(hp),
+ 			&hp->m_id[0],
+ 			&a[aindex]->a_bap->a_id[0]);
+ 	prntval(fptr, rerr.rtbase);
+@@ -882,7 +882,7 @@ errdmp3(FILE *fptr, char *str)
+ /*        |                 |                 |                 |           */
+ 	fprintf(fptr,
+ "  Defin  %-14.14s    %-14.14s    %-14.14s    ",
+-			raxp->a_bhp->h_lfile->f_idp,
++			lkmfile(raxp->a_bhp),
+ 			&raxp->a_bhp->m_id[0],
+ 			&raxp->a_bap->a_id[0]);
+ 	if (mode & R3_SYM) {
+@@ -967,7 +967,7 @@ erpdmp3(FILE *fptr, char *str)
+ "         file              module            pgarea            pgoffset\n");
+ 	fprintf(fptr,
+ "  PgDef  %-14.14s    %-14.14s    %-14.14s    ",
+-			thp->h_lfile->f_idp,
++			lkmfile(thp),
+ 			&thp->m_id[0],
+ 			&sdp.s_area->a_id[0]);
+ 	prntval(fptr, sdp.s_area->a_addr + sdp.s_addr);
+diff --git a/linksrc/lkrloc4.c b/linksrc/lkrloc4.c
+index 3dd28f6..77217f3 100644
+--- a/linksrc/lkrloc4.c
++++ b/linksrc/lkrloc4.c
+@@ -1164,7 +1164,7 @@ errdmp4(FILE *fptr, char *str)
+ "         file              module            area                   offset\n");
+ 	fprintf(fptr,
+ "  Refby  %-14.14s    %-14.14s    %-14.14s    ",
+-			hp->h_lfile->f_idp,
++			lkmfile(hp),
+ 			&hp->m_id[0],
+ 			&a[aindex]->a_bap->a_id[0]);
+ 	prntval(fptr, rerr.rtbase);
+@@ -1182,7 +1182,7 @@ errdmp4(FILE *fptr, char *str)
+ /*        |                 |                 |                 |           */
+ 	fprintf(fptr,
+ "  Defin  %-14.14s    %-14.14s    %-14.14s    ",
+-			raxp->a_bhp->h_lfile->f_idp,
++			lkmfile(raxp->a_bhp),
+ 			&raxp->a_bhp->m_id[0],
+ 			&raxp->a_bap->a_id[0]);
+ 	if (mode & R4_SYM) {
+@@ -1267,7 +1267,7 @@ erpdmp4(FILE *fptr, char *str)
+ "         file              module            pgarea               pgoffset\n");
+ 	fprintf(fptr,
+ "  PgDef  %-14.14s    %-14.14s    %-14.14s    ",
+-			thp->h_lfile->f_idp,
++			lkmfile(thp),
+ 			&thp->m_id[0],
+ 			&sdp.s_area->a_id[0]);
+ 	prntval(fptr, sdp.s_area->a_addr + sdp.s_addr);
+diff --git a/linksrc/lksdcdb.c b/linksrc/lksdcdb.c
+index 6b30099..f1279f2 100644
+--- a/linksrc/lksdcdb.c
++++ b/linksrc/lksdcdb.c
+@@ -111,7 +111,12 @@ void SDCDBcopy(char *str)
+ 	 * Copy cdb file if present and requested.
+ 	 */
+ 	if (yflag && yfp) {
+-		xfp = afile(str,"cdb",0);
++		/*
++		 * A module compiled without debugging information has no
++		 * cdb file.  That is not a fault - the loop below simply
++		 * has nothing to copy - so the open is made silently.
++		 */
++		xfp = afile(str,"cdb",16);
+ 		if (xfp) {
+ 			while (fgets(line, sizeof(line), xfp) != NULL) {
+ 				fprintf(yfp, "%s", line);
+@@ -163,6 +168,7 @@ void DefineSDCDB(char *name, a_uint value)
+ 	j = 0;
+ 	p1 = name;
+ 	while ((p1 = strchr(p1, '$')) != NULL) {
++		p1 += 1;
+ 		j += 1;
+ 	}
+ 
+diff --git a/linksrc/lksym.c b/linksrc/lksym.c
+index 822a402..03016da 100644
+--- a/linksrc/lksym.c
++++ b/linksrc/lksym.c
+@@ -36,6 +36,7 @@
+  *
+  *	lksym.c contains the following functions:
+  *		int	hash()
++ *		void	lkasym()
+  *		sym *	lkpsym()
+  *		char *	new()
+  *		sym *	newsym()
+@@ -371,6 +372,74 @@ symval(struct sym *tsp)
+ 	return(val);
+ }
+ 
++/*)Function	void	lkasym(void)
++ *
++ *	The function lkasym() indexes every symbol by the areax
++ *	it was defined in, linking the symbols of each areax into
++ *	a list rooted at that areax.
++ *
++ *	The map generator needs, for each area, the symbols defined
++ *	in each of its sections.  Without an index the only way to
++ *	find them is to scan the whole symbol hash table once per
++ *	section, which lstarea() did twice per area - to count the
++ *	symbols and then to collect them - making map generation
++ *	cost O(sections * symbols).  That is unnoticeable while a
++ *	program has a handful of areas and becomes the dominant
++ *	cost of linking when it has thousands.  One pass here
++ *	replaces all of those scans.
++ *
++ *	Symbols are appended to the tail of each list, so walking
++ *	a list visits them in the same order a scan of the hash
++ *	table would have: buckets in ascending order, and within a
++ *	bucket the chain from its head.  lstarea() sorts by address
++ *	afterwards and that sort is stable, so preserving this
++ *	order keeps the map output identical for symbols sharing
++ *	an address.
++ *
++ *	The function must be called after symdef(), which gives an
++ *	areax to any symbol that still lacks one, and before the
++ *	first use of a_syp.
++ *
++ *	local variables:
++ *		int	i		hash table index loop variable
++ *		sym *	sp		pointer to a symbol structure
++ *		areax *	taxp		pointer to the defining areax
++ *
++ *	global variables:
++ *		sym *symhash[NHASH]	array of pointers to NHASH
++ *					linked symbol lists
++ *
++ *	functions called:
++ *		none
++ *
++ *	side effects:
++ *		Every areax referenced by a symbol has its a_syp and
++ *		a_sytp list built;  every indexed symbol has its
++ *		s_alp link set.
++ */
++
++void
++lkasym(void)
++{
++	struct sym *sp;
++	struct areax *taxp;
++	int i;
++
++	for (i=0; i<NHASH; ++i) {
++		for (sp = symhash[i]; sp != NULL; sp = sp->s_sp) {
++			if ((taxp = sp->s_axp) == NULL)
++				continue;
++			sp->s_alp = NULL;
++			if (taxp->a_sytp == NULL) {
++				taxp->a_syp = sp;
++			} else {
++				taxp->a_sytp->s_alp = sp;
++			}
++			taxp->a_sytp = sp;
++		}
++	}
++}
++
+ /*)Function	void	symdef(fp)
+  *
+  *		FILE *	fp		file handle for output
+diff --git a/s19os9/s19os9.c b/s19os9/s19os9.c
+index 4da46a5..fe64c2c 100644
+--- a/s19os9/s19os9.c
++++ b/s19os9/s19os9.c
+@@ -45,7 +45,8 @@ FILE		*outfp;		/* Output File Handle		*/
+ 
+ int		ofarg;		/* Output File Argv Number	*/
+ 
+-char		ib[NINPUT*2];	/* Input text line		*/
++char		ibuf[NINPUT*2];	/* Input text line		*/
++char		*ib = ibuf;	/* Input text line pointer	*/
+ char		*ip;		/* String Pointer		*/
+ 
+ int		lincnt;		/* Input Line Counter		*/
+@@ -467,6 +468,7 @@ nxtline(void)
+ {
+ 	if (fgets(ib, NINPUT, inpfp) == NULL) {
+ 		fclose(inpfp);
++		inpfp = NULL;
+ 		return (0);
+ 	}
+ 	chopcrlf(ib);

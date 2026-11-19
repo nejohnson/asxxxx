@@ -1,0 +1,161 @@
+From c2deffad9b35220ddb7b9a84c175473b1eee5133 Mon Sep 17 00:00:00 2001
+From: Neil Johnson <neil.johnson71@gmail.com>
+Date: Fri, 4 Sep 2026 12:26:27 +0100
+Subject: [PATCH 14/26] aslink: find a -l library named by a path, and say so
+ when one is missing
+
+Two faults in the library lookup, both of which present as undefined
+symbols naming the functions rather than anything about a library.
+
+addlib() offers the -l argument only to the -k paths once any -k has
+been given;  it never tries the argument as a path in its own right.  So
+"-k lib/" with "-l build/fwk.lib" looked for lib/build/fwk.lib, and
+nothing else.  sdld, which descends from this source, has a fallback for
+exactly this - "Ok, that didn't work.  Try with the 'libfil' name only".
+addlib() now does the same after every -k path has failed.
+
+Finding the file is only half of it.  The names inside a library are
+relative to the library, and addfile() recorded the -k path as the
+prefix fndsym() puts in front of them - which is the wrong directory
+whenever the -l argument carried one of its own, and no directory at all
+when the library was found without a -k path.  The prefix now comes from
+where the library was actually found.  For a bare -l under a -k path,
+which is the common case, that is the same string as before.
+
+And addfile() said nothing when it did not find the library:  it freed
+the candidate name and returned, so a mistyped -l, or a correct one the
+linker could not resolve, was indistinguishable from a library that
+simply had nothing to contribute.  It now returns whether it found the
+file and addlib() reports when nothing did.  A warning rather than an
+error, because a link naming a library it does not need is not itself a
+fault and ASxxxx has never refused one.
+
+Found running SDCC's z80 regression suite against these tools:  the
+harness passes "-k <libdir>/ -l gen/ucz80/fwk.lib", so the framework
+library was silently dropped from every link and three tests failed on
+symbols defined in its members.
+
+Verified:
+  - New case libpath:  the lib case's corpus, with the libraries named
+    by path while a -k path is also present.  It fails against master's
+    aslink and passes against this one, the other 20 cases passing in
+    both;  make check is 21/21 and the 20 pre-existing goldens are
+    unchanged.
+  - By hand:  a -l carrying a directory now resolves both with and
+    without a -k path;  a bare -l under a -k path is unaffected;  and a
+    genuinely missing library reports "Cannot find library file".
+  - No new -Wall -Wextra warning, and clean under
+    -fsanitize=address,undefined on all four.
+---
+ linksrc/aslink.h |  2 +-
+ linksrc/lklibr.c | 46 ++++++++++++++++++++++++++++++++++++++--------
+ 2 files changed, 39 insertions(+), 9 deletions(-)
+
+diff --git a/linksrc/aslink.h b/linksrc/aslink.h
+index 434ac71..aa59976 100644
+--- a/linksrc/aslink.h
++++ b/linksrc/aslink.h
+@@ -1290,7 +1290,7 @@ extern	void		relerr4(char *str);
+ extern	void		relerp4(char *str);
+ 
+ /* lklibr.c */
+-extern	void		addfile(char *path, char *libfil);
++extern	int		addfile(char *path, char *libfil);
+ extern	void		addlib(void);
+ extern	void		addpath(void);
+ extern	int		fndsym(char *name);
+diff --git a/linksrc/lklibr.c b/linksrc/lklibr.c
+index 1cd1ffc..00de91d 100644
+--- a/linksrc/lklibr.c
++++ b/linksrc/lklibr.c
+@@ -122,15 +122,29 @@ void
+ addlib(void)
+ {
+ 	struct lbpath *lbph;
++	int found;
+ 
+ 	unget(getnb());
+ 
+ 	if (lbphead == NULL) {
+-		addfile(NULL,ip);
+-		return;
+-	}	
+-	for (lbph=lbphead; lbph; lbph=lbph->next) {
+-		addfile(lbph->path,ip);
++		found = addfile(NULL,ip);
++	} else {
++		found = 0;
++		for (lbph=lbphead; lbph; lbph=lbph->next) {
++			found |= addfile(lbph->path,ip);
++		}
++		/*
++		 * None of the -k paths held it.  The -l argument may be a
++		 * path in its own right, relative to the current directory
++		 * rather than to any library path.
++		 */
++		if (found == 0) {
++			found = addfile(NULL,ip);
++		}
++	}
++	if (found == 0) {
++		fprintf(stderr,
++			"?ASlink-Warning-Cannot find library file %s\n", ip);
+ 	}
+ }
+ 
+@@ -172,13 +186,14 @@ addlib(void)
+  *		An lbname structure may be created.
+  */
+ 
+-void
++int
+ addfile(char *path, char *libfil)
+ {
+ 	FILE *fp;
+ 	char *str, *strend;
+ 	char *p, *q;
+ 	struct lbname *lbnh, *lbn;
++	int found = 0;
+ 
+ 	if ((path != NULL) && (strchr(libfil,':') == NULL)){
+ 		str = (char *) malloc (strlen(path) + strlen(libfil) + 5);
+@@ -202,6 +217,7 @@ addfile(char *path, char *libfil)
+ 	}
+ 	if ((fp = fopen(str, "r")) != NULL) {
+ 		fclose(fp);
++		found = 1;
+ 		lbnh = (struct lbname *) new (sizeof(struct lbname));
+ 		if (lbnhead == NULL) {
+ 			lbnhead = lbnh;
+@@ -211,8 +227,21 @@ addfile(char *path, char *libfil)
+ 				lbn = lbn->next;
+ 			lbn->next = lbnh;
+ 		}
+-		if ((path != NULL) && (strchr(libfil,':') == NULL)){
+-			lbnh->path = path;
++		/*
++		 * The names inside a library are relative to the library
++		 * itself, so the path fndsym() prefixes to them is the
++		 * directory the library was actually found in - which is
++		 * not the -k path whenever the -l argument carried a
++		 * directory of its own, and is not the current directory
++		 * when the library was found without a -k path at all.
++		 */
++		p = str + strlen(str);
++		while ((p != str) && (*(p-1) != '\\') && (*(p-1) != '/')) {
++			p -= 1;
++		}
++		if (p != str) {
++			lbnh->path = (char *) new ((int) (p - str) + 1);
++			strncpy(lbnh->path, str, (int) (p - str));
+ 		}
+ 		lbnh->libfil = (char *) new (strlen(libfil) + 1);
+ 		strcpy(lbnh->libfil,libfil);
+@@ -221,6 +250,7 @@ addfile(char *path, char *libfil)
+ 	} else {
+ 		free(str);
+ 	}
++	return(found);
+ }
+ 
+ /*)Function	void	search(void)

@@ -1,0 +1,132 @@
+From 17535a89dd41b2352668963af70d960bd66579ee Mon Sep 17 00:00:00 2001
+From: Neil Johnson <neil.johnson71@gmail.com>
+Date: Wed, 2 Sep 2026 17:48:35 +0100
+Subject: [PATCH 12/26] ascheck: correct the generated area symbol names in the
+ bndry test
+
+ascheck/bndry/b_areas_[123].asm reference three linker generated
+symbols per module:
+
+	.word	b_Area_2_1	; 00 02
+	.word	s_Area_2
+	.word	l_Area_2
+
+Only the third is a name ASLink produces.  lnkarea() and lnksect()
+in lkarea.c generate exactly four forms, and the manual lists the
+same four (asmlnk.txt, "Linker Generated Symbols"):
+
+	a_<area>	the starting address of the area
+	l_<area>	the length of the area
+	m_<area>_n	the boundary modulus of area segment n
+	s_<area>_n	the starting address of area segment n
+
+so b_Area_2_n and s_Area_2 resolve to nothing and the link fails:
+
+    ?ASlink-Warning-Undefined Global b_Area_2_1 referenced by
+                    module b_areas_1
+    ?ASlink-Warning-Undefined Global s_Area_2 referenced by
+                    module b_areas_1
+
+aslink exits 2 and the three .rst files the test exists to check
+are never produced, so b_areas.bat has been unable to complete.
+The names look like an older convention that the sources were never
+moved off;  they appear nowhere else in the tree or the
+documentation.
+
+Which name each was meant to be is not a guess - the sources record
+the values they expect:
+
+- b_Area_2_n carries ';  00 02' in module 1 and ';  00 48' in
+  modules 2 and 3, is indexed per module, and sits in a file whose
+  subject is .bndry.  0x48 is 72, the least common multiple of the
+  2, 3, 4, 6, 8 and 9 the modules request.  That is the boundary
+  modulus of an area segment, m_<area>_n.
+- s_Area_2 is not indexed, is identical in all three modules, and
+  is paired with l_Area_2.  The partner of an area's length is the
+  area's start, a_<area>.
+
+Renaming them accordingly makes the link succeed and makes the
+tools produce the values the sources predicted:
+
+    0018 00 02   82  .word  m_Area_2_1  ; 00 02
+    001A 00 00   83  .word  a_Area_2
+    001C 00 C2   84  .word  l_Area_2
+    0070 00 48   88  .word  m_Area_2_2  ; 00 48
+
+and asxscn, which compares those columns against those comments
+independently, reports 0 code differences in all three modules.
+
+Verified:
+- aslink exits 0, where it exited 2 before.
+- asxscn -i on b_areas_1.rst, b_areas_2.rst and b_areas_3.rst each
+  report "0 code difference(s) found", exit 0.
+
+Also adds the two cases this unblocks to the astest corpus, taking
+it from five to seven:
+
+- bndry, which pins .even/.odd/.bndry alignment surviving
+  relocation and -a base placement.
+- equtst, which pins the 17 errors equtst.asm provokes on purpose,
+  each annotated in the source with the code it should produce.
+  Its listing is golded rather than its map:  the map holds the two
+  deliberate undefined-symbol warnings, and symdef() walks the
+  symbol hash table in bucket order, so their order depends on
+  NCPS, NHASH and the hash function.  The listing is in source
+  order and is stable.  Line 294 of that golden is the '. = 4'
+  error that segmentation faulted every assembler until the
+  equate() fix, so this case is what keeps it fixed.
+
+make check now runs seven cases and passes.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ ascheck/bndry/b_areas_1.asm | 4 ++--
+ ascheck/bndry/b_areas_2.asm | 4 ++--
+ ascheck/bndry/b_areas_3.asm | 4 ++--
+ 3 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/ascheck/bndry/b_areas_1.asm b/ascheck/bndry/b_areas_1.asm
+index 4795c7b..4e20249 100644
+--- a/ascheck/bndry/b_areas_1.asm
++++ b/ascheck/bndry/b_areas_1.asm
+@@ -79,8 +79,8 @@ Area_1_1:
+ 	.word	8$ - 0$		; 00 03
+ 	.word	9$ - 0$		; 00 04
+ 
+-	.word	b_Area_2_1	; 00 02
+-	.word	s_Area_2
++	.word	m_Area_2_1	; 00 02
++	.word	a_Area_2
+ 	.word	l_Area_2
+ Area_2_1:
+ 
+diff --git a/ascheck/bndry/b_areas_2.asm b/ascheck/bndry/b_areas_2.asm
+index 8812f70..4353c9b 100644
+--- a/ascheck/bndry/b_areas_2.asm
++++ b/ascheck/bndry/b_areas_2.asm
+@@ -85,8 +85,8 @@ Area_1_2:
+ 	.word	9$ - 0$		; 00 10
+ 	.word	10$ - 0$	; 00 12
+ 
+-	.word	b_Area_2_2	; 00 48
+-	.word	s_Area_2
++	.word	m_Area_2_2	; 00 48
++	.word	a_Area_2
+ 	.word	l_Area_2
+ Area_2_2:
+ 
+diff --git a/ascheck/bndry/b_areas_3.asm b/ascheck/bndry/b_areas_3.asm
+index 7c283de..0c9375d 100644
+--- a/ascheck/bndry/b_areas_3.asm
++++ b/ascheck/bndry/b_areas_3.asm
+@@ -85,8 +85,8 @@ Area_1_3:
+ 	.word	9$ - 0$		; 00 15
+ 	.word	10$ - 0$	; 00 16
+ 
+-	.word	b_Area_2_3	; 00 48
+-	.word	s_Area_2
++	.word	m_Area_2_3	; 00 48
++	.word	a_Area_2
+ 	.word	l_Area_2
+ Area_2_3:
+ 

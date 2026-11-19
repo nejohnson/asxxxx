@@ -1,0 +1,56 @@
+From 7625fabebc03dbf3479917213b340f9842dedb18 Mon Sep 17 00:00:00 2001
+From: Neil Johnson <neil.johnson71@gmail.com>
+Date: Mon, 5 Oct 2026 17:58:41 +0100
+Subject: [PATCH 20/26] asrab: "add sp,n" takes a signed displacement, so do
+ not range check it
+
+The Rabbit's ADD SP,n adds an eight bit displacement to SP.  It is
+signed in use - negative to allocate a stack frame, positive to free
+one - and a compiler emits far more of the first.
+
+rabmch.c emitted the operand with outrb(&e2, R_USGN), so "add sp,#-6"
+came back as "<v> Unsigned Number Exceeded Range" with the correct
+bytes already in the listing: the check does not change the encoding,
+it only refuses to let it out.  Measured against SDCC's library, that
+is 190 sites in each of the six Rabbit ports, every one of them a
+stack frame being allocated.
+
+Both signs name the same byte and both are meant, so there is no range
+to check and the flag is dropped rather than swapped for R_SGND -
+which would refuse "add sp,#200", freeing a frame larger than 127.
+sdas reached the same conclusion and says so in a comment,
+"n=signed displacement".
+
+astest/cases/rabsp pins each negative value assembling to the same
+byte as the unsigned spelling of that byte, which is the argument.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ asrab/rabmch.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/asrab/rabmch.c b/asrab/rabmch.c
+index fa8f2be..56af0f2 100644
+--- a/asrab/rabmch.c
++++ b/asrab/rabmch.c
+@@ -945,12 +945,19 @@ machine(struct mne *mp)
+ 		}
+                 /*
+                  * add  sp,n	[sp,#n]
++                 *
++                 * n is a signed displacement: negative to
++                 * allocate a stack frame, positive to free one.
++                 * Checking it as unsigned refused every frame
++                 * allocation, which is the common case, so the
++                 * byte is emitted without a range check - both
++                 * signs name the same byte and both are meant.
+                  */
+ 		if ((mchtyp == X_R2K) && (rf == S_ADD) &&
+ 		    (t1 == S_R16) && (e1.e_addr == SP) &&
+ 		    (t2 == S_IMMED)) {
+ 			outab(0x27);
+-			outrb(&e2, R_USGN);
++			outrb(&e2, 0);
+ 			break;
+                 }
+ 		xerr('a', "Invalid Addressing Mode.");

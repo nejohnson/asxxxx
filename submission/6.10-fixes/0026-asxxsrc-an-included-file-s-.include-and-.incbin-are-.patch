@@ -1,0 +1,63 @@
+From e801f50c80f273cb788e1fa58af0f2aadba57555 Mon Sep 17 00:00:00 2001
+From: Neil Johnson <neil@soundsemiconductor.com>
+Date: Fri, 16 Oct 2026 16:11:52 +0100
+Subject: [PATCH 26/26] asxxsrc: an included file's .include and .incbin are
+ found beside it
+
+At the first line of an included file nxtline() did strcpy(afn,
+asmc->afn) and set afp, leaving afs alone.  .include gives the new file
+its includer's afn, so the copy was of a string onto itself - undefined
+behaviour ASan reports as strcpy-param-overlap - and afs stayed the
+includer's path while afp became the included file's path length.  The
+.include and .incbin directives build a relative name from afs and afp,
+so a file included from another directory could not include or take
+anything beside itself:  sub/x.asm's .include "y.asm" opened the
+includer's specification cut at the length of sub/'s path, with y.asm
+after it.
+
+The included file's afs and afp are now made current together, and afn
+is left alone:  it is the source file's name, which symfn() prefixes to
+the symbols it makes so that they are unique across modules.
+
+astest, three new cases:  incpath fails before and passes after;  itst
+(upstream's ascheck/itst, nested-include diagnostics) and incsym (the
+symbols an included file makes are named after the module) were golded
+with the unfixed assembler and pass unchanged.  52 of 52.  Sweep of
+all 54 assemblers over the 171 sources under their own directories,
+old and new builds:  2812 output files identical after the timestamps.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ asxxsrc/aslex.c | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/asxxsrc/aslex.c b/asxxsrc/aslex.c
+index 4e71ba5..2c46610 100644
+--- a/asxxsrc/aslex.c
++++ b/asxxsrc/aslex.c
+@@ -599,8 +599,8 @@ int skpcomma(void)
+  *	side effects:
+  *		include file will be closed at detection of end of file.
+  *		the next sequential source file may be selected.
+- *		The current file specification afn[] and the path
+- *		length afp may be changed.
++ *		The current file specification afs, its name afn
++ *		and the path length afp may be changed.
+  *		The respective line counter will be updated.
+  *
+  * --------------------------------------------------------------
+@@ -898,7 +898,13 @@ loop:	if (asmc == NULL) return(0);
+ 			goto loop;
+ 		} else {
+ 			if (incline++ == 0) {
+-				strcpy(afn, asmc->afn);
++				/*
++				 * The included file's own path, for the
++				 * .include and .incbin it contains.  afn
++				 * stays the source file's name:  the
++				 * symbols symfn() makes are per module.
++				 */
++				afs = asmc->afs;
+ 				afp = asmc->afp;
+ 			}
+ 			srcline = incline;

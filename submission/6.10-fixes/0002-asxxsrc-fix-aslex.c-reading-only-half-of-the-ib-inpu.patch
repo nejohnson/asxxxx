@@ -1,0 +1,110 @@
+From 8444af1956dc6751a5dff4a7ce44c488dc9ed15d Mon Sep 17 00:00:00 2001
+From: Neil Johnson <neil.johnson71@gmail.com>
+Date: Tue, 18 Aug 2026 08:00:30 +0100
+Subject: [PATCH 02/26] asxxsrc: fix aslex.c reading only half of the ib[]
+ input line buffer
+
+The assembler-source text line buffer is declared as:
+
+  char ib[NINPUT*2];   /* asxxsrc/asdata.c, asxxxx.h */
+
+(NINPUT is 380, so ib[] holds up to 759 usable characters plus a
+terminator - the doubling is deliberate headroom for in-place
+.define substitution growth, per the explicit NINPUT*2-1 bounds
+checks already present in asmcro.c and aslex.c's replace()).
+
+However, the three places in aslex.c that actually fill ib[] from a
+file - the T_ASM and T_INCL cases in nxtline() (fgets) and the
+T_MACRO case (fgetm) - all passed just NINPUT, not NINPUT*2, as the
+maximum read length. For any source line at or beyond 380 characters,
+fgets()/fgetm() would stop 379 characters in, without having reached
+the newline, terminating the buffer at that point and leaving the
+remainder of the line - including its trailing newline - unread in
+the stream.
+
+The consequence is worst when the long line is a ';'-prefixed comment:
+the leading ';' is in the truncated (and correctly ignored) first
+part, but the leftover tail of the comment is then read as if it were
+the *next* source line, with no comment marker on it. Whatever text
+happens to fall after the 379-character cut is then handed to the
+lexer as real assembler source, typically producing a spurious
+directive/mnemonic error:
+
+  ?ASxxxx-Error-<o> in line N of file
+                <o> 'N <garbage tail of the comment>'
+                <o> directive / mnemonic error
+
+This isn't specific to comments - any line (code or comment) at or
+past the threshold is corrupted the same way, but comments are the
+common case since nothing else stops a human or a code generator from
+producing an arbitrarily long one.
+
+Fix: pass NINPUT*2 (matching ib[]'s actual declared size) to the
+fgets()/fgetm() calls in aslex.c, instead of NINPUT. This is the
+buffer this code already owns; it was just never being read to its
+full capacity. No buffer sizes changed, no new allocation - this
+purely corrects a stale size argument left over from before ib[] was
+doubled in size.
+
+This is in asxxsrc/, the assembler core shared by every target
+(asz80, as8085, aspic, ...), so the fix applies uniformly regardless
+of which command-line target/mnemonic set is used.
+
+Verified with a standalone asz80 built from asxxsrc/*.c + asz80/*.c:
+- Binary-searched the exact failure threshold: a source line of 379
+  characters (excluding the newline) assembles correctly (right at
+  the boundary, since the "lost" newline degenerates harmlessly into
+  an extra blank line); 380 characters is the first length that
+  corrupts, matching NINPUT exactly and confirming this as the exact
+  root cause rather than a nearby off-by-one.
+- A 400-character ';'-comment line (representative of the reported
+  case) reproduces the spurious directive/mnemonic error on the
+  unpatched binary and assembles cleanly - correct line count, correct
+  code generated for the following statement - on the patched one.
+- Re-tested the threshold search against the fix: now holds up to 759
+  characters (NINPUT*2 - 1, i.e. ib[]'s actual full capacity) before
+  hitting the same (now much larger, and expected) limit.
+- Ran the existing asz80/t80.bat and asz80/tz80.bat self-tests
+  (asz80 -gloaxf, aslink -xu, asxscn on the resulting .lst/.rst) with
+  both the unpatched and patched binaries: byte-identical .lst/.rst
+  output apart from timestamps in both cases, tz80 fully clean (0
+  errors, 0 asxscn differences) in both, and t80's two pre-existing
+  asxscn "code difference" reports (an unrelated HD64180 TST
+  addressing quirk) present identically in both runs. No regressions.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+---
+ asxxsrc/aslex.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/asxxsrc/aslex.c b/asxxsrc/aslex.c
+index febb62c..16465f1 100644
+--- a/asxxsrc/aslex.c
++++ b/asxxsrc/aslex.c
+@@ -728,7 +728,7 @@ loop:	if (asmc == NULL) return(0);
+ 		break;
+ 
+ 	case T_ASM:
+-		if (fgets(ib, NINPUT, asmc->fp) == NULL) {
++		if (fgets(ib, NINPUT*2, asmc->fp) == NULL) {
+ 			if (trcflags & TRC_ASM) {
+ 				if ((pass == 2) && (lfp != NULL)) {
+ 					fprintf(lfp, ";A<< %s\n", asmc->afs);
+@@ -768,7 +768,7 @@ loop:	if (asmc == NULL) return(0);
+ 		break;
+ 
+ 	case T_INCL:
+-		if (fgets(ib, NINPUT, asmc->fp) == NULL) {
++		if (fgets(ib, NINPUT*2, asmc->fp) == NULL) {
+ 			if (trcflags & TRC_INC) {
+ 				if ((pass == 2) && (lfp != NULL)) {
+ 					fprintf(lfp, ";I<< (%d) %s\n", incfil, asmc->afs);
+@@ -820,7 +820,7 @@ loop:	if (asmc == NULL) return(0);
+ 		break;
+ 
+ 	case T_MACRO:
+-		if (fgetm(ib, NINPUT, asmc->fp) == NULL) {
++		if (fgetm(ib, NINPUT*2, asmc->fp) == NULL) {
+ 			nfp = (struct macrofp *) asmc->fp;
+ 			np = nfp->np;
+ 			if (trcflags & TRC_MCR) {

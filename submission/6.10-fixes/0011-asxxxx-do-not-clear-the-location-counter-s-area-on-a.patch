@@ -1,0 +1,104 @@
+From 45f96d697dd5a882f634df4a195d97887471f5db Mon Sep 17 00:00:00 2001
+From: Neil Johnson <neil.johnson71@gmail.com>
+Date: Wed, 2 Sep 2026 17:46:14 +0100
+Subject: [PATCH 11/26] asxxxx: do not clear the location counter's area on a
+ '. = <arg>' error
+
+Assembling a source containing a direct assignment of an absolute
+value to the location counter,
+
+	. = 4
+
+segmentation faults every one of the 56 assemblers.  The minimal
+reproducer is that one line.
+
+equate() detects the error and reports it:
+
+	sp = lookup(id);
+	if (sp == &dot) {
+		outall();
+		if (e1->e_flag || e1->e_base.e_ap != dot.s_area)
+			err('.');
+	}
+
+err('.') is not fatal, so the function runs on to record the area
+the value belongs to:
+
+	} else {
+		sp->s_area = e1->e_base.e_ap;
+	}
+
+For an absolute expression there is no area and e_base.e_ap is
+NULL, so this assigns NULL to dot.s_area - the very condition just
+reported as an error.  At the end of the pass asmain.c:586 calls
+newdot(dot.s_area) to flush the area, newdot() dereferences its
+argument at asmain.c:3373, and the assembler dies:
+
+    AddressSanitizer: SEGV on unknown address 0x000000000020
+        #0 newdot asxxsrc/asmain.c:3373
+        #1 main   asxxsrc/asmain.c:586
+
+The location counter must always belong to an area;  main() sets
+dot.s_area to &dca before each pass for exactly that reason.  Leave
+it alone when the error fires.  The value assignment is unaffected,
+the '.' error is still reported, and every other equate is
+untouched:  the new branch is reached only when the symbol being
+assigned is the location counter itself and the expression is
+absolute.
+
+This is not a corner case reachable only by a malformed file.
+ascheck/equtst/equtst.asm is upstream's own test of assembler
+equates;  it exercises 17 deliberate errors, each annotated in the
+source with the code it should produce, and line 294 is
+
+	. = 4			;.		program counter error
+
+so the file has been unable to complete since that line was added.
+Anything else containing the same construct fails the same way.
+
+Verified:
+- The one line reproducer now reports the documented error and
+  exits 2 rather than 139:
+    ?ASxxxx-Error-<.> in line 1 of min
+                  <.> use ". = . + <arg>" not ". = <arg>"
+- ascheck assembles equtst.asm to completion, producing all 17
+  annotated errors and no others, and aslink links the result.
+- Built every one of the 56 assemblers from these sources and from
+  master's, and ran both over equtst.asm: all 56 crashed with 139
+  before and all 56 exit 2 after.  The fault was in shared code and
+  affected every target.
+- Ran both builds of all 56 over asxtst/tconst.asm: byte identical
+  .lst and .rel in every case, so nothing else moved.
+- Built with -fsanitize=address,undefined and reran equtst.asm: no
+  reports.
+- Compiled with -Wall with no warnings.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ asxxsrc/asmain.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/asxxsrc/asmain.c b/asxxsrc/asmain.c
+index cd93ffe..0e86f07 100644
+--- a/asxxsrc/asmain.c
++++ b/asxxsrc/asmain.c
+@@ -3115,6 +3115,19 @@ equate(char *id, struct expr *e1, a_uint equtype)
+ 	if (e1->e_flag && (e1->e_base.e_sp->s_type == S_NEW)) {
+ 		rerr();
+ 		xerr('x', "global argument NOT ALLOWED in an equate");
++	} else
++	if ((sp == &dot) && (e1->e_base.e_ap == NULL)) {
++		/*
++		 * A direct assignment of an absolute value to the
++		 * current location counter, '. = 4' rather than
++		 * '. = . + 4', has already been reported as a '.'
++		 * error above.  Do not go on to record the area of
++		 * the value, which for an absolute expression is
++		 * none:  the location counter must always have an
++		 * area, and newdot() dereferences it at the end of
++		 * the pass.
++		 */
++		;
+ 	} else {
+ 		sp->s_area = e1->e_base.e_ap;
+ 	}

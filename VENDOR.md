@@ -161,6 +161,12 @@ Never on a branch that goes upstream.
 - `GC-SECTIONS-FEASIBILITY.md` — a study of whether ASLink could gain an
   `ld --gc-sections` equivalent. Added in `6b8fdc3`, updated in
   `abd44c1`, `8341553`, `89cf960`, `9e68e94`, `3b976de` and `7690547`.
+- `submission/` — the series written out for upstream, who works from
+  patch files rather than git. `6.10-fixes/` holds the 26 fixes as
+  numbered patches made with `git format-patch 903242b..e801f50`
+  (leaving out `VENDOR.md`), the same changes as one `all-fixes.patch`,
+  and a `README.txt` index. Applying either with GNU `patch -p1` to the
+  V6.10 distribution gives a tree identical to `e801f50`'s.
 
 ### The submission series
 

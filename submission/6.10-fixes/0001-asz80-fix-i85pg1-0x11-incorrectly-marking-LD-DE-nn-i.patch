@@ -1,0 +1,97 @@
+From 932b9f5a3de47d94f505d0bf7bf7d7ed25100af6 Mon Sep 17 00:00:00 2001
+From: Neil Johnson <neil.johnson71@gmail.com>
+Date: Tue, 18 Aug 2026 07:55:18 +0100
+Subject: [PATCH 01/26] asz80: fix i85pg1[0x11] incorrectly marking LD DE,nn
+ illegal on 8085
+
+i85pg1[256] is the per-opcode legality/cycle-count table used to check
+whether a generated Z80-mnemonic instruction is a standard (documented)
+8085 instruction. Position 0x11 (LD DE,nn / LXI D,nnnn in Intel syntax)
+was marked UN (undefined/illegal), causing:
+
+  ?ASxxxx-Error-<o> in line N of file
+                <o> 'N  ld  de, #nnnn'
+                <o> Not a standard 8085 instruction.
+
+for any .8085-mode source using this instruction - despite LXI D,d16
+being an entirely ordinary, documented 8085 instruction, identical in
+form and timing (10 states) to LXI B,d16 and LXI H,d16, both of which
+are correctly marked legal at 0x01 and 0x21 in the same table. The
+sibling x85pg1[] table (used when undocumented instructions/flags are
+also enabled) already has the correct value (10) at 0x11, making this
+look like an isolated transcription slip in i85pg1[] specifically
+rather than a deliberate restriction.
+
+Fix: asz80/z80mch.c, i85pg1[0x11] UN -> 10.
+
+The existing regression test asz80/t80.asm never exercised .8085 mode
+at all (only .8080, at what were lines 4 and 1087 before this change),
+so it would not have caught this even with reference output available.
+Added a small .8085-mode section at the end of t80.asm covering all
+four LD rp,nn forms (BC/DE/HL/SP) to close that gap.
+
+Verified:
+- Built a standalone asz80 from asxxsrc/*.c + asz80/*.c with plain gcc.
+- Before the fix: assembling a small .8085-mode file with LD BC,nn /
+  LD DE,nn / LD HL,nn / LD SP,nn fails only on DE, with the error
+  above; BC/HL/SP assemble fine - exactly as the table's asymmetry
+  predicts.
+- After the fix: all four assemble cleanly, with correct opcode bytes
+  (01/11/21/31 + little-endian 16-bit immediate, e.g. 11 22 22 for
+  LD DE,#0x2222) and matching [10]-state cost annotations in the
+  listing.
+- Ran the existing t80.bat pipeline (asz80 -gloaxf, aslink -xu,
+  asxscn on both .lst and .rst) before and after the fix: identical
+  output apart from timestamps and the new .8085 section - no
+  regressions. The two pre-existing asxscn "code difference" reports
+  (TST #n / TST n, an unrelated HD64180 addressing quirk) are present
+  identically in both runs.
+- With the new .8085 test section added: the unpatched binary produces
+  one extra error, on the new LD DE,nn line, exactly as expected; the
+  patched binary produces the same error count as the baseline run
+  without that section, confirming the addition catches this class of
+  bug going forward.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+---
+ asz80/t80.asm  | 16 ++++++++++++++++
+ asz80/z80mch.c |  2 +-
+ 2 files changed, 17 insertions(+), 1 deletion(-)
+
+diff --git a/asz80/t80.asm b/asz80/t80.asm
+index f458789..34cd3f2 100644
+--- a/asz80/t80.asm
++++ b/asz80/t80.asm
+@@ -1160,3 +1160,19 @@ jr5:
+ 	tstio	 n			;ED 74 20
+ 	;***********************************************************
+ 
++	.page
++	;***********************************************************
++	; 8085 Codes
++	;***********************************************************
++
++;	.8080
++	.8085
++
++	;***********************************************************
++	; load register pair with immediate data
++	ld	bc,#nn			;01 84 05
++	ld	de,#nn			;11 84 05
++	ld	hl,#nn			;21 84 05
++	ld	sp,#nn			;31 84 05
++	;***********************************************************
++
+diff --git a/asz80/z80mch.c b/asz80/z80mch.c
+index 139b1e4..8ba64fa 100644
+--- a/asz80/z80mch.c
++++ b/asz80/z80mch.c
+@@ -433,7 +433,7 @@ static char i85pg1[256] = {
+ /*--*--* 0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F */
+ /*--*--* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+ /*00*/   4,10, 7, 6, 4, 4, 7, 4,UN,10, 7, 6, 4, 4, 7, 4,
+-/*10*/   7,UN, 7, 6, 4, 4, 7, 4,UN,10, 7, 6, 4, 4, 7, 4,
++/*10*/   7,10, 7, 6, 4, 4, 7, 4,UN,10, 7, 6, 4, 4, 7, 4,
+ /*20*/   4,10,16, 6, 4, 4, 7, 4,UN,10,16, 6, 4, 4, 7, 4,
+ /*30*/   4,10,13, 6,10,10,10, 4,UN,10,13, 6, 4, 4, 7, 4,
+ /*40*/   4, 4, 4, 4, 4, 4, 4, 7, 4, 4, 4, 4, 4, 4, 7, 4,

@@ -1,0 +1,114 @@
+From ae14058e0c9d524c45050b60fba0256ad3d383c2 Mon Sep 17 00:00:00 2001
+From: Neil Johnson <neil.johnson71@gmail.com>
+Date: Tue, 6 Oct 2026 14:28:58 +0100
+Subject: [PATCH 24/26] asgb: the relocatable ldh could not link at all
+
+A relocatable ldh operand had 0xFF00 added to it and was emitted with
+R_PAGN.  R4_PAGN checks (relv & ~p_mask) == sdp.s_addr, sdp.s_addr
+comes from a P record, a P record comes from .setdp - and asgb has no
+.setdp.  So sdp.s_addr was always zero and the check could not pass
+for any ordinary symbol: every relocatable ldh was a PageN relocation
+error.
+
+Nothing noticed because nothing reached it.  tgb.asm exercises the
+form, but its n8 is an absolute equate, so the value is resolved at
+assembly time and no relocation is emitted.  The four "ld a,(nn)"
+sites above have the same R_PAGN against a raw address rather than an
+offset, and are equally unreachable.
+
+All seven become a plain low byte relocation, which is what SDAS
+emits and what the instruction actually wants.  LDH takes an eight
+bit offset from 0xFF00 and both spellings of it - the offset 0x42 and
+the full address 0xFF42 - have the same low byte, so there is nothing
+to disambiguate and the emitted byte is right either way.
+
+What is given up is catching a symbol that resolves outside both
+pages.  ASxxxx has no relocation mode for "page 0 or page 0xFF", and
+either mode it does have would reject one of the two spellings this
+assembler already accepts when the value is absolute - where the
+check is kept, because there the value can be seen.  Nothing that
+used to be caught stops being caught: nothing could link this far.
+
+Fixes tst_bug-3997 in SDCC's sm83 suite, which reaches it through a
+__sfr with no __at - those get a full HRAM address.  That was the
+last failure on the port that was not baseline.
+
+astest/cases/gbldh now links two modules and pins both spellings
+resolving to the same byte.  tgb.asm still assembles to the bytes its
+own comments give, all 1384.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ asgb/gbmch.c | 17 +++++++----------
+ 1 file changed, 7 insertions(+), 10 deletions(-)
+
+diff --git a/asgb/gbmch.c b/asgb/gbmch.c
+index 2af4e12..9bd78b1 100644
+--- a/asgb/gbmch.c
++++ b/asgb/gbmch.c
+@@ -395,7 +395,7 @@ machine(struct mne *mp)
+ 				}
+ 			} else {
+ 				outab(0xF0);
+-				outrb(&e1, R_PAGN);
++				outrb(&e1, 0);
+ 			}
+ 			break;
+ 		case S_IDBC:	outab(0x0A);	break;
+@@ -436,7 +436,7 @@ machine(struct mne *mp)
+ 					}
+ 				} else {
+ 					outab(0xF0);
+-					outrb(&e1, R_PAGN);
++					outrb(&e1, 0);
+ 				}
+ 				break;
+ 			case S_IDBC:	outab(0x0A);	break;
+@@ -496,7 +496,7 @@ machine(struct mne *mp)
+ 					}
+ 				} else {
+ 					outab(0xF0);
+-					outrb(&e2, R_PAGN);
++					outrb(&e2, 0);
+ 				}
+ 				break;
+ 			case S_IDC:	outab(0xF2);	break;
+@@ -545,7 +545,7 @@ machine(struct mne *mp)
+ 					}
+ 				} else {
+ 					outab(0xE0);
+-					outrb(&e1, R_PAGN);
++					outrb(&e1, 0);
+ 				}
+ 				break;
+ 			case S_IDC:	outab(0xE2);	break;
+@@ -810,8 +810,7 @@ machine(struct mne *mp)
+ 					break;
+ 				} else {
+ 					outab(0xF0);
+-					e1.e_addr += 0xFF00;
+-					outrb(&e1, R_PAGN);
++					outrb(&e1, 0);
+ 				}
+ 				break;
+ 			case S_IDC:	outab(0xF2);			break;
+@@ -848,8 +847,7 @@ machine(struct mne *mp)
+ 				break;
+ 			} else {
+ 				outab(0xF0);
+-				e2.e_addr += 0xFF00;
+-				outrb(&e2, R_PAGN);
++				outrb(&e2, 0);
+ 			}
+ 			break;
+ 		}
+@@ -867,8 +865,7 @@ machine(struct mne *mp)
+ 				break;
+ 			} else {
+ 				outab(0xE0);
+-				e1.e_addr += 0xFF00;
+-				outrb(&e1, R_PAGN);
++				outrb(&e1, 0);
+ 			}
+ 			break;
+ 		}

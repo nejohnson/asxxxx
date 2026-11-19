@@ -1,0 +1,153 @@
+From 5f61880bd3bf62a0e59f52a20f71eb41a654501c Mon Sep 17 00:00:00 2001
+From: Neil Johnson <neil.johnson71@gmail.com>
+Date: Fri, 2 Oct 2026 14:37:45 +0100
+Subject: [PATCH 18/26] asxxxx: keep manufactured symbol names to identifier
+ characters
+
+asexpr.c builds four kinds of symbol name by prefixing the source file's
+name, verbatim:
+
+    "%.32s.%.80s.%d$"   a scoped local
+    "%.32s_%d"          a '.' reference
+    "%.32s.%.80s"       a qualified local
+    "%.32s_%d"          an expression symbol, exprsym()
+
+A file name may contain characters an identifier may not.  A dash is the
+common one and it is also subtraction, so assembling my-file.asm wrote
+
+    S my-file.__str_1 =D 0011
+    S my-file_1 =R1^D((my-file.__str_1 >> 8))
+
+into the .rel, and then the linker had to read that name back as an
+operand of an expression, where it cannot be told from a subtraction.
+Nothing in anyone's source contains the dash: the assembler puts it
+there, so the assembler is the right place not to.
+
+symfn() returns the file name with everything that is not an identifier
+character replaced by '_', and the four sites use it.  The names now also
+agree with the .module name, which SDCC had already sanitised - the
+object carried "M gte_20030109_1" and "S gte_20030109-1.__str_1" side by
+side, contradicting each other.
+
+Measured rather than assumed, and the order matters: with the assembler
+fixed and the linker *unmodified*, a link that reported six errors
+reports none.
+
+ - 54 of the 62 targets assemble their own t*.asm both ways: 108 of 108
+   .rel and .lst outputs byte identical, so this is inert for every file
+   whose name was already an identifier.
+ - All 62 targets build with no errors and no warnings; astest 32 of 32.
+
+Found while migrating SDCC's mcs51 port, which is the first to put such a
+name inside an expression - gcc-torture file names are full of dashes.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ asxxsrc/asexpr.c | 57 ++++++++++++++++++++++++++++++++++++++++++++----
+ asxxsrc/asxxxx.h |  1 +
+ 2 files changed, 54 insertions(+), 4 deletions(-)
+
+diff --git a/asxxsrc/asexpr.c b/asxxsrc/asexpr.c
+index 66c7f68..56e6803 100644
+--- a/asxxsrc/asexpr.c
++++ b/asxxsrc/asexpr.c
+@@ -370,7 +370,7 @@ exprscan(struct expr *esp, char *bgn, char *end)
+ 					/*
+ 					 * Create symbol name
+ 					 */
+-					sprintf(nbufr, "%.32s.%.80s.%d$", asmc->afn, sp->s_id, n);
++					sprintf(nbufr, "%.32s.%.80s.%d$", symfn(), sp->s_id, n);
+ 					while (tp) {
+ 						if (tp->t_num == n) {
+ 							/*
+@@ -389,11 +389,11 @@ exprscan(struct expr *esp, char *bgn, char *end)
+ 					sp = slookup(sbufr);
+ 					if (sp != NULL) {
+ 						if (sp == &dot) {
+-							sprintf(nbufr, "%.32s_%d", asmc->afn, ++rlsym);
++							sprintf(nbufr, "%.32s_%d", symfn(), ++rlsym);
+ 							sp = newsym(nbufr, sbufr, sp->s_area, sp->s_addr);
+ 							s = nbufr;
+ 						} else {
+-							sprintf(nbufr, "%.32s.%.80s", asmc->afn, sbufr);
++							sprintf(nbufr, "%.32s.%.80s", symfn(), sbufr);
+ 							if ((sp->s_flag & S_GBL) == 0) {
+ 								sp = newsym(nbufr, sbufr, sp->s_area, sp->s_addr);
+ 								s = nbufr;
+@@ -482,6 +482,55 @@ newsym(char *str, char *id, struct area *ap, a_uint addr)
+ 	return(sp);
+ }
+ 
++/*)Function	char *	symfn()
++ *
++ *	The function symfn() returns the current source file's name with
++ *	every character that may not appear in an identifier replaced by
++ *	'_', truncated to the 32 characters the names built from it use.
++ *
++ *	Those names are manufactured rather than written by anyone: a local
++ *	symbol or an expression symbol is made unique across modules by
++ *	prefixing it with the file's name.  A file name may contain
++ *	characters an identifier may not, and a dash is both the common one
++ *	and an operator, so a name like
++ *
++ *		S my-file.__str_1 =D 0011
++ *
++ *	is written into a .rel file where the linker must read it back as an
++ *	operand of an expression and cannot tell it from a subtraction.  The
++ *	assembler is the only thing that ever puts a dash there, so it is
++ *	the right place to not put one.
++ *
++ *	local variables:
++ *		char *	p		pointer to the file name
++ *		int	i		character index
++ *
++ *	global variables:
++ *		asmf *	asmc		current input file
++ *		char	ctype[]		character type array
++ *
++ *	functions called:
++ *		none
++ *
++ *	side effects:
++ *		none
++ */
++
++char *
++symfn(void)
++{
++	static char fn[33];
++	char *p;
++	int i;
++
++	p = asmc->afn;
++	for (i=0; (i < (int) (sizeof(fn)-1)) && p[i]; i++) {
++		fn[i] = (ctype[p[i] & 0x7F] & (LETTER|DIGIT)) ? p[i] : '_';
++	}
++	fn[i] = '\0';
++	return(fn);
++}
++
+ /*)Function	void	exprsym(struct expr *esp, char *str)
+  *
+  *		struct expr *	esp	pointer to the expression to modify
+@@ -525,7 +574,7 @@ exprsym(struct expr *esp, char *str)
+ 	/*
+ 	 * Create a new symbol
+ 	 */
+-	sprintf(bufr, "%.32s_%d", asmc->afn, ++rlsym);
++	sprintf(bufr, "%.32s_%d", symfn(), ++rlsym);
+ 	sp = lookup(bufr);
+ 	if ((sp->s_type == S_NEW) && (sp->s_flag == 0)) {
+ 		sp->s_id = strsto(bufr);
+diff --git a/asxxsrc/asxxxx.h b/asxxsrc/asxxxx.h
+index 18471db..4fbbea2 100644
+--- a/asxxsrc/asxxxx.h
++++ b/asxxsrc/asxxxx.h
+@@ -1386,6 +1386,7 @@ extern	void		exprx(struct expr *esp, int n);
+ extern	void		exprmasks(int n);
+ extern	void		exprscan(struct expr *esp, char *end, char *bgn);
+ extern	void		exprsym(struct expr *esp, char *str);
++extern	char *		symfn(void);
+ extern	int		is_abs(struct expr *esp);
+ extern	int		is_digit(int c, int r);
+ extern	struct sym *	newsym(char *str, char *id, struct area *ap, a_uint addr);

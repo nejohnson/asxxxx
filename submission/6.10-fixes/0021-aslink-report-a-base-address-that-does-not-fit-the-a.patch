@@ -1,0 +1,219 @@
+From de13f1c50050866283cb52fe59150a14f7d0a1fe Mon Sep 17 00:00:00 2001
+From: Neil Johnson <neil.johnson71@gmail.com>
+Date: Tue, 6 Oct 2026 10:53:28 +0100
+Subject: [PATCH 21/26] aslink: report a base address that does not fit the
+ address space
+
+"-a AREA = value" and "-b BANK = value" took whatever expr() handed
+back, and expr() reduces every number it scans to the address space.
+A base beyond the space therefore did not fail: it silently became the
+low bits of itself, the area was placed there, and lstarea() printed
+the same masked value - so the map read correctly while the placement
+was wrong.
+
+Found on SDCC's Rabbit ports, which reach extended memory through an
+MMU and write "-a _XDATA = 0x84000".  The link is 16 bit, so _XDATA
+was placed at 0x4000 and 40005 bytes of it were laid over the data
+area at 0xA000.  The program linked, exit 0, and ran until the
+simulator gave up.
+
+The check has to be made where the digits are read rather than on the
+value that comes back, and that is the whole difficulty.  expr() sign
+extends, so a legitimate base in the top half of memory - 0xFF80 on a
+16 bit target - arrives as 0xFFFFFF80, and a check written against the
+returned value rejects it.  That is the same trap as the three sign
+extension bugs already fixed in the area size checks.  So nmbr()
+records the loss in expr_ovf as each literal is scanned, and setarea()
+and setbank() ask afterwards.
+
+Only the three places that scan a literal call nmbr().  An arithmetic
+result is deliberately not checked, because an expression may pass
+outside the address space and come back and truncating the
+intermediate is the documented behaviour.  The cost is that
+"-a CODE = 0x84000>>4" is reported although it evaluates to 0x8400;
+checking the result instead cannot work at all, since the truncation
+happens inside term() before any caller sees it.
+
+astest/cases/basebig pins both directions, and the positive case is
+0xFF80 - the sign extended one.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ linksrc/aslink.h |  2 ++
+ linksrc/lkarea.c | 15 +++++++++++++++
+ linksrc/lkbank.c | 12 ++++++++++++
+ linksrc/lkdata.c |  6 ++++++
+ linksrc/lkeval.c | 46 +++++++++++++++++++++++++++++++++++++++++++---
+ 5 files changed, 78 insertions(+), 3 deletions(-)
+
+diff --git a/linksrc/aslink.h b/linksrc/aslink.h
+index 1420182..d0e7d3e 100644
+--- a/linksrc/aslink.h
++++ b/linksrc/aslink.h
+@@ -1071,6 +1071,8 @@ extern	char	*expr_ip;	/*	initial expression ip
+ 				 */
+ extern	int	expr_radix;	/*	expression default radix
+ 				 */
++extern	int	expr_ovf;	/*	a scanned number did not fit a_mask
++				 */
+ extern	int	as_msb;		/*	Assembler selected MSB
+ 				 */
+ extern	a_uint	a_mask;		/*	Address Mask
+diff --git a/linksrc/lkarea.c b/linksrc/lkarea.c
+index 57eb564..471816f 100644
+--- a/linksrc/lkarea.c
++++ b/linksrc/lkarea.c
+@@ -672,6 +672,7 @@ setarea(void)
+ 		ip = a_bsp->strp;
+ 		getid(id, -1);
+ 		if (getnb() == '=') {
++			expr_ovf = 0;
+ 			v = expr();
+ 			for (ap = areap; ap != NULL; ap = ap->a_ap) {
+ 				if (symeq(id, ap->a_id, 1))
+@@ -680,6 +681,20 @@ setarea(void)
+ 			if (ap == NULL) {
+ 				fprintf(stderr,	"?ASlink-Error-No definition of area %s\n", id);
+ 				lkerr++;
++			} else
++			/*
++			 * A base larger than the address space is not a
++			 * base this linker can honour, and masking it to
++			 * fit puts the area somewhere nobody asked for -
++			 * silently, because the map prints the address
++			 * masked too, so it reads correctly while the
++			 * placement is wrong.
++			 */
++			if (expr_ovf) {
++				fprintf(stderr,
++				"?ASlink-Error-Base Address of Area %s Exceeds The Address Space\n",
++					ap->a_id);
++				lkerr++;
+ 			} else {
+ 				ap->a_addr = v;
+ 				ap->a_bset = 1;
+diff --git a/linksrc/lkbank.c b/linksrc/lkbank.c
+index 0dc6bd6..339c562 100644
+--- a/linksrc/lkbank.c
++++ b/linksrc/lkbank.c
+@@ -335,6 +335,7 @@ setbank(void)
+ 		ip = b_bsp->strp;
+ 		getid(id, -1);
+ 		if (getnb() == '=') {
++			expr_ovf = 0;
+ 			v = expr() & a_mask;
+ 			for (bp = bankp; bp != NULL; bp = bp->b_bp) {
+ 				if (symeq(id, bp->b_id, 1))
+@@ -343,6 +344,17 @@ setbank(void)
+ 			if (bp == NULL) {
+ 				fprintf(stderr,	"?ASlink-Error-No definition of bank %s\n", id);
+ 				lkerr++;
++			} else
++			/*
++			 * As setarea(), except that the masking here was
++			 * always explicit - which made the loss no less
++			 * silent.
++			 */
++			if (expr_ovf) {
++				fprintf(stderr,
++				"?ASlink-Error-Base Address of Bank %s Exceeds The Address Space\n",
++					bp->b_id);
++				lkerr++;
+ 			} else {
+ 				bp->b_base = v;
+ 				bp->b_flag = B_BASE;
+diff --git a/linksrc/lkdata.c b/linksrc/lkdata.c
+index 9038bfb..b356c26 100644
+--- a/linksrc/lkdata.c
++++ b/linksrc/lkdata.c
+@@ -146,6 +146,12 @@ char	*expr_ip;	/*	initial expression ip
+ 			 */
+ int	expr_radix;	/*	expression default radix
+ 			 */
++int	expr_ovf;	/*	a number scanned by term() did not fit the
++			 *	address space.  Recorded here rather than
++			 *	reported there: out of range is only an
++			 *	error in some contexts, and term() does
++			 *	not know which it is in.
++			 */
+ int	as_msb;		/*	Assembler selected MSB
+ 			 */
+ a_uint	a_mask;		/*	Address Mask
+diff --git a/linksrc/lkeval.c b/linksrc/lkeval.c
+index eed988d..a2ab3be 100644
+--- a/linksrc/lkeval.c
++++ b/linksrc/lkeval.c
+@@ -323,6 +323,46 @@ binop(int c, a_uint v, a_uint ve)
+ 	return((v & s_mask) ? v | ~v_mask : v & v_mask);
+ }
+ 
++/*)Function	a_uint	nmbr(v)
++ *
++ *		a_uint	v		the value just scanned
++ *
++ *	The function nmbr() reduces a scanned number to the address
++ *	space, the way every other value in an expression is reduced,
++ *	and records whether anything was lost.
++ *
++ *	A literal larger than the address space cannot be what was
++ *	meant, but it is not always an error: it is only wrong where
++ *	the value is an address, and term() has no way of knowing
++ *	whether it is.  So the loss is recorded in expr_ovf and left
++ *	for a caller that cares - setarea() and setbank(), where a
++ *	base that does not fit is a silent misplacement - to ask
++ *	about afterwards.
++ *
++ *	Only the three places that scan a literal call this.  An
++ *	arithmetic result is deliberately not checked: an expression
++ *	may legitimately pass outside the address space and come back,
++ *	and truncating the intermediate is the documented behaviour.
++ *
++ *	global variables:
++ *		a_uint	a_mask		address mask
++ *		int	expr_ovf	value did not fit flag
++ *		a_uint	s_mask		sign mask
++ *		a_uint	v_mask		overflow mask
++ *
++ *	side effects:
++ *		expr_ovf is set if the value did not fit.
++ */
++
++static a_uint
++nmbr(a_uint v)
++{
++	if ((v & ~a_mask) != 0) {
++		expr_ovf = 1;
++	}
++	return((v & s_mask) ? v | ~v_mask : v & v_mask);
++}
++
+ /*)Function	a_uint	term(a_uint v)
+  *
+  *	The function term() evaluates a single constant
+@@ -464,7 +504,7 @@ term(a_uint v)
+ 				c = get();
+ 			}
+ 			unget(c);
+-			return((v & s_mask) ? v | ~v_mask : v & v_mask);
++			return(nmbr(v));
+ 		}
+ 		ip = jp;
+ 		c = expr_radix;
+@@ -507,7 +547,7 @@ term(a_uint v)
+ 		if (c != '.') {
+ 			unget(c);
+ 		}
+-		return((v & s_mask) ? v | ~v_mask : v & v_mask);
++		return(nmbr(v));
+ 	}
+ 	/* 2) */
+ 	if ((ctype[c] & RAD16) && (r == 16)) {
+@@ -532,7 +572,7 @@ term(a_uint v)
+ 				c = get();
+ 			}
+ 			unget(c);
+-			return((v & s_mask) ? v | ~v_mask : v & v_mask);
++			return(nmbr(v));
+ 		}
+ 		c = n;
+ 		ip = jp;
