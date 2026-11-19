@@ -1,0 +1,119 @@
+From 53b82b9df8cb1ae8a64dc3d929b2aab6f2c08a98 Mon Sep 17 00:00:00 2001
+From: Neil Johnson <neil.johnson71@gmail.com>
+Date: Wed, 7 Oct 2026 11:51:54 +0100
+Subject: [PATCH 25/26] asxxsrc: re-enter an overlay area at its start, not
+ where it left off
+
+newdot() treated every area alike: leaving one recorded its size,
+entering one resumed at that size.  For a concatenating area that is
+right.  For an overlay area it is not.  The manual says what an
+overlay is - "OVR and CON options indicate if program sections of the
+same name will overlay each other (start at the same location) or be
+concatenated with each other" - and a module's own sections of that
+name were being concatenated.
+
+Four lines show it:
+
+    .area OVL (REL,OVR)
+    a1:  .ds 8
+    .area OVL (REL,OVR)
+    a2:  .ds 8
+
+a1 at 0, a2 at 8.  Both ought to be at 0, and the area ought to be 8
+bytes rather than 16.
+
+What it costs in practice: SDCC's 8051 back end gives every function
+its own block of the overlay area, one .area OSEG per function, and
+relies on them all starting at zero - which is how the overlay works
+at all, since two functions that never call each other can share the
+bytes.  Continued rather than overlaid, a module's overlay comes out
+as the sum of every function's block instead of the largest.  One
+program in SDCC's regression corpus, rotate_size_64, has 44 such
+functions of 8 bytes each: 352 bytes asked of a 128 byte internal
+RAM where 16 were called for.  The 8051 reaches internal RAM below
+0x80 with a direct operand and SFRs above it with the same operand,
+so the excess was laid over the timers and ports, silently, and
+30 of the corpus's 2868 programs were built that way.
+
+So an overlay now restarts at its base on entry and takes the size
+of its largest block, which is also what SDAS does - newdot() there
+carries the two cases with the comments "a new overlay starts at 0,
+no fuzz" and "the size of an overlay is the biggest size
+encountered".  The fuzz goes with it: an overlay re-entered at its
+start owes nothing to what the last block in it did.
+
+IS_OVR() excludes an area that is also ABS.  A bare OVR already
+means ABS+OVR in the object record (asout.c), and an absolute area
+is positioned by .org, which has to keep working on re-entry.
+
+New case astest/cases/ovr: blocks of 8, 12 and 4 in one module and 6
+and 3 in another.  All five start at the area's base and the area is
+12 bytes.  The concatenating area beside it still appends, 2+1+4=7 -
+which is what says the change reached only overlays.  On master the
+case reports the area as 24 bytes.
+
+Verified:
+  - astest 46/46 (the case fails against master, 24 bytes for 12)
+  - 56 targets built from this tree and from master, each run over
+    asxtst/tconst.asm and ascheck/equtst/equtst.asm: 112 runs, every
+    .lst and .rel byte-identical.  Neither input re-enters an
+    overlay, which is the point - nothing that does not changes.
+  - as8051 built -fsanitize=address,undefined, run over equtst,
+    tconst and the 44-function SDCC module: clean.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ asxxsrc/asmain.c | 25 +++++++++++++++++++++----
+ asxxsrc/asxxxx.h |  3 +++
+ 2 files changed, 24 insertions(+), 4 deletions(-)
+
+diff --git a/asxxsrc/asmain.c b/asxxsrc/asmain.c
+index 0e86f07..1162046 100644
+--- a/asxxsrc/asmain.c
++++ b/asxxsrc/asmain.c
+@@ -3384,10 +3384,27 @@ newdot(struct area *nap)
+ 
+ 	oap = dot.s_area;
+ 	oap->a_fuzz = fuzz;
+-	oap->a_size = dot.s_addr;
+-	fuzz = nap->a_fuzz;
+-	dot.s_area = nap;
+-	dot.s_addr = nap->a_size;
++	if (IS_OVR(oap)) {
++		if (oap->a_size < dot.s_addr) {
++			oap->a_size = dot.s_addr;
++		}
++	} else {
++		oap->a_size = dot.s_addr;
++	}
++	if (IS_OVR(nap)) {
++		/*
++		 * An overlay is re-entered at its start, so what the
++		 * last block in it did to the fuzz says nothing about
++		 * this one.
++		 */
++		fuzz = 0;
++		dot.s_area = nap;
++		dot.s_addr = 0;
++	} else {
++		fuzz = nap->a_fuzz;
++		dot.s_area = nap;
++		dot.s_addr = nap->a_size;
++	}
+ 	outall();
+ }
+ 
+diff --git a/asxxsrc/asxxxx.h b/asxxsrc/asxxxx.h
+index 4fbbea2..89ae2fd 100644
+--- a/asxxsrc/asxxxx.h
++++ b/asxxsrc/asxxxx.h
+@@ -314,6 +314,9 @@ struct	bndry
+ #define	A_OVR	0x0404		/* Overlaying */
+ #define	A_REL	0x0800		/* Relocatable */
+ #define	A_ABS	0x0808		/* Absolute */
++
++#define	IS_OVR(ap)	((((ap)->a_flag & A_OVR) == A_OVR) && \
++			 (((ap)->a_flag & A_ABS) != A_ABS))
+ #define	A_NOPAG	0x1000		/* Non-Paged */
+ #define	A_PAG	0x1010		/* Paged */
+ 

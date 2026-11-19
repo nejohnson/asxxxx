@@ -1,0 +1,94 @@
+From 391264ed8c99f0aa782b2199f33b59873589fafd Mon Sep 17 00:00:00 2001
+From: Neil Johnson <neil.johnson71@gmail.com>
+Date: Mon, 7 Sep 2026 16:38:20 +0100
+Subject: [PATCH 15/26] aslink: a malformed object record is an error, not an
+ endless loop
+
+eval() reads every numeric field of a .rel record:
+
+    c = getnb();
+    while ((n = digit(c, radix)) >= 0) { v = v*radix + n; c = get(); }
+    unget(c);
+
+Given a character that is not a digit in the current radix the loop body
+never runs, unget() puts the character back unread, and eval() returns 0
+having consumed nothing.  Every caller reads its record with
+
+    while (more()) { ... eval() ... }
+
+and more() reports there is still input, because the character is
+neither a NUL nor a ';'.  So eval() is called again on the same
+character, and again, and the linker never finishes.
+
+Any object file that is corrupt or truncated mid-record can do this, and
+T and R - the code and relocation records - are among the ones that do,
+so it is not an exotic input:  an assembler killed part way through a
+write, a full disk, an interrupted build.  A hang is worse than an error
+here, because under a parallel make it is a stuck job rather than a
+failed one, and nothing says which file was at fault.
+
+Caught in eval() rather than in each of its forty-odd call sites, since
+every one of them is reading a machine generated number and none can
+legitimately be looking at anything else.  The test is narrow: only a
+character that is neither a digit nor an end of line, which is exactly
+the case that loops - reading past the end of a record is left behaving
+as it did.
+
+Found while probing the linker's behaviour on damaged input, not by a
+real corrupt file.
+
+Verified:
+  - "T 00 zz", "R 00 00 zz", and a "D"/"Q" radix record that puts the
+    rest of the file in the wrong radix, all four of which hang against
+    master, now stop with ER_FATAL naming the offending byte, the radix,
+    the file and the line.  "X 99 nonsense", a truncated object file,
+    and an ordinary link are unchanged.
+  - New case badrel, a hand written object file valid but for a "zz" in
+    its second T record.  It passes here;  against master's aslink it
+    wedges astest, which is what it is there to catch.
+  - make check 22/22, the 21 pre-existing goldens unchanged.
+  - No new -Wall -Wextra warning, and clean under
+    -fsanitize=address,undefined on all four malformed inputs and on a
+    good link.
+
+Note for whoever meets this next:  because the failure mode is a hang,
+badrel does not fail when the fix is absent, it hangs, and takes
+'make check' with it.  astest has no timeout.  The case comment says so.
+---
+ linksrc/lkeval.c | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/linksrc/lkeval.c b/linksrc/lkeval.c
+index 526e8ca..eed988d 100644
+--- a/linksrc/lkeval.c
++++ b/linksrc/lkeval.c
+@@ -84,6 +84,29 @@ eval(void)
+ 
+ 	c = getnb();
+ 	v = 0;
++	/*
++	 * Every field eval() reads comes from a machine generated .rel
++	 * file and is a number in the current radix.  A character that is
++	 * neither a digit nor the end of the line means the file is not
++	 * one:  it is corrupt, or it was written in a radix other than the
++	 * one its header asked for.
++	 *
++	 * This has to be caught here rather than left to the callers.  The
++	 * loop below would not run, unget() would put the character back
++	 * unread, and eval() would return 0 having consumed nothing - so
++	 * the 'while (more())' loops that read these records would call it
++	 * again on the same character, and again, without end.
++	 */
++	if ((digit(c, radix) < 0) && (c != '\0') && (c != ';')) {
++		fprintf(stderr,
++			"?ASlink-Error-Invalid digit 0x%02X in object record,"
++			" radix %d\n", c & 0xFF, radix);
++		if (cfp != NULL) {
++			fprintf(stderr, "              file : %s\n", cfp->f_idp);
++		}
++		fprintf(stderr, "              line : %s\n", ib);
++		lkexit(ER_FATAL);
++	}
+ 	while ((n = digit(c, radix)) >= 0) {
+ 		v = v*radix + n;
+ 		c = get();

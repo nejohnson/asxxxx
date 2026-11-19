@@ -1,0 +1,235 @@
+From 50e0e039051ffa0b380dafbf5c6bd235b1f62d51 Mon Sep 17 00:00:00 2001
+From: Neil Johnson <neil.johnson71@gmail.com>
+Date: Wed, 23 Sep 2026 09:57:31 +0100
+Subject: [PATCH 16/26] aslink: do not crash reporting a relocation error
+ against a library module
+
+errdmp3() and errdmp4() print where a symbol was referenced from and
+where it was defined, each as hp->h_lfile->f_idp.  A module named in the
+link script has an lfile.  A module pulled from a library does not:
+loadfile() in lklibr.c opens the member with fopen() rather than reaching
+it through the script's file list, so it never becomes the current lfile,
+and lkmain.c has already cleared cfp for the library pass by then.  Every
+header read from a library therefore carried h_lfile NULL, and the six
+sites that dereferenced it took the linker down with SIGSEGV.
+
+The timing made it worse than it sounds.  The crash lands part way
+through the diagnostic - the Refby line is printed, the Defin line kills
+it - so the user is told a symbol is wrong, not told where it came from,
+and gets a core dump in place of the rest.  And it fires for the ordinary
+case of a symbol resolved out of a library, which is most of them.
+
+Modules now carry the library they were read from, in a new h_lspc set
+from lklibr.c's lblibspc, and the reporting goes through lkmfile(), which
+names the lfile when there is one, the library when there is not, and
+returns a string rather than NULL in the case that is currently
+unreachable.  The diagnostic is better for it:  a module out of a library
+used to have nothing to print even when it did not crash, and now names
+the library it came from.
+
+astest/cases/lkliberr pins the exit status.  Two hand-written as6808
+modules put edef_lo and edef_hi either side of the end of page 0, so the
+direct page reference in emain cannot reach edef_hi, which is resolved
+out of elib.lib.  aslink must report that and exit 2; before this it
+exited 139.  Verified both ways - the case fails against the unfixed
+linker and passes against the fixed one - and the other 24 cases are
+unaffected.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ linksrc/aslink.h  |  3 +++
+ linksrc/lkhead.c  | 47 +++++++++++++++++++++++++++++++++++++++++++++++
+ linksrc/lklibr.c  | 11 +++++++++++
+ linksrc/lkrloc3.c |  6 +++---
+ linksrc/lkrloc4.c |  6 +++---
+ 5 files changed, 67 insertions(+), 6 deletions(-)
+
+diff --git a/linksrc/aslink.h b/linksrc/aslink.h
+index aa59976..1420182 100644
+--- a/linksrc/aslink.h
++++ b/linksrc/aslink.h
+@@ -515,6 +515,7 @@ struct	head
+ 	int	h_nmode;	/* # of modes */
+ 	struct	mode  **m_list;	/* Mode list */
+ 	char *	m_id;		/* Module name */
++	char *	h_lspc;		/* Library file, if the module came from one */
+ };
+ 
+ /*
+@@ -1178,6 +1179,7 @@ extern	void		setbank(void);
+ 
+ /* lkhead.c */
+ extern	void		module(void);
++extern	char *		lkmfile(struct head *thp);
+ extern	void		newhead(void);
+ extern	void		newmode(void);
+ 
+@@ -1296,6 +1298,7 @@ extern	void		addpath(void);
+ extern	int		fndsym(char *name);
+ extern	void		library(void);
+ extern	void		loadfile(char *filspc);
++extern	char *		lblibspc;	/* Library being loaded, or NULL */
+ extern	void		search(void);
+ 
+ /* lkout.c */
+diff --git a/linksrc/lkhead.c b/linksrc/lkhead.c
+index d482a24..ac36694 100644
+--- a/linksrc/lkhead.c
++++ b/linksrc/lkhead.c
+@@ -39,6 +39,52 @@
+  *	lkhead.c contains no local variables.
+  */
+ 
++/*)Function	char *	lkmfile(thp)
++ *
++ *		struct head *thp	module header
++ *
++ *	The function lkmfile() returns the name of the file a module was
++ *	read from, for use in a diagnostic.
++ *
++ *	A module named in the link script has an lfile and is reported by
++ *	its path.  A module pulled from a library has none:  loadfile() in
++ *	lklibr.c opens the library member directly, so it never becomes the
++ *	current lfile, and lkmain.c has already cleared cfp for the library
++ *	pass by then.  Such a module is reported by its library instead.
++ *	The remaining case, a header with neither, cannot arise today but is
++ *	given a name rather than a NULL:  every caller is in the middle of
++ *	printing an error, and taking the linker down while it does so -
++ *	which is what dereferencing h_lfile unconditionally used to do -
++ *	loses the diagnostic the user was about to be given.
++ *
++ *	local variables:
++ *		none
++ *
++ *	global variables:
++ *		none
++ *
++ *	functions called:
++ *		none
++ *
++ *	side effects:
++ *		none
++ */
++
++char *
++lkmfile(struct head *thp)
++{
++	if (thp == NULL) {
++		return "<unknown>";
++	}
++	if (thp->h_lfile != NULL) {
++		return thp->h_lfile->f_idp;
++	}
++	if (thp->h_lspc != NULL) {
++		return thp->h_lspc;
++	}
++	return "<library>";
++}
++
+ /*)Function	void	newhead(void)
+  *
+  *	The function newhead() creates a head structure.  All head
+@@ -112,6 +158,7 @@ newhead(void)
+ 	 * Initialize the header
+ 	 */
+ 	hp->h_lfile = cfp;		/* Set file pointer */
++	hp->h_lspc = lblibspc;		/* Library, if this came from one */
+ 	hp->m_id = "";			/* No Module */
+ 	/*
+ 	 * Scan for Parameters	 
+diff --git a/linksrc/lklibr.c b/linksrc/lklibr.c
+index 00de91d..06d7ed8 100644
+--- a/linksrc/lklibr.c
++++ b/linksrc/lklibr.c
+@@ -30,6 +30,15 @@
+ 
+ #include "aslink.h"
+ 
++/*
++ * The library object file currently being read, or NULL when the modules
++ * being read came from the link script.  A library member is opened here
++ * with fopen() rather than reached through the script's file list, so it
++ * never becomes the current lfile and its header carries no h_lfile - see
++ * lkmfile() in lkhead.c.
++ */
++char	*lblibspc = NULL;
++
+ /*)Module	lklibr.c
+  *
+  *	The module lklibr.c contains the functions which
+@@ -596,11 +605,13 @@ loadfile(char *filspc)
+ 	char str[NINPUT];
+ 
+ 	if ((fp = fopen(filspc,"r")) != NULL) {
++		lblibspc = filspc;
+ 		while (fgets(str, NINPUT, fp) != NULL) {
+ 			chopcrlf(str);
+ 			ip = str;
+ 			link();
+ 		}
++		lblibspc = NULL;
+ 		fclose(fp);
+ 	}
+ }
+diff --git a/linksrc/lkrloc3.c b/linksrc/lkrloc3.c
+index 98748d2..b6dde02 100644
+--- a/linksrc/lkrloc3.c
++++ b/linksrc/lkrloc3.c
+@@ -864,7 +864,7 @@ errdmp3(FILE *fptr, char *str)
+ "         file              module            area                   offset\n");
+ 	fprintf(fptr,
+ "  Refby  %-14.14s    %-14.14s    %-14.14s    ",
+-			hp->h_lfile->f_idp,
++			lkmfile(hp),
+ 			&hp->m_id[0],
+ 			&a[aindex]->a_bap->a_id[0]);
+ 	prntval(fptr, rerr.rtbase);
+@@ -882,7 +882,7 @@ errdmp3(FILE *fptr, char *str)
+ /*        |                 |                 |                 |           */
+ 	fprintf(fptr,
+ "  Defin  %-14.14s    %-14.14s    %-14.14s    ",
+-			raxp->a_bhp->h_lfile->f_idp,
++			lkmfile(raxp->a_bhp),
+ 			&raxp->a_bhp->m_id[0],
+ 			&raxp->a_bap->a_id[0]);
+ 	if (mode & R3_SYM) {
+@@ -967,7 +967,7 @@ erpdmp3(FILE *fptr, char *str)
+ "         file              module            pgarea            pgoffset\n");
+ 	fprintf(fptr,
+ "  PgDef  %-14.14s    %-14.14s    %-14.14s    ",
+-			thp->h_lfile->f_idp,
++			lkmfile(thp),
+ 			&thp->m_id[0],
+ 			&sdp.s_area->a_id[0]);
+ 	prntval(fptr, sdp.s_area->a_addr + sdp.s_addr);
+diff --git a/linksrc/lkrloc4.c b/linksrc/lkrloc4.c
+index 3dd28f6..77217f3 100644
+--- a/linksrc/lkrloc4.c
++++ b/linksrc/lkrloc4.c
+@@ -1164,7 +1164,7 @@ errdmp4(FILE *fptr, char *str)
+ "         file              module            area                   offset\n");
+ 	fprintf(fptr,
+ "  Refby  %-14.14s    %-14.14s    %-14.14s    ",
+-			hp->h_lfile->f_idp,
++			lkmfile(hp),
+ 			&hp->m_id[0],
+ 			&a[aindex]->a_bap->a_id[0]);
+ 	prntval(fptr, rerr.rtbase);
+@@ -1182,7 +1182,7 @@ errdmp4(FILE *fptr, char *str)
+ /*        |                 |                 |                 |           */
+ 	fprintf(fptr,
+ "  Defin  %-14.14s    %-14.14s    %-14.14s    ",
+-			raxp->a_bhp->h_lfile->f_idp,
++			lkmfile(raxp->a_bhp),
+ 			&raxp->a_bhp->m_id[0],
+ 			&raxp->a_bap->a_id[0]);
+ 	if (mode & R4_SYM) {
+@@ -1267,7 +1267,7 @@ erpdmp4(FILE *fptr, char *str)
+ "         file              module            pgarea               pgoffset\n");
+ 	fprintf(fptr,
+ "  PgDef  %-14.14s    %-14.14s    %-14.14s    ",
+-			thp->h_lfile->f_idp,
++			lkmfile(thp),
+ 			&thp->m_id[0],
+ 			&sdp.s_area->a_id[0]);
+ 	prntval(fptr, sdp.s_area->a_addr + sdp.s_addr);

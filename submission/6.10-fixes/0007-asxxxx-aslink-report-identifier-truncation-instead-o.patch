@@ -1,0 +1,767 @@
+From 5a3bfee527ac5c91f8c53fc6800e4646fc99a96b Mon Sep 17 00:00:00 2001
+From: Neil Johnson <njohnson@roku.com>
+Date: Tue, 1 Sep 2026 14:25:15 +0100
+Subject: [PATCH 07/26] asxxxx, aslink: report identifier truncation instead of
+ doing it silently
+
+getid() in aslex.c and getid()/getsymid() in lklex.c all stop
+copying at NCPS-1 characters and carry on without comment. The
+name the tool retains is then not the name it was given, and
+nothing downstream can tell the difference: two identifiers
+sharing their first NCPS-1 characters become one. In the linker
+that binds a reference to the wrong symbol or merges two areas,
+neither of which produces a diagnostic at any later stage - the
+link simply succeeds and the program misbehaves. d5e2177 removed
+the divergence between the two tools' limits, so truncation is at
+least consistent now, but it is still silent, and a name past the
+common limit still merges.
+
+Report it at the point it happens, on both sides.
+
+Assembler (aslex.c): getid() and getst() raise a new 'l' error
+when input was discarded. getst() is included because it scans
+the .module name, which reaches the .rel file's M record and the
+debug output. 'l' joins the table in assubr.c as "identifier too
+long, name truncated"; the letter was previously unused. Errors
+are recorded per line and reported by diag() only on pass 2, so a
+truncated name is reported once, appears in the .lst against the
+offending line like any other error code, and sets the exit
+status through aserr.
+
+Linker (lklex.c): getid() and getsymid() report through a new
+static iderr(), naming the truncated result so it can be matched
+against the .rel file, and set lkerr. getfid() is deliberately
+left alone - a truncated file specification surfaces immediately
+as a "cannot open" failure rather than as wrong output, which is
+a different and already-visible problem.
+
+Verified:
+- Assembler, 260-character identifier: reports
+  "?ASxxxx-Error-<l> in line 2 of trunc" with the generic message
+  "identifier too long, name truncated", once per offending line,
+  on both the .globl and the label definition, in the .lst as
+  well as on stderr, exit 2.
+- Boundary is exact: 254- and 255-character identifiers are
+  accepted silently and written to the .rel in full; 256 raises
+  the error. NCPS-1 is 255.
+- Linker, hand-built .rel carrying a 300-character symbol name
+  and a 300-character area name (the assembler will no longer
+  emit either): both the getsymid() path and the getid() path
+  report "?ASlink-Error-Identifier longer than 255 characters,
+  truncated to ...", exit 2.
+- Regression across every target sharing asxxsrc: built both the
+  master and the patched assembler for all 56 targets and
+  assembled asxtst/tconst.asm with each. All 56 produce
+  byte-identical .lst and .rel output, and none raises a spurious
+  'l' error.
+- Ran the asz80 self-tests tz80.bat and t80.bat end to end
+  (asz80 -gloaxf, aslink -xu) with the master and patched tools:
+  byte-identical .rel, .lst and .rst.
+- Built the linker with -fsanitize=address,undefined and ran the
+  truncation reproducer with -m, -j and -y: no sanitizer reports.
+- Both tools rebuilt with -Wall: no new warnings.
+
+Not done here: the manual's error-code list (THE ASSEMBLER /
+ERRORS in asxdoc/asmlnk.txt) needs an <l> entry, but asmlnk.txt
+is generated from asmlnk.rtf and editing the generated copy alone
+would put the two out of step. Worth noting that the same list is
+already missing <k> and <v>, which the code has had for some
+time.
+
+Folded in, asxdoc, asxhtml: document the <k>, <l> and <v> assembler error codes:
+
+The manual's error list (THE ASSEMBLER / ERRORS) describes 16 of
+the 19 codes the assembler can actually produce. <k> and <v> have
+been in assubr.c's errors[] table for some time without ever
+reaching the manual, and <l> is new in d150ace. A programmer
+hitting any of the three finds the code on stderr and in the .lst
+but no entry explaining it.
+
+Add all three, in the alphabetical position the list already uses:
+
+      <k>   Numerical conversion error:  invalid digit.
+            Raised by digit() in asexpr.c when a character is a
+            valid hexadecimal digit but not valid in the radix
+            currently in effect.
+
+      <l>   Identifier too long:  the name has been truncated.
+            Raised by getid() and getst() in aslex.c.
+
+      <v>   Value out of range:  signed or unsigned argument.
+            Raised by rngchk() in asexpr.c and by the signed and
+            unsigned range checks in asout.c.
+
+After this the manual's list and assubr.c's errors[] table agree
+exactly - same 19 codes, none missing on either side.
+
+The manual ships as four renderings of one fixed-width layout,
+and asxdoc/ and asxhtml/ carry byte-identical copies of three of
+them, so the same change is applied to six files:
+
+    asxdoc/asmlnk.txt    asxhtml/asmlnk.txt
+    asxdoc/asmlnk.rtf    asxhtml/asmlnk.rtf
+                         asxhtml/asmlnk.htm
+                         asxhtml/asxs03.htm
+
+asmlnk.rtf is the same text in a WordPad wrapper - one \par per
+line, one \page per form feed, so its logical lines correspond
+1:1 with asmlnk.txt and it takes the identical edit. asmlnk.htm
+is asmlnk.txt with an HTML header and footer, offset by six
+lines. asxs03.htm is a separately generated, de-paginated edition
+with &lt;/&gt; escaping and a narrower indent, so it takes the
+same three entries reformatted to its own layout.
+
+Pagination is hardcoded in all of these, so the six inserted
+lines have to be absorbed. Page 1-67 was exactly full at 49
+content lines; the overflow cascades into 1-68 and 1-69, both
+also full, and comes to rest in 1-70, which had only 38 of its 49
+lines used. The page count is therefore unchanged, and no page
+header or table of contents entry needed renumbering. The four
+pages now hold 48/49/49/44 content lines, and the break is placed
+so <v> and <z> stay together at the head of 1-68 rather than
+leaving <v> orphaned at the foot of 1-67.
+
+Verified:
+- The reflowed region is line-for-line identical across
+  asmlnk.txt, asmlnk.rtf and asmlnk.htm after the edit, checked
+  by reconstructing the RTF's logical lines and comparing.
+- No page in the document exceeds 55 lines; the page count is
+  still 700 and the RTF still has 700 \page markers.
+- Page headers after the edited region (1-70 through 1-73) and
+  all table of contents entries are untouched.
+- The RTF's unescaped brace balance is 0, as it was before; the
+  file's raw -65 count is pre-existing and comes entirely from
+  escaped \{ and \} in the document's C examples.
+- asxdoc/ and asxhtml/ copies remain byte-identical to each
+  other.
+
+Not updated: asmlnk.pdf, which is a print of the RTF and cannot
+be regenerated here without changing the whole document's
+typesetting. It now lags the other four renderings by these three
+entries.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ asxdoc/asmlnk.rtf  | 40 +++++++++++++++++++++++-----------------
+ asxdoc/asmlnk.txt  | 40 +++++++++++++++++++++++-----------------
+ asxhtml/asmlnk.htm | 40 +++++++++++++++++++++++-----------------
+ asxhtml/asmlnk.rtf | 40 +++++++++++++++++++++++-----------------
+ asxhtml/asmlnk.txt | 40 +++++++++++++++++++++++-----------------
+ asxhtml/asxs03.htm |  6 ++++++
+ asxxsrc/aslex.c    | 18 ++++++++++++++++--
+ asxxsrc/assubr.c   |  1 +
+ linksrc/lklex.c    | 41 ++++++++++++++++++++++++++++++++++++++++-
+ 9 files changed, 178 insertions(+), 88 deletions(-)
+
+diff --git a/asxdoc/asmlnk.rtf b/asxdoc/asmlnk.rtf
+index 83297ff..f0134a2 100644
+--- a/asxdoc/asmlnk.rtf
++++ b/asxdoc/asmlnk.rtf
+@@ -3973,6 +3973,10 @@
+ \par
+               <i>   Caused  by  an  .include file error or an .if/.endif\par
+                     mismatch.  \par
++\par
++              <k>   Numerical conversion error:  invalid digit.  \par
++\par
++              <l>   Identifier too long:  the name has been truncated.  \par
+ \par
+               <m>   Multiple  definitions  of  the  same label, multiple\par
+                     .module directives, multiple conflicting  attributes\par
+@@ -4001,17 +4005,19 @@
+ \par
+               <u>   Undefined symbol encountered during assembly.  \par
+ \par
+-              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  \par
+-\par
+-\par
+-           Most  assemblers  now include more descriptive error messages\par
+-        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to\par
+ \page\par
+ \par
+         THE ASSEMBLER                                          PAGE 1-68\par
+         ERRORS\par
+ \par
+ \par
++              <v>   Value out of range:  signed or unsigned argument.  \par
++\par
++              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  \par
++\par
++\par
++           Most  assemblers  now include more descriptive error messages\par
++        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to\par
+         provide the expanded error messages will show three lines on the\par
+         stdout device as shown by this error:  \par
+ \par
+@@ -4054,18 +4060,18 @@
+              1.  Error field (first two characters of line) \par
+ \par
+              2.  Current location counter \par
++\page\par
+ \par
+-             3.  Generated code in byte format \par
++        THE ASSEMBLER                                          PAGE 1-69\par
++        LISTING FILE\par
+ \par
+-             4.  Opcode cycles count \par
+ \par
+-             5.  Source text line number \par
+ \par
+-\page\par
++             3.  Generated code in byte format \par
+ \par
+-        THE ASSEMBLER                                          PAGE 1-69\par
+-        LISTING FILE\par
++             4.  Opcode cycles count \par
+ \par
++             5.  Source text line number \par
+ \par
+              6.  Source text \par
+ \par
+@@ -4108,18 +4114,18 @@
+         characters:  \par
+ \par
+              1.  *   paged relocation \par
+-\par
+-             2.  u   low  byte of unsigned word or unsigned byte \par
+-\par
+-             3.  v   high byte of unsigned word \par
+-\par
+-             4.  p   PCR low  byte of word relocation or PCR byte \par
+ \par
+ \page\par
+ \par
+         THE ASSEMBLER                                          PAGE 1-70\par
+         LISTING FILE\par
+ \par
++\par
++             2.  u   low  byte of unsigned word or unsigned byte \par
++\par
++             3.  v   high byte of unsigned word \par
++\par
++             4.  p   PCR low  byte of word relocation or PCR byte \par
+ \par
+              5.  q   PCR high byte of word relocation \par
+ \par
+diff --git a/asxdoc/asmlnk.txt b/asxdoc/asmlnk.txt
+index ed6437c..cf21249 100644
+--- a/asxdoc/asmlnk.txt
++++ b/asxdoc/asmlnk.txt
+@@ -3972,6 +3972,10 @@
+               <i>   Caused  by  an  .include file error or an .if/.endif
+                     mismatch.  
+ 
++              <k>   Numerical conversion error:  invalid digit.  
++
++              <l>   Identifier too long:  the name has been truncated.  
++
+               <m>   Multiple  definitions  of  the  same label, multiple
+                     .module directives, multiple conflicting  attributes
+                     in  an  .area or .bank directive or the use of .hilo
+@@ -3999,17 +4003,19 @@
+ 
+               <u>   Undefined symbol encountered during assembly.  
+ 
+-              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  
+-
+-
+-           Most  assemblers  now include more descriptive error messages
+-        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to
+ 
+ 
+         THE ASSEMBLER                                          PAGE 1-68
+         ERRORS
+ 
+ 
++              <v>   Value out of range:  signed or unsigned argument.  
++
++              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  
++
++
++           Most  assemblers  now include more descriptive error messages
++        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to
+         provide the expanded error messages will show three lines on the
+         stdout device as shown by this error:  
+ 
+@@ -4052,18 +4058,18 @@
+              1.  Error field (first two characters of line) 
+ 
+              2.  Current location counter 
++
+ 
+-             3.  Generated code in byte format 
++        THE ASSEMBLER                                          PAGE 1-69
++        LISTING FILE
+ 
+-             4.  Opcode cycles count 
+ 
+-             5.  Source text line number 
+ 
+-
++             3.  Generated code in byte format 
+ 
+-        THE ASSEMBLER                                          PAGE 1-69
+-        LISTING FILE
++             4.  Opcode cycles count 
+ 
++             5.  Source text line number 
+ 
+              6.  Source text 
+ 
+@@ -4107,18 +4113,18 @@
+ 
+              1.  *   paged relocation 
+ 
+-             2.  u   low  byte of unsigned word or unsigned byte 
+-
+-             3.  v   high byte of unsigned word 
+-
+-             4.  p   PCR low  byte of word relocation or PCR byte 
+-
+ 
+ 
+         THE ASSEMBLER                                          PAGE 1-70
+         LISTING FILE
+ 
+ 
++             2.  u   low  byte of unsigned word or unsigned byte 
++
++             3.  v   high byte of unsigned word 
++
++             4.  p   PCR low  byte of word relocation or PCR byte 
++
+              5.  q   PCR high byte of word relocation 
+ 
+              6.  r   low  byte relocation or byte relocation 
+diff --git a/asxhtml/asmlnk.htm b/asxhtml/asmlnk.htm
+index 1c30046..9ae8605 100644
+--- a/asxhtml/asmlnk.htm
++++ b/asxhtml/asmlnk.htm
+@@ -3966,6 +3966,10 @@
+               <i>   Caused  by  an  .include file error or an .if/.endif
+                     mismatch.  
+ 
++              <k>   Numerical conversion error:  invalid digit.  
++
++              <l>   Identifier too long:  the name has been truncated.  
++
+               <m>   Multiple  definitions  of  the  same label, multiple
+                     .module directives, multiple conflicting  attributes
+                     in  an  .area or .bank directive or the use of .hilo
+@@ -3993,17 +3997,19 @@
+ 
+               <u>   Undefined symbol encountered during assembly.  
+ 
+-              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  
+-
+-
+-           Most  assemblers  now include more descriptive error messages
+-        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to
+ 
+ 
+         THE ASSEMBLER                                          PAGE 1-68
+         ERRORS
+ 
+ 
++              <v>   Value out of range:  signed or unsigned argument.  
++
++              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  
++
++
++           Most  assemblers  now include more descriptive error messages
++        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to
+         provide the expanded error messages will show three lines on the
+         stdout device as shown by this error:  
+ 
+@@ -4046,18 +4052,18 @@
+              1.  Error field (first two characters of line) 
+ 
+              2.  Current location counter 
++
+ 
+-             3.  Generated code in byte format 
++        THE ASSEMBLER                                          PAGE 1-69
++        LISTING FILE
+ 
+-             4.  Opcode cycles count 
+ 
+-             5.  Source text line number 
+ 
+-
++             3.  Generated code in byte format 
+ 
+-        THE ASSEMBLER                                          PAGE 1-69
+-        LISTING FILE
++             4.  Opcode cycles count 
+ 
++             5.  Source text line number 
+ 
+              6.  Source text 
+ 
+@@ -4101,18 +4107,18 @@
+ 
+              1.  *   paged relocation 
+ 
+-             2.  u   low  byte of unsigned word or unsigned byte 
+-
+-             3.  v   high byte of unsigned word 
+-
+-             4.  p   PCR low  byte of word relocation or PCR byte 
+-
+ 
+ 
+         THE ASSEMBLER                                          PAGE 1-70
+         LISTING FILE
+ 
+ 
++             2.  u   low  byte of unsigned word or unsigned byte 
++
++             3.  v   high byte of unsigned word 
++
++             4.  p   PCR low  byte of word relocation or PCR byte 
++
+              5.  q   PCR high byte of word relocation 
+ 
+              6.  r   low  byte relocation or byte relocation 
+diff --git a/asxhtml/asmlnk.rtf b/asxhtml/asmlnk.rtf
+index 83297ff..f0134a2 100644
+--- a/asxhtml/asmlnk.rtf
++++ b/asxhtml/asmlnk.rtf
+@@ -3973,6 +3973,10 @@
+ \par
+               <i>   Caused  by  an  .include file error or an .if/.endif\par
+                     mismatch.  \par
++\par
++              <k>   Numerical conversion error:  invalid digit.  \par
++\par
++              <l>   Identifier too long:  the name has been truncated.  \par
+ \par
+               <m>   Multiple  definitions  of  the  same label, multiple\par
+                     .module directives, multiple conflicting  attributes\par
+@@ -4001,17 +4005,19 @@
+ \par
+               <u>   Undefined symbol encountered during assembly.  \par
+ \par
+-              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  \par
+-\par
+-\par
+-           Most  assemblers  now include more descriptive error messages\par
+-        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to\par
+ \page\par
+ \par
+         THE ASSEMBLER                                          PAGE 1-68\par
+         ERRORS\par
+ \par
+ \par
++              <v>   Value out of range:  signed or unsigned argument.  \par
++\par
++              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  \par
++\par
++\par
++           Most  assemblers  now include more descriptive error messages\par
++        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to\par
+         provide the expanded error messages will show three lines on the\par
+         stdout device as shown by this error:  \par
+ \par
+@@ -4054,18 +4060,18 @@
+              1.  Error field (first two characters of line) \par
+ \par
+              2.  Current location counter \par
++\page\par
+ \par
+-             3.  Generated code in byte format \par
++        THE ASSEMBLER                                          PAGE 1-69\par
++        LISTING FILE\par
+ \par
+-             4.  Opcode cycles count \par
+ \par
+-             5.  Source text line number \par
+ \par
+-\page\par
++             3.  Generated code in byte format \par
+ \par
+-        THE ASSEMBLER                                          PAGE 1-69\par
+-        LISTING FILE\par
++             4.  Opcode cycles count \par
+ \par
++             5.  Source text line number \par
+ \par
+              6.  Source text \par
+ \par
+@@ -4108,18 +4114,18 @@
+         characters:  \par
+ \par
+              1.  *   paged relocation \par
+-\par
+-             2.  u   low  byte of unsigned word or unsigned byte \par
+-\par
+-             3.  v   high byte of unsigned word \par
+-\par
+-             4.  p   PCR low  byte of word relocation or PCR byte \par
+ \par
+ \page\par
+ \par
+         THE ASSEMBLER                                          PAGE 1-70\par
+         LISTING FILE\par
+ \par
++\par
++             2.  u   low  byte of unsigned word or unsigned byte \par
++\par
++             3.  v   high byte of unsigned word \par
++\par
++             4.  p   PCR low  byte of word relocation or PCR byte \par
+ \par
+              5.  q   PCR high byte of word relocation \par
+ \par
+diff --git a/asxhtml/asmlnk.txt b/asxhtml/asmlnk.txt
+index ed6437c..cf21249 100644
+--- a/asxhtml/asmlnk.txt
++++ b/asxhtml/asmlnk.txt
+@@ -3972,6 +3972,10 @@
+               <i>   Caused  by  an  .include file error or an .if/.endif
+                     mismatch.  
+ 
++              <k>   Numerical conversion error:  invalid digit.  
++
++              <l>   Identifier too long:  the name has been truncated.  
++
+               <m>   Multiple  definitions  of  the  same label, multiple
+                     .module directives, multiple conflicting  attributes
+                     in  an  .area or .bank directive or the use of .hilo
+@@ -3999,17 +4003,19 @@
+ 
+               <u>   Undefined symbol encountered during assembly.  
+ 
+-              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  
+-
+-
+-           Most  assemblers  now include more descriptive error messages
+-        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to
+ 
+ 
+         THE ASSEMBLER                                          PAGE 1-68
+         ERRORS
+ 
+ 
++              <v>   Value out of range:  signed or unsigned argument.  
++
++              <z>   Divide by 0 or Modulus by 0 error:  result is 0.  
++
++
++           Most  assemblers  now include more descriptive error messages
++        for <a>, <o>, and  <q>  errors.   Those  assemblers  updated  to
+         provide the expanded error messages will show three lines on the
+         stdout device as shown by this error:  
+ 
+@@ -4052,18 +4058,18 @@
+              1.  Error field (first two characters of line) 
+ 
+              2.  Current location counter 
++
+ 
+-             3.  Generated code in byte format 
++        THE ASSEMBLER                                          PAGE 1-69
++        LISTING FILE
+ 
+-             4.  Opcode cycles count 
+ 
+-             5.  Source text line number 
+ 
+-
++             3.  Generated code in byte format 
+ 
+-        THE ASSEMBLER                                          PAGE 1-69
+-        LISTING FILE
++             4.  Opcode cycles count 
+ 
++             5.  Source text line number 
+ 
+              6.  Source text 
+ 
+@@ -4107,18 +4113,18 @@
+ 
+              1.  *   paged relocation 
+ 
+-             2.  u   low  byte of unsigned word or unsigned byte 
+-
+-             3.  v   high byte of unsigned word 
+-
+-             4.  p   PCR low  byte of word relocation or PCR byte 
+-
+ 
+ 
+         THE ASSEMBLER                                          PAGE 1-70
+         LISTING FILE
+ 
+ 
++             2.  u   low  byte of unsigned word or unsigned byte 
++
++             3.  v   high byte of unsigned word 
++
++             4.  p   PCR low  byte of word relocation or PCR byte 
++
+              5.  q   PCR high byte of word relocation 
+ 
+              6.  r   low  byte relocation or byte relocation 
+diff --git a/asxhtml/asxs03.htm b/asxhtml/asxs03.htm
+index 5d3d42a..0b09fd7 100644
+--- a/asxhtml/asxs03.htm
++++ b/asxhtml/asxs03.htm
+@@ -285,6 +285,10 @@ error message for the <*> error code.
+       &lt;i&gt;   Caused  by  an  .include file error or an .if/.endif
+             mismatch.  
+ 
++      &lt;k&gt;   Numerical conversion error:  invalid digit.  
++
++      &lt;l&gt;   Identifier too long:  the name has been truncated.  
++
+       &lt;m&gt;   Multiple  definitions  of  the  same label, multiple
+             .module directives, multiple conflicting  attributes
+             in  an  .area or .bank directive or the use of .hilo
+@@ -312,6 +316,8 @@ error message for the <*> error code.
+ 
+       &lt;u&gt;   Undefined symbol encountered during assembly.  
+ 
++      &lt;v&gt;   Value out of range:  signed or unsigned argument.  
++
+       &lt;z&gt;   Divide by 0 or Modulus by 0 error:  result is 0.  
+ 
+ 
+diff --git a/asxxsrc/aslex.c b/asxxsrc/aslex.c
+index 9d2ec8a..4e71ba5 100644
+--- a/asxxsrc/aslex.c
++++ b/asxxsrc/aslex.c
+@@ -98,6 +98,7 @@ void
+ getid(char *id, int c)
+ {
+ 	char *p;
++	int trunc;
+ 
+ 	if (c < 0) {
+ 		c = getnb();
+@@ -105,12 +106,18 @@ getid(char *id, int c)
+ 			qerr();
+ 	}
+ 	p = id;
++	trunc = 0;
+ 	do {
+-		if (p < &id[NCPS-1])
++		if (p < &id[NCPS-1]) {
+ 			*p++ = c;
++		} else {
++			trunc = 1;
++		}
+ 	} while (ctype[c=get()] & (LETTER|DIGIT));
+ 	unget(c);
+ 	*p++ = 0;
++	if (trunc)
++		err('l');
+ }
+ 
+ /*)Function	void	getst(id, c)
+@@ -160,6 +167,7 @@ void
+ getst(char *id, int c)
+ {
+ 	char *p;
++	int trunc;
+ 
+ 	if (c < 0) {
+ 		c = getnb();
+@@ -167,12 +175,18 @@ getst(char *id, int c)
+ 			qerr();
+ 	}
+ 	p = id;
++	trunc = 0;
+ 	do {
+-		if (p < &id[NCPS-1])
++		if (p < &id[NCPS-1]) {
+ 			*p++ = c;
++		} else {
++			trunc = 1;
++		}
+ 	} while (ctype[c=get()] & ~(SPACE|ILL) & 0xFF);
+ 	unget(c);
+ 	*p++ = 0;
++	if (trunc)
++		err('l');
+ }
+ 
+ /*)Function	int	getdstr(str, slen)
+diff --git a/asxxsrc/assubr.c b/asxxsrc/assubr.c
+index ce025a4..a87549a 100644
+--- a/asxxsrc/assubr.c
++++ b/asxxsrc/assubr.c
+@@ -263,6 +263,7 @@ char *errors[] = {
+ 	"<e> .error/.assume programmed error",
+ 	"<i> .include/.incbin file error or an .if/.endif mismatch",
+ 	"<k> numerical conversion error",
++	"<l> identifier too long, name truncated",
+ 	"<m> multiple definitions error or macro recursion error",
+ 	"<n> .endm, .mexit, or .narg outside of a macro",
+ 	"<o> .org in REL area or directive / mnemonic error",
+diff --git a/linksrc/lklex.c b/linksrc/lklex.c
+index 0f9b628..1c4096e 100644
+--- a/linksrc/lklex.c
++++ b/linksrc/lklex.c
+@@ -85,21 +85,60 @@
+  *		input text line.
+  */
+ 
++/*)Function	void	iderr(id)
++ *
++ *		char *	id		the truncated identifier
++ *
++ *	The function iderr() reports an identifier that was too
++ *	long to be scanned in full by getid().  The
++ *	name the linker retains is not the name the assembler
++ *	wrote, so it may collide with an unrelated identifier
++ *	sharing the same first NCPS-1 characters - binding a
++ *	reference to the wrong symbol, or merging two areas.
++ *	Neither outcome is detectable later, so the truncation
++ *	itself has to be reported here.
++ *
++ *	global variables:
++ *		int	lkerr		error flag
++ *
++ *	functions called:
++ *		int	fprintf()	c_library
++ *
++ *	side effects:
++ *		The error is reported and the error flag is set.
++ */
++
++static void
++iderr(char *id)
++{
++	fprintf(stderr,
++		"?ASlink-Error-Identifier longer than %d characters, truncated to %s\n",
++		NCPS-1, id);
++	lkerr++;
++}
++
+ void
+ getid(char *id, int c)
+ {
+ 	char *p;
++	int trunc;
+ 
+ 	if (c < 0) {
+ 		c = getnb();
+ 	}
+ 	p = id;
++	trunc = 0;
+ 	do {
+-		if (p < &id[NCPS-1])
++		if (p < &id[NCPS-1]) {
+ 			*p++ = c;
++		} else {
++			trunc = 1;
++		}
+ 	} while (ctype[c=get()] & (LETTER|DIGIT));
+ 	unget(c);
+ 	*p++ = 0;
++	if (trunc)
++		iderr(id);
+ }
+ 
+ /*)Function	void	getfid(str, c)

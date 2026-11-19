@@ -1,0 +1,384 @@
+From 87b9f396ff05e30890cc6c88e62b01d25f8b9901 Mon Sep 17 00:00:00 2001
+From: Neil Johnson <njohnson@roku.com>
+Date: Wed, 2 Sep 2026 10:32:20 +0100
+Subject: [PATCH 08/26] aslink: index symbols by areax so the map is not
+ quadratic
+
+lstarea() found the symbols belonging to an area by scanning the
+entire symbol hash table once per section of that area - and did
+it twice, once to count the symbols and again to collect them.
+Map generation therefore cost O(sections * symbols), which is
+invisible while a program has a handful of areas and becomes the
+dominant cost of linking when it has thousands. Measured on ten
+modules of one area per function, with -m:
+
+     2,000 sections    0.32 s
+    10,000 sections   10.36 s
+
+against 0.02 s to link the same 10,000 symbols in a single area.
+Nine tenths of that ten seconds was map generation, and it is
+reached more often than it looks: SDCDBfopen() forces mflag on, so
+any link asking for .cdb debug output pays it whether or not a map
+was wanted.
+
+Index the symbols once instead. lkasym() in lksym.c walks the hash
+table a single time and links each symbol into a list rooted at
+the areax that defines it, using new s_alp, a_syp and a_sytp
+fields; lstarea() then walks only its own area's symbols. map()
+calls it after symdef(), which is where every symbol acquires an
+areax.
+
+Symbols are appended to the tail of each list so that walking a
+list yields the same order the old hash-table scan did - buckets
+ascending, and within a bucket from the head of the chain. That
+matters because the sort which follows is stable, so the order
+decides how symbols sharing an address are listed.
+
+The sort was a bubble sort over the collected array, which is the
+other half of the cost. It is replaced by qsort() over an array of
+struct msym, each carrying the symbol, its relocated address and
+its collection index. qsort() is not required to be stable, so
+msymcmp() falls back on the collection index when addresses are
+equal, preserving the previous ordering exactly.
+
+Together:
+
+     2,000 sections    0.32 s  ->  0.03 s
+    10,000 sections   10.36 s  ->  0.76 s
+
+Of that 0.76 s only 0.05 s is now map generation; the remaining
+0.71 s is the link itself, where lkparea() scans the global area
+list once per A record. That is a separate quadratic and is not
+touched here.
+
+Verified with a standalone aslink built from linksrc/*.c, compared
+against one built from the unmodified sources:
+
+- Default map output is unchanged: four modules of 30 sections each,
+  five labels sharing every address to exercise the sort order,
+  linked with -m, -m1, -m -w, -m1 -w, -m -d, -m -q and -m -u -j.
+  Map, .noi and hex identical apart from the timestamp line.
+- Built with -Wall with no new warnings.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ linksrc/aslink.h |   4 ++
+ linksrc/lklist.c | 120 ++++++++++++++++++++++++++++++-----------------
+ linksrc/lkmain.c |   7 +++
+ linksrc/lksym.c  |  69 +++++++++++++++++++++++++++
+ 4 files changed, 156 insertions(+), 44 deletions(-)
+
+diff --git a/linksrc/aslink.h b/linksrc/aslink.h
+index 774dd15..0c7b376 100644
+--- a/linksrc/aslink.h
++++ b/linksrc/aslink.h
+@@ -642,6 +642,8 @@ struct	areax
+ 	a_uint	a_addr;		/* Beginning address of section */
+ 	a_uint	a_size;		/* Size of the area in section */
+ 	a_uint	a_bndry;	/* Boundary for this A directive */
++	struct	sym	*a_syp;	/* Symbol list head, see lkasym() */
++	struct	sym	*a_sytp;/* Symbol list tail, see lkasym() */
+ };
+ 
+ /*
+@@ -659,6 +661,7 @@ struct	areax
+ struct	sym
+ {
+ 	struct	sym	*s_sp;	/* Symbol link */
++	struct	sym	*s_alp;	/* Next symbol of the same areax, see lkasym() */
+ 	struct	areax	*s_axp;	/* Symbol area link */
+ 	char	s_type;		/* Symbol subtype */
+ 	char	s_flag;		/* Flag byte */
+@@ -1168,6 +1171,7 @@ extern	void		newhead(void);
+ extern	void		newmode(void);
+ 
+ /* lksym.c */
++extern	void		lkasym(void);
+ extern	int		hash(char *p, int cflag);
+ extern	struct	sym *	lkpsym(char *id, int f);
+ extern	char *		new(unsigned int n);
+diff --git a/linksrc/lklist.c b/linksrc/lklist.c
+index 34136a6..dd2b304 100644
+--- a/linksrc/lklist.c
++++ b/linksrc/lklist.c
+@@ -165,6 +165,55 @@ dgt(int rdx, char *str, int n)
+ 	return(1);
+ }
+ 
++/*
++ *	The map symbol reference used to sort an area's symbols into
++ *	address order.  m_addr is the symbol's relocated address,
++ *	m_seq the order in which the symbol was collected, used to
++ *	break ties so the sort is stable.
++ */
++struct	msym
++{
++	struct	sym *m_sp;	/* Symbol */
++	a_uint	m_addr;		/* Relocated address */
++	int	m_seq;		/* Collection order */
++};
++
++/*)Function	int	msymcmp(p1, p2)
++ *
++ *		void *	p1		pointer to a struct msym
++ *		void *	p2		pointer to a struct msym
++ *
++ *	The function msymcmp() is the qsort() comparison function
++ *	ordering an area's symbols by ascending relocated address,
++ *	symbols sharing an address keeping their collection order.
++ *
++ *	local variables:
++ *		msym *	m1		pointer to the first symbol
++ *		msym *	m2		pointer to the second symbol
++ *
++ *	global variables:
++ *		none
++ *
++ *	functions called:
++ *		none
++ *
++ *	side effects:
++ *		none
++ */
++
++static int
++msymcmp(const void *p1, const void *p2)
++{
++	const struct msym *m1 = (const struct msym *) p1;
++	const struct msym *m2 = (const struct msym *) p2;
++
++	if (m1->m_addr < m2->m_addr) return (-1);
++	if (m1->m_addr > m2->m_addr) return ( 1);
++	if (m1->m_seq  < m2->m_seq ) return (-1);
++	if (m1->m_seq  > m2->m_seq ) return ( 1);
++	return (0);
++}
++
+ /*)Function	void	slew(xp, yp)
+  *
+  *		area *	xp		pointer to an area structure
+@@ -406,29 +455,27 @@ void
+ lstarea(struct area *xp, struct bank *yp)
+ {
+ 	struct areax *oxp;
+-	int i, j, n;
++	int i, n;
+ 	char *frmt, *ptr;
+ 	int nmsym;
+-	a_uint a0, ai, aj;
++	a_uint aj;
+ 	struct sym *sp;
+-	struct sym **p;
++	struct msym *p;
+ 
+ 	/*
+-	 * Find number of symbols in area
++	 * Find number of symbols in area.  The symbols of each
++	 * section are reached through the index lkasym() built,
++	 * so this costs one walk of this area's own symbols
++	 * rather than a scan of the whole symbol table per
++	 * section.
+ 	 */
+ 	nmsym = 0;
+-	oxp = xp->a_axp;
+-	while (oxp) {
+-		for (i=0; i<NHASH; i++) {
+-			sp = symhash[i];
+-			while (sp != NULL) {
+-				if ((oxp == sp->s_axp) && !sp->s_flag && !(sp->s_type & S_HID)) {
+-					++nmsym;
+-				}
+-				sp = sp->s_sp;
++	for (oxp = xp->a_axp; oxp != NULL; oxp = oxp->a_axp) {
++		for (sp = oxp->a_syp; sp != NULL; sp = sp->s_alp) {
++			if (!sp->s_flag && !(sp->s_type & S_HID)) {
++				++nmsym;
+ 			}
+ 		}
+-		oxp = oxp->a_axp;
+ 	}
+ 
+ 	if ((nmsym == 0) && (xp->a_size == 0)) {
+@@ -443,47 +490,32 @@ lstarea(struct area *xp, struct bank *yp)
+ 	}
+ 
+ 	/*
+-	 * Allocate space for an array of pointers to symbols
++	 * Allocate space for an array of symbol references
+ 	 * and load array.
+ 	 */
+-	if ( (p = (struct sym **) malloc (nmsym*sizeof(struct sym *))) == NULL) {
++	if ( (p = (struct msym *) malloc (nmsym*sizeof(struct msym))) == NULL) {
+ 		fprintf(mfp, "Insufficient space to build Map Segment.\n");
+ 		return;
+ 	}
+ 	nmsym = 0;
+-	oxp = xp->a_axp;
+-	while (oxp) {
+-		for (i=0; i<NHASH; i++) {
+-			sp = symhash[i];
+-			while (sp != NULL) {
+-				if ((oxp == sp->s_axp) && !sp->s_flag && !(sp->s_type & S_HID)) {
+-					p[nmsym++] = sp;
+-				}
+-				sp = sp->s_sp;
++	for (oxp = xp->a_axp; oxp != NULL; oxp = oxp->a_axp) {
++		for (sp = oxp->a_syp; sp != NULL; sp = sp->s_alp) {
++			if (!sp->s_flag && !(sp->s_type & S_HID)) {
++				p[nmsym].m_sp   = sp;
++				p[nmsym].m_addr = sp->s_addr + oxp->a_addr;
++				p[nmsym].m_seq  = nmsym;
++				nmsym += 1;
+ 			}
+ 		}
+-		oxp = oxp->a_axp;
+ 	}
+ 
+ 	/*
+-	 * Bubble Sort of Addresses in Symbol Table Array
++	 * Sort the symbols into ascending address order.  m_seq
++	 * carries the order the symbols were collected in so that
++	 * qsort(), which is not required to be stable, still
++	 * orders symbols sharing an address as the collection did.
+ 	 */
+-	j = 1;
+-	while (j) {
+-		j = 0;
+-		sp = p[0];
+-		a0 = sp->s_addr + sp->s_axp->a_addr;
+-		for (i=1; i<nmsym; ++i) {
+-			sp = p[i];
+-			ai = sp->s_addr + sp->s_axp->a_addr;
+-			if (a0 > ai) {
+-				j = 1;
+-				p[i] = p[i-1];
+-				p[i-1] = sp;
+-			}
+-			a0 = ai;
+-		}
+-	}
++	qsort(p, nmsym, sizeof(struct msym), msymcmp);
+ 
+ 	/*
+ 	 * Repeat Counter
+@@ -521,7 +553,7 @@ lstarea(struct area *xp, struct bank *yp)
+ 			fprintf(mfp, "%s", frmt);
+ 		}
+ 
+-		sp = p[i];
++		sp = p[i].m_sp;
+ 		aj = (sp->s_addr + sp->s_axp->a_addr) & a_mask;
+ #ifdef	LONGINT
+ 		switch(a_bytes) {
+diff --git a/linksrc/lkmain.c b/linksrc/lkmain.c
+index 4486f81..bd53654 100644
+--- a/linksrc/lkmain.c
++++ b/linksrc/lkmain.c
+@@ -687,6 +687,7 @@ link(void)
+  *		FILE *	afile()		lkmain.c
+  *		int	fprintf()	c_library
+  *		void	lkexit()	lkmain.c
++ *		void	lkasym()	lksym.c
+  *		void	lstarea()	lklist.c
+  *		void	newpag()	lklist.c
+  *		void	symdef()	lksym.c
+@@ -713,6 +714,12 @@ map(void)
+ 		lkexit(ER_FATAL);
+ 	}
+ 
++	/*
++	 * Index the symbols by the areax defining them so that
++	 * lstarea() need not scan the whole symbol table per area.
++	 */
++	lkasym();
++
+ 	/*
+ 	 * Output Map Bank/Area Lists
+ 	 */
+diff --git a/linksrc/lksym.c b/linksrc/lksym.c
+index 822a402..03016da 100644
+--- a/linksrc/lksym.c
++++ b/linksrc/lksym.c
+@@ -36,6 +36,7 @@
+  *
+  *	lksym.c contains the following functions:
+  *		int	hash()
++ *		void	lkasym()
+  *		sym *	lkpsym()
+  *		char *	new()
+  *		sym *	newsym()
+@@ -371,6 +372,74 @@ symval(struct sym *tsp)
+ 	return(val);
+ }
+ 
++/*)Function	void	lkasym(void)
++ *
++ *	The function lkasym() indexes every symbol by the areax
++ *	it was defined in, linking the symbols of each areax into
++ *	a list rooted at that areax.
++ *
++ *	The map generator needs, for each area, the symbols defined
++ *	in each of its sections.  Without an index the only way to
++ *	find them is to scan the whole symbol hash table once per
++ *	section, which lstarea() did twice per area - to count the
++ *	symbols and then to collect them - making map generation
++ *	cost O(sections * symbols).  That is unnoticeable while a
++ *	program has a handful of areas and becomes the dominant
++ *	cost of linking when it has thousands.  One pass here
++ *	replaces all of those scans.
++ *
++ *	Symbols are appended to the tail of each list, so walking
++ *	a list visits them in the same order a scan of the hash
++ *	table would have: buckets in ascending order, and within a
++ *	bucket the chain from its head.  lstarea() sorts by address
++ *	afterwards and that sort is stable, so preserving this
++ *	order keeps the map output identical for symbols sharing
++ *	an address.
++ *
++ *	The function must be called after symdef(), which gives an
++ *	areax to any symbol that still lacks one, and before the
++ *	first use of a_syp.
++ *
++ *	local variables:
++ *		int	i		hash table index loop variable
++ *		sym *	sp		pointer to a symbol structure
++ *		areax *	taxp		pointer to the defining areax
++ *
++ *	global variables:
++ *		sym *symhash[NHASH]	array of pointers to NHASH
++ *					linked symbol lists
++ *
++ *	functions called:
++ *		none
++ *
++ *	side effects:
++ *		Every areax referenced by a symbol has its a_syp and
++ *		a_sytp list built;  every indexed symbol has its
++ *		s_alp link set.
++ */
++
++void
++lkasym(void)
++{
++	struct sym *sp;
++	struct areax *taxp;
++	int i;
++
++	for (i=0; i<NHASH; ++i) {
++		for (sp = symhash[i]; sp != NULL; sp = sp->s_sp) {
++			if ((taxp = sp->s_axp) == NULL)
++				continue;
++			sp->s_alp = NULL;
++			if (taxp->a_sytp == NULL) {
++				taxp->a_syp = sp;
++			} else {
++				taxp->a_sytp->s_alp = sp;
++			}
++			taxp->a_sytp = sp;
++		}
++	}
++}
++
+ /*)Function	void	symdef(fp)
+  *
+  *		FILE *	fp		file handle for output

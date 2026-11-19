@@ -1,0 +1,155 @@
+From f0d4d75299f17dfa65ebbae31feabd1bf09ebc63 Mon Sep 17 00:00:00 2001
+From: Neil Johnson <neil.johnson71@gmail.com>
+Date: Mon, 5 Oct 2026 17:15:40 +0100
+Subject: [PATCH 19/26] as8xcxxx: predefine the core 8051 SFRs, as as8051
+ already does
+
+as8051 carries a preDef[] table in i51pst.c and registers both the
+upper and the lower case spelling of every entry from minit(), so a
+source can say ACC, B, PSW or acc.7 without including a .sfr file.
+
+as8xcxxx was shaped for the same thing and never got it: ds8.h
+declares struct PreDef - with an extra ptype field, for the registers
+that differ between the DS8xCxxx parts - and declares the extern for
+the table, but no table is defined and minit() never walks one.  The
+extern has therefore been dangling since the file was written, and
+every name as8xcxxx shares with as8051 assembles as an undefined
+global instead.
+
+Define the table with the subset of as8051's that every processor in
+the family has, with ptype zero meaning "common to all of them", and
+register it the way as8051 does.  The 37 names and values are exactly
+as8051's; the per processor registers the ptype field was added for
+can be filled in against their own ptype later.
+
+A source that defines a name itself still keeps its own definition -
+registration only fills in symbols that are still S_NEW - so nothing
+already written changes meaning.  astest/cases/sfrpre pins both: that
+the two spellings assemble identically, and that an own definition
+wins.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ as8xcxxx/ds8mch.c | 41 ++++++++++++++++++++++++++++++++++++++
+ as8xcxxx/ds8pst.c | 50 +++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 91 insertions(+)
+
+diff --git a/as8xcxxx/ds8mch.c b/as8xcxxx/ds8mch.c
+index 1c35c70..086810b 100644
+--- a/as8xcxxx/ds8mch.c
++++ b/as8xcxxx/ds8mch.c
+@@ -917,6 +917,12 @@ mchpcr(struct expr *esp, int *v, int n)
+ void
+ minit(void)
+ {
++	struct sym	*sp;
++	struct PreDef	*pd;
++	int i;
++	char pid[8];
++	char *p;
++
+ 	/*
+ 	 * Byte Order
+ 	 */
+@@ -927,6 +933,41 @@ minit(void)
+ 		ds8_bytes = 0;
+ 		mchtyp = X_DS8XCXXX;
+ 		sym[2].s_addr = X_DS8XCXXX;
++
++		/*
++		 * First time only:
++		 *	add the pre-defined symbols to the table
++		 *	as local symbols.  A ptype of zero selects a
++		 *	symbol common to every processor.
++		 */
++		pd = preDef;
++		while (pd->id) {
++			if ((pd->ptype != 0) && (pd->ptype != mchtyp)) {
++				pd++;
++				continue;
++			}
++			strcpy(pid, pd->id);
++			for (i=0; i<2; i++) {
++				/*
++				 * i == 0,  Create Upper Case Symbols
++				 * i == 1,  Create Lower Case Symbols
++				 */
++				if (i == 1) {
++					p = pid;
++					while (*p) {
++						*p = ccase[*p & 0x007F];
++						p++;
++					}
++				}
++				sp = lookup(pid);
++				if (sp->s_type == S_NEW) {
++					sp->s_addr = pd->value;
++					sp->s_type = S_USER;
++					sp->s_flag = S_LCL | S_ASG;
++				}
++			}
++			pd++;
++		}
+ 	}
+ }
+ 
+diff --git a/as8xcxxx/ds8pst.c b/as8xcxxx/ds8pst.c
+index 46033f0..4885243 100644
+--- a/as8xcxxx/ds8pst.c
++++ b/as8xcxxx/ds8pst.c
+@@ -336,5 +336,55 @@ struct	mne	mne[] = {
+     {	NULL,	"xchd",		S_XCHD,		S_EOL,	0xD6	}
+ };
+ 
++/*
++ * The SFRs common to every DS8xCxxx part, predefined so that
++ * hand written code can say ACC, B or PSW without including
++ * ds8xcxxx.sfr.  as8051 does the same from i51pst.c; the values
++ * here are that table's, restricted to the registers every
++ * processor in this family has.  A ptype of zero means the
++ * symbol applies to all of them.
++ */
++struct PreDef preDef[] = {
++    {	"AC",			0x00D6,	0	},
++    {	"ACC",			0x00E0,	0	},
++    {	"ACC.0",		0x00E0,	0	},
++    {	"ACC.1",		0x00E1,	0	},
++    {	"ACC.2",		0x00E2,	0	},
++    {	"ACC.3",		0x00E3,	0	},
++    {	"ACC.4",		0x00E4,	0	},
++    {	"ACC.5",		0x00E5,	0	},
++    {	"ACC.6",		0x00E6,	0	},
++    {	"ACC.7",		0x00E7,	0	},
++    {	"B",			0x00F0,	0	},
++    {	"B.0",			0x00F0,	0	},
++    {	"B.1",			0x00F1,	0	},
++    {	"B.2",			0x00F2,	0	},
++    {	"B.3",			0x00F3,	0	},
++    {	"B.4",			0x00F4,	0	},
++    {	"B.5",			0x00F5,	0	},
++    {	"B.6",			0x00F6,	0	},
++    {	"B.7",			0x00F7,	0	},
++    {	"CY",			0x00D7,	0	},
++    {	"DPH",			0x0083,	0	},
++    {	"DPL",			0x0082,	0	},
++    {	"EA",			0x00AF,	0	},
++    {	"F0",			0x00D5,	0	},
++    {	"IE",			0x00A8,	0	},
++    {	"IP",			0x00B8,	0	},
++    {	"OV",			0x00D2,	0	},
++    {	"P",			0x00D0,	0	},
++    {	"PCON",			0x0087,	0	},
++    {	"PS",			0x00BC,	0	},
++    {	"PSW",			0x00D0,	0	},
++    {	"RS0",			0x00D3,	0	},
++    {	"RS1",			0x00D4,	0	},
++    {	"SM0",			0x009F,	0	},
++    {	"SM1",			0x009E,	0	},
++    {	"SM2",			0x009D,	0	},
++    {	"SP",			0x0081,	0	},
++    {	NULL,		0x0000,	0	}
++};
++
++
+ 
+ 

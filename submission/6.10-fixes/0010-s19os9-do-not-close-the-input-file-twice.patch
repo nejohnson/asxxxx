@@ -1,0 +1,73 @@
+From b4f52f8d10692948e31f84171d9c944d9f541fb9 Mon Sep 17 00:00:00 2001
+From: Neil Johnson <neil.johnson71@gmail.com>
+Date: Wed, 2 Sep 2026 17:37:48 +0100
+Subject: [PATCH 10/26] s19os9: do not close the input file twice
+
+s19os9 aborts as it exits.  On glibc:
+
+    free(): double free detected in tcache 2
+    Aborted (core dumped)
+
+exiting 134 rather than 0, even on a run that did everything asked
+of it.
+
+nxtline() closes the input file when fgets() reaches the end of it
+but leaves inpfp pointing at the closed stream:
+
+	if (fgets(ib, NINPUT, inpfp) == NULL) {
+		fclose(inpfp);
+		return (0);
+	}
+
+asexit() then closes whatever inpfp still points at:
+
+	if (inpfp != NULL) fclose(inpfp);
+
+The guard is there to close the file only if it is open, but
+nothing ever tells it the file was closed, so it closes it a second
+time.  AddressSanitizer reports the second fclose() through
+_IO_new_fclose from asexit() at s19os9.c:554.
+
+Reading a whole input file is the normal path, so this happens on
+every successful run.  The damage is confined to the exit status:
+the abort is raised inside the C library's cleanup, after the
+output file has been closed and its contents are complete, which is
+why the fault has gone unnoticed - the .bin it produces is correct.
+It is still worth fixing, because a caller that checks the exit
+status of s19os9 sees every successful translation as a failure.
+
+Clear inpfp when nxtline() closes it, so the guard in asexit() can
+do what it was written to do.  inpfp is not read anywhere between
+that point and asexit();  the only other uses are the fopen() that
+sets it and the fgets() in nxtline() itself, which is not reached
+again once it has returned 0.
+
+Verified:
+- Translated s19os9/module.asm, assembled with as6809 and linked to
+  Motorola S records:  exits 0, where before it exited 134.  The
+  output is byte identical to that of a build from the pristine
+  903242b sources, so the translation itself is unchanged.
+- Built with -fsanitize=address,undefined and reran:  no reports,
+  where before there was a double-free report.
+- Checked the exit status on the paths that do not read to end of
+  file, which were already correct and remain so:  no arguments
+  exits 1, an input file that cannot be opened exits 3.
+- Compiled with -Wall with no warnings.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ s19os9/s19os9.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/s19os9/s19os9.c b/s19os9/s19os9.c
+index aa8956b..fe64c2c 100644
+--- a/s19os9/s19os9.c
++++ b/s19os9/s19os9.c
+@@ -468,6 +468,7 @@ nxtline(void)
+ {
+ 	if (fgets(ib, NINPUT, inpfp) == NULL) {
+ 		fclose(inpfp);
++		inpfp = NULL;
+ 		return (0);
+ 	}
+ 	chopcrlf(ib);

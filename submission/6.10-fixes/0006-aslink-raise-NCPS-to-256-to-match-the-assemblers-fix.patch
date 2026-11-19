@@ -1,0 +1,404 @@
+From c0f9d8d795802d76e4003458b32b28b026d86252 Mon Sep 17 00:00:00 2001
+From: Neil Johnson <njohnson@roku.com>
+Date: Tue, 1 Sep 2026 14:01:08 +0100
+Subject: [PATCH 06/26] aslink: raise NCPS to 256 to match the assemblers,
+ fixing symbol collisions
+
+NCPS - the number of significant characters in an identifier - is
+80 in linksrc/aslink.h but 256 in asxxsrc/asxxxx.h. Both getid()
+implementations (lklex.c and aslex.c) silently truncate at NCPS-1,
+so the assembler writes symbol and area names up to 255 characters
+into the .rel file and the linker then reads only the first 79 of
+each. Two distinct names sharing a long prefix become one name.
+
+The benign outcome is a spurious error. Assembling a module with
+two globals that differ only after their 92nd character, both
+written out in full by the assembler, the linker rejects the
+second as a redefinition of the first:
+
+  ?ASlink-Error-Multiple definition of sym_that_is_quite_long_...
+
+The damaging outcome is silent. Where the colliding names are a
+definition in one module and a reference in another, the truncated
+reference matches the truncated definition, the undefined-symbol
+check in symdef() never fires, and the call is quietly bound to a
+different function. Reproduced with two modules, one defining
+"<92-char prefix>alpha" and the other calling "<92-char
+prefix>beta" which nothing anywhere defines: the unpatched linker
+exits 0 with no diagnostic and emits "CD 03 00" - a call to
+...alpha's address.
+
+Names of this length are unremarkable in generated code, where a
+segment prefix, a module name and a function name are concatenated
+mechanically and long shared prefixes are the norm rather than the
+exception.
+
+Raise the linker's NCPS to 256 so the two limits agree and the
+linker reads back exactly what the assembler wrote, and add a
+comment at each definition recording that the two must be kept in
+step. NCPS is used only for automatic buffers and for the strncmp()
+bound in fndsym(), so this costs a few hundred bytes of stack in
+the affected frames and nothing else; no structure member, file
+format field or on-disk layout depends on it.
+
+Verified with a standalone aslink built from linksrc/*.c:
+- The spurious "Multiple definition" case above now links cleanly
+  (exit 0) with both symbols present at distinct addresses, 0000
+  and 0001, in the map.
+- The silent-misbinding case now reports the fault it should
+  always have reported, naming the symbol in full:
+  "?ASlink-Warning-Undefined Global sym_that_..._beta referenced
+  by module nb", exit 2.
+- Ran the existing asz80 self-tests, tz80.bat and t80.bat
+  (asz80 -gloaxf, aslink -xu), before and after: byte-for-byte
+  identical .lst and .rst output.
+- An ordinary two-module link produces byte-identical Intel Hex
+  before and after.
+- 'aslink -y' output is unchanged.
+- Rebuilt with -fsanitize=address,undefined and linked a module
+  declaring a 255-character area name - the longest the raised
+  NCPS admits, exercising the NGSYM buffers from the preceding
+  commit - with -m, -j and -y all enabled: no sanitizer reports.
+
+Note this makes the two tools agree; it does not make truncation
+itself diagnosable. A name longer than 255 characters is still
+silently clipped, identically, by both.
+
+Folded in, asxdoc, asxhtml: a name may be 255 characters, not 79:
+
+The manual says a module, area or bank name "may be from 1 to 79
+characters in length", in three places.  That was true of the
+round trip rather than of the assembler:  the assembler has always
+allowed NCPS-1 characters, which is 255, but the linker's NCPS was
+80, so getid() in lklex.c truncated at 79 anything it read back
+from a .rel file.  A name longer than that survived assembly and
+was silently cut short by the linker.
+
+d5e2177 raised the linker's NCPS to 256 to match, which is what
+removed the 79 character limit and, with it, the collisions that
+truncation caused.  The manual was not updated at the time.  All
+three statements now read 255.
+
+The three sit in justified paragraphs set to 72 columns, so two
+needed more than the digits changing:
+
+- The .bank description had three spaces after "areas." - a
+  sentence gap of two plus one of justification - so the extra
+  character was taken from the padding and the line still ends at
+  column 72.
+- The .module description had no padding to give up:  its line was
+  exactly 72 with single spaces throughout and one sentence gap.
+  That paragraph is therefore re-wrapped, which changes how the
+  justification falls across its nine lines but not what it says,
+  and not how many lines it occupies.  Sentence gaps of two spaces
+  are preserved.
+- The .area description ends a paragraph, so its line is short and
+  simply grew by one character.
+
+Applied to the six renderings that carry the text.  asxs02.htm is
+de-paginated and set to 64 columns rather than 72, so its copy of
+the .module paragraph was re-wrapped to its own width.
+
+Verified:
+- No occurrence of "1 to 79 characters" remains anywhere under
+  asxdoc or asxhtml.
+- No line count changed in any file, so the pagination is
+  untouched:  asmlnk.txt is still 700 pages with no page over 55
+  lines, and asmlnk.rtf still has 32516 \par and 700 \page,
+  matching the text line for line, with its unescaped brace
+  balance still 0.
+- asmlnk.htm still agrees with asmlnk.txt at its six line offset,
+  and the asxdoc and asxhtml copies of each file remain identical.
+- Every line of the re-wrapped paragraph is exactly 72 columns,
+  bar the last, as before.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ asxdoc/asmlnk.rtf  | 18 +++++++++---------
+ asxdoc/asmlnk.txt  | 18 +++++++++---------
+ asxhtml/asmlnk.htm | 18 +++++++++---------
+ asxhtml/asmlnk.rtf | 18 +++++++++---------
+ asxhtml/asmlnk.txt | 18 +++++++++---------
+ asxhtml/asxs02.htm | 18 +++++++++---------
+ linksrc/aslink.h   | 10 +++++++++-
+ 7 files changed, 63 insertions(+), 55 deletions(-)
+
+diff --git a/asxdoc/asmlnk.rtf b/asxdoc/asmlnk.rtf
+index 6f167f4..83297ff 100644
+--- a/asxdoc/asmlnk.rtf
++++ b/asxdoc/asmlnk.rtf
+@@ -1444,13 +1444,13 @@
+ \par
+                 .module name \par
+ \par
+-           The  .module  directive causes the name to be included in the\par
+-        assemblers output file as an identifier for this particular  ob-\par
+-        ject module.  The name may be from 1 to 79 characters in length.\par
+-        The name may not have any embedded white space (spaces or tabs).\par
+-        Only  one  identifier is allowed per assembled module.  The main\par
+-        use of this directive  is  to  allow  the  linker  to  report  a\par
+-        modules'  use  of undefined symbols.  At link time all undefined\par
++           The .module directive causes the name to be included  in  the\par
++        assemblers output file as  an  identifier  for  this  particular\par
++        object module.  The name may be from  1  to  255  characters  in\par
++        length.  The name may not have any embedded white space  (spaces\par
++        or tabs).  Only one identifier is allowed per assembled  module.\par
++        The main use of this directive is to allow the linker to  report\par
++        a modules' use of undefined symbols.  At link time all undefined\par
+         symbols are  reported  and  the  modules  referencing  them  are\par
+         listed.  \par
+ \par
+@@ -2115,7 +2115,7 @@
+         ing multiple programming and data sections.   The  name  is  the\par
+         area  label used by the assembler and the linker to collect code\par
+         from various separately assembled modules into one section.  The\par
+-        name may be from 1 to 79 characters in length.  \par
++        name may be from 1 to 255 characters in length.  \par
+ \par
+            The options are specified within parenthesis and separated by\par
+         commas as shown in the following example:  \par
+@@ -2270,7 +2270,7 @@
+                         tion.   This  name  may  be  the  same  as   any\par
+                         user-defined  symbol  or  area as the bank names\par
+                         are independent  of  all  symbols,  labels,  and\par
+-                        areas.   The name may be from 1 to 79 characters\par
++                        areas.  The name may be from 1 to 255 characters\par
+                         in length.  \par
+ \par
+                 options specify the parameters of the bank:  \par
+diff --git a/asxdoc/asmlnk.txt b/asxdoc/asmlnk.txt
+index 83f74bf..ed6437c 100644
+--- a/asxdoc/asmlnk.txt
++++ b/asxdoc/asmlnk.txt
+@@ -1442,13 +1442,13 @@
+ 
+                 .module name 
+ 
+-           The  .module  directive causes the name to be included in the
+-        assemblers output file as an identifier for this particular  ob-
+-        ject module.  The name may be from 1 to 79 characters in length.
+-        The name may not have any embedded white space (spaces or tabs).
+-        Only  one  identifier is allowed per assembled module.  The main
+-        use of this directive  is  to  allow  the  linker  to  report  a
+-        modules'  use  of undefined symbols.  At link time all undefined
++           The .module directive causes the name to be included  in  the
++        assemblers output file as  an  identifier  for  this  particular
++        object module.  The name may be from  1  to  255  characters  in
++        length.  The name may not have any embedded white space  (spaces
++        or tabs).  Only one identifier is allowed per assembled  module.
++        The main use of this directive is to allow the linker to  report
++        a modules' use of undefined symbols.  At link time all undefined
+         symbols are  reported  and  the  modules  referencing  them  are
+         listed.  
+ 
+@@ -2113,7 +2113,7 @@
+         ing multiple programming and data sections.   The  name  is  the
+         area  label used by the assembler and the linker to collect code
+         from various separately assembled modules into one section.  The
+-        name may be from 1 to 79 characters in length.  
++        name may be from 1 to 255 characters in length.  
+ 
+            The options are specified within parenthesis and separated by
+         commas as shown in the following example:  
+@@ -2268,7 +2268,7 @@
+                         tion.   This  name  may  be  the  same  as   any
+                         user-defined  symbol  or  area as the bank names
+                         are independent  of  all  symbols,  labels,  and
+-                        areas.   The name may be from 1 to 79 characters
++                        areas.  The name may be from 1 to 255 characters
+                         in length.  
+ 
+                 options specify the parameters of the bank:  
+diff --git a/asxhtml/asmlnk.htm b/asxhtml/asmlnk.htm
+index 6faa99b..1c30046 100644
+--- a/asxhtml/asmlnk.htm
++++ b/asxhtml/asmlnk.htm
+@@ -1436,13 +1436,13 @@
+ 
+                 .module name 
+ 
+-           The  .module  directive causes the name to be included in the
+-        assemblers output file as an identifier for this particular  ob-
+-        ject module.  The name may be from 1 to 79 characters in length.
+-        The name may not have any embedded white space (spaces or tabs).
+-        Only  one  identifier is allowed per assembled module.  The main
+-        use of this directive  is  to  allow  the  linker  to  report  a
+-        modules'  use  of undefined symbols.  At link time all undefined
++           The .module directive causes the name to be included  in  the
++        assemblers output file as  an  identifier  for  this  particular
++        object module.  The name may be from  1  to  255  characters  in
++        length.  The name may not have any embedded white space  (spaces
++        or tabs).  Only one identifier is allowed per assembled  module.
++        The main use of this directive is to allow the linker to  report
++        a modules' use of undefined symbols.  At link time all undefined
+         symbols are  reported  and  the  modules  referencing  them  are
+         listed.  
+ 
+@@ -2107,7 +2107,7 @@
+         ing multiple programming and data sections.   The  name  is  the
+         area  label used by the assembler and the linker to collect code
+         from various separately assembled modules into one section.  The
+-        name may be from 1 to 79 characters in length.  
++        name may be from 1 to 255 characters in length.  
+ 
+            The options are specified within parenthesis and separated by
+         commas as shown in the following example:  
+@@ -2262,7 +2262,7 @@
+                         tion.   This  name  may  be  the  same  as   any
+                         user-defined  symbol  or  area as the bank names
+                         are independent  of  all  symbols,  labels,  and
+-                        areas.   The name may be from 1 to 79 characters
++                        areas.  The name may be from 1 to 255 characters
+                         in length.  
+ 
+                 options specify the parameters of the bank:  
+diff --git a/asxhtml/asmlnk.rtf b/asxhtml/asmlnk.rtf
+index 6f167f4..83297ff 100644
+--- a/asxhtml/asmlnk.rtf
++++ b/asxhtml/asmlnk.rtf
+@@ -1444,13 +1444,13 @@
+ \par
+                 .module name \par
+ \par
+-           The  .module  directive causes the name to be included in the\par
+-        assemblers output file as an identifier for this particular  ob-\par
+-        ject module.  The name may be from 1 to 79 characters in length.\par
+-        The name may not have any embedded white space (spaces or tabs).\par
+-        Only  one  identifier is allowed per assembled module.  The main\par
+-        use of this directive  is  to  allow  the  linker  to  report  a\par
+-        modules'  use  of undefined symbols.  At link time all undefined\par
++           The .module directive causes the name to be included  in  the\par
++        assemblers output file as  an  identifier  for  this  particular\par
++        object module.  The name may be from  1  to  255  characters  in\par
++        length.  The name may not have any embedded white space  (spaces\par
++        or tabs).  Only one identifier is allowed per assembled  module.\par
++        The main use of this directive is to allow the linker to  report\par
++        a modules' use of undefined symbols.  At link time all undefined\par
+         symbols are  reported  and  the  modules  referencing  them  are\par
+         listed.  \par
+ \par
+@@ -2115,7 +2115,7 @@
+         ing multiple programming and data sections.   The  name  is  the\par
+         area  label used by the assembler and the linker to collect code\par
+         from various separately assembled modules into one section.  The\par
+-        name may be from 1 to 79 characters in length.  \par
++        name may be from 1 to 255 characters in length.  \par
+ \par
+            The options are specified within parenthesis and separated by\par
+         commas as shown in the following example:  \par
+@@ -2270,7 +2270,7 @@
+                         tion.   This  name  may  be  the  same  as   any\par
+                         user-defined  symbol  or  area as the bank names\par
+                         are independent  of  all  symbols,  labels,  and\par
+-                        areas.   The name may be from 1 to 79 characters\par
++                        areas.  The name may be from 1 to 255 characters\par
+                         in length.  \par
+ \par
+                 options specify the parameters of the bank:  \par
+diff --git a/asxhtml/asmlnk.txt b/asxhtml/asmlnk.txt
+index 83f74bf..ed6437c 100644
+--- a/asxhtml/asmlnk.txt
++++ b/asxhtml/asmlnk.txt
+@@ -1442,13 +1442,13 @@
+ 
+                 .module name 
+ 
+-           The  .module  directive causes the name to be included in the
+-        assemblers output file as an identifier for this particular  ob-
+-        ject module.  The name may be from 1 to 79 characters in length.
+-        The name may not have any embedded white space (spaces or tabs).
+-        Only  one  identifier is allowed per assembled module.  The main
+-        use of this directive  is  to  allow  the  linker  to  report  a
+-        modules'  use  of undefined symbols.  At link time all undefined
++           The .module directive causes the name to be included  in  the
++        assemblers output file as  an  identifier  for  this  particular
++        object module.  The name may be from  1  to  255  characters  in
++        length.  The name may not have any embedded white space  (spaces
++        or tabs).  Only one identifier is allowed per assembled  module.
++        The main use of this directive is to allow the linker to  report
++        a modules' use of undefined symbols.  At link time all undefined
+         symbols are  reported  and  the  modules  referencing  them  are
+         listed.  
+ 
+@@ -2113,7 +2113,7 @@
+         ing multiple programming and data sections.   The  name  is  the
+         area  label used by the assembler and the linker to collect code
+         from various separately assembled modules into one section.  The
+-        name may be from 1 to 79 characters in length.  
++        name may be from 1 to 255 characters in length.  
+ 
+            The options are specified within parenthesis and separated by
+         commas as shown in the following example:  
+@@ -2268,7 +2268,7 @@
+                         tion.   This  name  may  be  the  same  as   any
+                         user-defined  symbol  or  area as the bank names
+                         are independent  of  all  symbols,  labels,  and
+-                        areas.   The name may be from 1 to 79 characters
++                        areas.  The name may be from 1 to 255 characters
+                         in length.  
+ 
+                 options specify the parameters of the bank:  
+diff --git a/asxhtml/asxs02.htm b/asxhtml/asxs02.htm
+index ccfc1e5..f3026d4 100644
+--- a/asxhtml/asxs02.htm
++++ b/asxhtml/asxs02.htm
+@@ -90,13 +90,13 @@ Format:
+ 
+         .module name 
+ 
+-   The  .module  directive causes the name to be included in the
+-assemblers output file as an identifier for this particular  ob-
+-ject module.  The name may be from 1 to 79 characters in length.
+-The name may not have any embedded white space (spaces or tabs).
+-Only  one  identifier is allowed per assembled module.  The main
+-use of this directive  is  to  allow  the  linker  to  report  a
+-modules'  use  of undefined symbols.  At link time all undefined
++   The .module directive causes the name to be included  in  the
++assemblers output file as  an  identifier  for  this  particular
++object module.  The name may be from  1  to  255  characters  in
++length.  The name may not have any embedded white space  (spaces
++or tabs).  Only one identifier is allowed per assembled  module.
++The main use of this directive is to allow the linker to  report
++a modules' use of undefined symbols.  At link time all undefined
+ symbols are  reported  and  the  modules  referencing  them  are
+ listed.  
+ 
+@@ -793,7 +793,7 @@ where:  name    represents the symbolic name of the program sec-
+ ing multiple programming and data sections.   The  name  is  the
+ area  label used by the assembler and the linker to collect code
+ from various separately assembled modules into one section.  The
+-name may be from 1 to 79 characters in length.  
++name may be from 1 to 255 characters in length.  
+ 
+    The options are specified within parenthesis and separated by
+ commas as shown in the following example:  
+@@ -933,7 +933,7 @@ where:  name    represents  the  symbolic  name of the bank sec-
+                 tion.   This  name  may  be  the  same  as   any
+                 user-defined  symbol  or  area as the bank names
+                 are independent  of  all  symbols,  labels,  and
+-                areas.   The name may be from 1 to 79 characters
++                areas.  The name may be from 1 to 255 characters
+                 in length.  
+ 
+         options specify the parameters of the bank:  
+diff --git a/linksrc/aslink.h b/linksrc/aslink.h
+index 667929f..774dd15 100644
+--- a/linksrc/aslink.h
++++ b/linksrc/aslink.h
+@@ -175,7 +175,15 @@
+  * relocatable binary file.
+  */
+ 
+-#define NCPS		80	/* characters per symbol */
++/*
++ * NCPS must match the assemblers' NCPS in asxxsrc/asxxxx.h.  Both
++ * getid() in lklex.c and getid() in aslex.c silently truncate an
++ * identifier at NCPS-1 characters; if the linker's limit is the
++ * smaller of the two it will truncate names the assembler wrote
++ * out in full, and two distinct symbols sharing a long prefix
++ * then collapse into one.
++ */
++#define NCPS		256	/* characters per symbol */
+ 
+ /*
+  * Buffer size for a linker-generated symbol name derived from an

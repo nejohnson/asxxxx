@@ -1,0 +1,128 @@
+From 962f02f8a3e51d2562759f5b86e3f6f0a9511d82 Mon Sep 17 00:00:00 2001
+From: Neil Johnson <njohnson@roku.com>
+Date: Tue, 1 Sep 2026 13:48:46 +0100
+Subject: [PATCH 05/26] aslink: size the linker-generated symbol name buffers
+ correctly
+
+lnkarea() and lnksect() in lkarea.c synthesise symbols naming an
+area's start address, its length, and each section's boundary
+modulus and base address:
+
+	sprintf(temp, "a_%s", ap->a_id);
+	sprintf(temp, "l_%s", ap->a_id);
+	sprintf(temp, "m_%s_%u", tap->a_id, i);
+	sprintf(temp, "s_%s_%u", tap->a_id, i);
+
+with temp declared 'char temp[NCPS+2]'. NCPS+2 is 82 bytes, which
+is sized for a 2-character prefix plus an area name - but an area
+name read by getid() may itself be NCPS-1 = 79 characters, and the
+"m_"/"s_" forms append a '_' separator and a decimal section index
+on top of that. The worst case is 2 + 79 + 1 + 10 + 1 = 93 bytes
+against a buffer of 82, and even the smallest section index
+overflows: "m_" + 79 + "_" + "1" + NUL is 84 bytes.
+
+This is reachable today with no unusual input - a single .area
+directive whose name is the maximum length getid() will accept is
+enough. Confirmed with an AddressSanitizer build of linksrc/*.c
+linking a one-line module declaring a 79-character area:
+
+  ERROR: AddressSanitizer: stack-buffer-overflow
+  WRITE of size 84 at 0x7e6a36100e72
+    #3 in lnksect linksrc/lkarea.c:560
+    #4 in lnkarea linksrc/lkarea.c:449
+  'temp' (line 519) <== Memory access at offset 114 overflows
+                        this variable
+
+Introduce NGSYM in aslink.h - NCPS plus 16 characters, documented
+against the four format strings above - and use it for both temp[]
+buffers. The 16 characters cover the prefix, the separator and up
+to 10 decimal digits of a 32-bit unsigned section index, leaving
+margin.
+
+DefineNoICE() in lknoice.c has the same shape at a second remove:
+token1 is filled by sscanf() from a symbol name and can therefore
+hold NCPS-1 characters, after which
+
+	sprintf(&token1[strlen(token1)], "_%u", level);
+
+appends a further separator and index to it. token1 moves to NGSYM
+as well; token2 and token3 are only ever sscanf() targets and stay
+at NCPS.
+
+Verified with an AddressSanitizer/UBSan build of linksrc/*.c:
+- The 79-character area name reproducer above, which faults on the
+  unpatched linker, links cleanly with no sanitizer report.
+- The same link with -j, exercising the lknoice.c path, is also
+  clean.
+
+Note this commit only corrects the buffer sizing; it does not
+change any generated name, and NCPS itself is unchanged here.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ linksrc/aslink.h  | 15 +++++++++++++++
+ linksrc/lkarea.c  |  4 ++--
+ linksrc/lknoice.c |  2 +-
+ 3 files changed, 18 insertions(+), 3 deletions(-)
+
+diff --git a/linksrc/aslink.h b/linksrc/aslink.h
+index 7f6c171..667929f 100644
+--- a/linksrc/aslink.h
++++ b/linksrc/aslink.h
+@@ -176,6 +176,21 @@
+  */
+ 
+ #define NCPS		80	/* characters per symbol */
++
++/*
++ * Buffer size for a linker-generated symbol name derived from an
++ * area name, as built by lnkarea()/lnksect() in lkarea.c:
++ *
++ *	"a_<area>"  "l_<area>"  "m_<area>_<n>"  "s_<area>_<n>"
++ *
++ * NCPS covers the area name itself (up to NCPS-1 characters plus
++ * its terminating NUL, as bounded by getid() in lklex.c).  The
++ * remaining 16 characters cover the 2-character prefix, the '_'
++ * separator and the decimal section index, which is at most 10
++ * digits for a 32-bit unsigned value.
++ */
++#define	NGSYM	    (NCPS + 16)	/* generated symbol name length */
++
+ #define	NINPUT		512	/* Input buffer size */
+ #define	NHASH	     (1 << 6)	/* Buckets in hash table */
+ #define	HMASK	    (NHASH - 1)	/* Hash mask */
+diff --git a/linksrc/lkarea.c b/linksrc/lkarea.c
+index 2e47a87..6aa3173 100644
+--- a/linksrc/lkarea.c
++++ b/linksrc/lkarea.c
+@@ -424,7 +424,7 @@ lnkarea(void)
+ {
+ 	a_uint rloc;
+ 	int bytes;
+-	char temp[NCPS+2];
++	char temp[NGSYM];
+ 	struct sym *sp;
+ 
+ 	for (bp = bankp; bp != NULL; bp = bp->b_bp) {
+@@ -516,7 +516,7 @@ lnksect(struct area *tap)
+ 	a_uint size, addr;
+ 	struct areax *taxp;
+ 	a_uint bofst, i;
+-	char temp[NCPS+2];
++	char temp[NGSYM];
+ 	struct sym *sp;
+ 
+ 	size = 0;
+diff --git a/linksrc/lknoice.c b/linksrc/lknoice.c
+index 10114c1..92bb50b 100644
+--- a/linksrc/lknoice.c
++++ b/linksrc/lknoice.c
+@@ -240,7 +240,7 @@ NoICEmagic(void)
+ void
+ DefineNoICE( char *name, a_uint value, struct bank *yp )
+ {
+-	char token1[NCPS];			/* parse for file.function.symbol */
++	char token1[NGSYM];			/* parse for file.function.symbol */
+ 	char token2[NCPS];
+ 	char token3[NCPS];
+ 	char sep1, sep2;

@@ -1,0 +1,85 @@
+From 78c404033aab80085a8b664b5278436dde084670 Mon Sep 17 00:00:00 2001
+From: Neil Johnson <njohnson@roku.com>
+Date: Tue, 1 Sep 2026 13:41:12 +0100
+Subject: [PATCH 04/26] aslink: fix DefineSDCDB() hanging on any symbol
+ containing a '$'
+
+DefineSDCDB() in lksdcdb.c decides whether a symbol belongs in the
+SDCDB .cdb output by counting the '$' characters in its name - the
+comment directly above the loop reads "SDC symbols have 3 or more $
+characters". The scan never advances past a match:
+
+	j = 0;
+	p1 = name;
+	while ((p1 = strchr(p1, '$')) != NULL) {
+		j += 1;
+	}
+
+strchr() returns a pointer to the first '$' at or after p1, and that
+pointer is assigned straight back to p1. On the next iteration
+strchr() is handed a pointer that already points at a '$', so it
+returns the same address again, and again, incrementing j forever.
+The loop terminates only for a name containing no '$' at all - that
+is, only for the names the function exists to filter out. Every name
+it was written to match hangs the linker.
+
+The effect is that 'aslink -y' never terminates on any real SDCC
+input: SDCC's mangled symbol names ("F$main$0$0", "G$counter$0$0$1")
+carry a '$' between every field, so the very first such symbol
+reaching DefineSDCDB() spins indefinitely with no output and no
+diagnostic. Nothing else is affected - DefineSDCDB() is reached only
+from lstarea() in lklist.c, and only when yflag is set - so a link
+without -y is entirely unaffected, which is why the fault has stayed
+latent.
+
+Advance p1 past each match, so the scan progresses and terminates:
+
+	while ((p1 = strchr(p1, '$')) != NULL) {
+		p1 += 1;
+		j += 1;
+	}
+
+The counting semantics are otherwise unchanged: j is the number of
+'$' characters in the name, and the existing "j > 2" test continues
+to select names with three or more of them.
+
+Verified with a standalone aslink built from linksrc/*.c:
+- Reproduced with a module exporting five symbols spanning the
+  decision boundary - "plain_sym" (no '$'), "one$dollar" (one),
+  "two$dol$lars" (two), "F$main$0$0" (three) and "G$counter$0$0$1"
+  (four). The unpatched linker run as "aslink -n -y -i" produces no
+  output and does not terminate (killed at a 10 second timeout); the
+  patched linker completes immediately.
+- Confirmed the boundary is still honoured after the fix: the
+  resulting .cdb contains exactly the two names with three or more
+  '$' characters, "L:F$main$0$0:0" and "L:G$counter$0$0$1:1", and
+  none of the three below the threshold.
+- Confirmed no change when -y is not in use: linked a two-module
+  test with and without the patch, producing byte-identical Intel
+  Hex output and byte-identical .map files (timestamps aside).
+- Ran the existing asz80 self-tests, tz80.bat and t80.bat
+  (asz80 -gloaxf, aslink -xu), against the unpatched and patched
+  linker: byte-for-byte identical .lst and .rst output in both
+  cases. The assembler-side "Not an 8080 instruction" reports in
+  t80 are pre-existing and unrelated, and appear unchanged in both
+  runs. No regressions.
+- Rebuilt with -fsanitize=address,undefined and reran both the -y
+  and the no--y links: no sanitizer reports.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ linksrc/lksdcdb.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/linksrc/lksdcdb.c b/linksrc/lksdcdb.c
+index 6b30099..7b1fbe3 100644
+--- a/linksrc/lksdcdb.c
++++ b/linksrc/lksdcdb.c
+@@ -163,6 +163,7 @@ void DefineSDCDB(char *name, a_uint value)
+ 	j = 0;
+ 	p1 = name;
+ 	while ((p1 = strchr(p1, '$')) != NULL) {
++		p1 += 1;
+ 		j += 1;
+ 	}
+ 
