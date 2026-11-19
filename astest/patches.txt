@@ -120,7 +120,7 @@ gccrt       feature  80f74d0
 gckeep      feature  80f74d0
 obase       feature  a3ce67a
 obase_i     feature  a3ce67a
-optcdb      feature  a0a3eda
+optcdb      feature  a0a3eda a3ce67a
 libpath     feature  62b5902
 badrel      hang     c9fbd13 4870877
 lkliberr    feature  ad6cd6e
@@ -143,6 +143,23 @@ t90lda      feature  87502d9
 t90sdas     feature  f36f47e
 gbldh       feature  ce6624f 8b83c64
 rab4k       feature  c9841cd 6729f98 9d831fc
+
+
+AGAINST THE FIXES ALONE
+
+        The series offered upstream puts every fix before every
+        addition, and the harness last, once everything its cases
+        test is present.  The tools built at the end of the fixes,
+        with no addition beneath them, were run against the whole
+        suite the same way:
+
+            astest -T <fixes>/asxmak/linux/exe -R ../../../ -W _astfx
+
+        55 cases:  29 pass, 26 fail.  Every failure is a case for an
+        addition, or one whose script uses an addition to drive the
+        tool:  optcdb tests the fix a0a3eda, but its link line names
+        the output with -o+, which is a3ce67a.  No fix needs an
+        addition to work.
 
 
 ORDERING
