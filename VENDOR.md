@@ -55,11 +55,13 @@ Grouped by what each one would be if it were offered upstream, because
 that is the only distinction that matters when the time comes. Within a
 group, oldest first.
 
-Four commits are not submittable in the shape they are in, and there is
-a table for them below. Three repair something this fork itself added,
-so they belong squashed into their parent rather than sent as defects in
-their own right; the fourth carries two unrelated changes and needs
-splitting.
+Eight commits are not submittable in the shape they are in, and there is
+a table for them below. Six repair something this fork itself added, so
+they belong squashed into their parent rather than sent as defects in
+their own right; one carries two unrelated changes and needs splitting;
+one is reverted. That reshaping is done on `submit/series`, described
+under "The submission series" below, so this log keeps recording the
+commits as they were made.
 
 ### Fixes to upstream defects
 
@@ -87,13 +89,10 @@ Submittable as they stand.
 | `d7ee0bd` | `asxxsrc` | a manufactured symbol name took the source file name verbatim, so a file name containing a `-` produced a symbol the linker could not read back as an expression operand — `-` is also subtraction. Sanitised in `symfn()`, which is also where `18aa725` is reverted |
 | `8f3852f` | `as8xcxxx` | the predefined 8051 SFR names were missing. `ds8.h` declares `struct PreDef` and an `extern` for the table, but no table was ever defined and `minit()` never registered one, so the `extern` dangled and every name `as8xcxxx` shares with `as8051` assembled as an undefined global. Table and registration added, matching `as8051`'s values |
 | `bfac3cf` | `asrab` | the Rabbit's `add sp,n` is a signed displacement - negative allocates a stack frame - and was range checked as unsigned, so every frame allocation was refused with the correct bytes already in the listing. 190 sites in each of the six Rabbit ports |
-| `093caac` | `asrab` | the Rabbit 3000A support in `6a57c37` converted the thirty machine-type tests in `rabmch.c` and missed the four in `rabadr.c` and the cycle-count table, so under `.r3ka` the opcodes worked and the addressing modes did not |
 | `7de9475` | `aslink` | `-a AREA =` and `-b BANK =` took whatever `expr()` returned, and `expr()` reduces every number it scans to the address space, so a base beyond the space silently became the low bits of itself and the map printed the same masked value. Checked where the digits are read, because `expr()` sign-extends and a legitimate `0xFF80` arrives as `0xFFFFFF80` |
 | `c0d155f` | `astlcs90` | `S_JP` took a register operand only after a condition and otherwise went straight to `expr()`, so `jp (hl)` assembled **with no diagnostic** as an absolute jump to an undefined global named `hl`, and linked. Wrong code, no error |
 | `ce6624f` | `asgb` | `ldh a,(nn)` tested `v1` where it meant `v2`, and `v1` is the A register in that branch, so a full I/O address was always "not in range" - while the store form, with the same two tests against a `v1` that really is the address, always worked |
 | `8b83c64` | `asgb` | a relocatable `ldh` operand could not link at all: `asgb` added `0xFF00` and emitted `R_PAGN`, which checks against a `.setdp` base `asgb` has no directive to establish, so `sdp.s_addr` was always zero. All seven sites now emit a plain low-byte relocation, which is what LDH wants - both spellings of the operand have the same low byte |
-| `6193c78` | `asrab` | the Rabbit 4000's quad load displacement was range checked as signed, so `ld bcde,136 (sp)` was refused. A stack offset is written unsigned and an index offset is usually negative - both halves of the byte are meant |
-| `ac2a167` | `asez80` | `lea` took its displacement only in the second operand, Zilog's spelling. Code generators write it as a third, which is the same instruction and the same bytes; the code already parsed the expression, it just could not step over the comma |
 | `b711951` | `asxxsrc` | at the first line of an included file `nxtline()` copied `afn` onto itself (`strcpy-param-overlap` under ASan) and set the included file's path length `afp` without its specification `afs`, so a file included from another directory could not `.include` or `.incbin` anything beside itself. `afs` and `afp` are now made current together; `afn` stays the source file's name, which `symfn()` needs to keep manufactured symbols per module. 54-assembler sweep identical; new astest cases `incpath`, `itst`, `incsym`, the last two golded before the fix. The case needed `99b103d`, `%w`/`%s` in astest's `asm` options |
 
 ### Additions
@@ -104,7 +103,7 @@ defect, so they travel separately.
 
 | Commit | Area | Addition |
 |---|---|---|
-| `5e75020`, `64281e6`, `4870877` | `astest` | a portable regression harness for the assemblers and the linker: C89 driver, `.tst` case format, `make check` / `make bless`. 48 cases |
+| `5e75020`, `64281e6`, `4870877`, `0a38b35`, `3e6a432`, `7bb4ff8`, `8271cbe`, `99b103d`, `11112af`, `8113573` | `astest` | a portable regression harness for the assemblers and the linker: C89 driver, `.tst` case format, `make check` / `make bless`. 48 cases. The later commits make the expected files independent of the working directory, refuse a directory too long for the map, cover the ABS half of `ovr`, substitute `%w`/`%s` in assembler options, bound the buffers a script line is built into, and record the suite run against the fixes alone |
 | `d033ae5` | `asxxsrc` | `.function` / `.endfunc`, per-function areas that inherit the enclosing area's flags and bank |
 | `80f74d0` | `aslink` | the section collector — `-r` roots, `KEEP`, `--print-gc-sections` equivalent |
 | `a3ce67a` | `aslink` | `-o+` names every file the linker creates after the program rather than after the first object |
@@ -116,6 +115,7 @@ defect, so they travel separately.
 | `40e56a0` | `asz80` | `.allow_undocumented` and the IX/IY half register instructions. Upstream already classified the operands and reserved the opcode type; only the directive row and the encodings were missing |
 | `d02ee7a` | `asz80` | `tst` accepts `tst a,n` as well as `tst n`. Same instruction, same bytes; code generators emit the first |
 | `6392f48` | `asrab` | `LZ` and `LO`, the Rabbit's names for the two logical conditions, alongside the `NV` and `V` it already had. Same two encodings |
+| `ac2a167` | `asez80` | `lea` takes its displacement as a third operand as well as in the second, Zilog's spelling. Code generators write it as a third; same instruction, same bytes |
 | `d298d9b` | `asz80` | `.r800`, `multu` and `multuw`, and the IX/IY half registers with them. The ASCII R800 is a Z80 superset that `asz80` did not cover |
 | `6a57c37` | `asrab` | the Rabbit 3000A: `.r3ka`, the block-move group, `uma`/`ums`, the system/user mode group and `push`/`pop su`. The machine type was a single value compared for equality, so there was no room for a second Rabbit |
 | `614da60` | `asrab` | `ipset0`..`ipset3` beside the manual's `ipset n`. Same instruction, same two bytes |
@@ -135,8 +135,10 @@ defect, so they travel separately.
 |---|---|
 | `03533d2` | repairs `s19os9` after **our own** `56c5bcd` made `ib[]` a pointer. Belongs squashed into `56c5bcd` |
 | `b37cf7e`, `79c25e7` | both correct sign-extension bugs in **our own** `94d8c73`. Belong squashed into it — three commits, one patch |
+| `093caac` | repairs **our own** `6a57c37`, the Rabbit 3000A, which converted the thirty machine-type tests in `rabmch.c` and missed the four in `rabadr.c` and the cycle-count table. Belongs squashed into `6a57c37` |
+| `6729f98`, `6193c78` | repair **our own** Rabbit 4000 and 6000 (`c9841cd`, `9d831fc`): the 6000's `xor` stack form and the 4000's `xor hl,de` were missing, and the quad load displacement was range checked as signed. Belong squashed into it — four commits, one patch |
 | `18aa725` | **reverted by `d7ee0bd`** and no longer in the tree. It taught the linker's `newsym()` to accept `-` in a symbol's own name, which was the same defect treated one layer out: a name is only half of it, and an expression referring to that name is the other half. Not to be offered upstream, and worth remembering as the shape of mistake it was - the assembler was manufacturing the name, so the assembler was where to fix it |
-| `198f405` | two changes in one: a real `lstarea()` fix (map generation was `O(sections * symbols)`; 10,000 sections took 10.36 s, of which nine tenths was the map) and a new `-mc` compact map format. Split before offering |
+| `198f405` | two changes in one: a real `lstarea()` fix (map generation was `O(sections * symbols)`; 10,000 sections took 10.36 s, of which nine tenths was the map) and a new `-mc` compact map format. Split on `split/198f405` into `8bd8253`, the fix, and `102abbb`, the format; the two reproduce `198f405` exactly, and the fix alone leaves the default map, `.noi` and hex output identical to unmodified 6.10 |
 
 ### Documentation
 
@@ -159,6 +161,47 @@ Never on a branch that goes upstream.
 - `GC-SECTIONS-FEASIBILITY.md` — a study of whether ASLink could gain an
   `ld --gc-sections` equivalent. Added in `6b8fdc3`, updated in
   `abd44c1`, `8341553`, `89cf960`, `9e68e94`, `3b976de` and `7690547`.
+
+### The submission series
+
+`submit/series` holds the whole of the local work as it would be sent
+upstream: 51 patches against pristine `903242b`, one per change, each
+commit message carrying its analysis and what verified it. `master`'s
+history is left as it was made; the series is built from it.
+
+- **26 fixes first, then 24 additions, then astest.** No fix depends on
+  an addition, so upstream can take the fixes and stop.
+- **Squashed:** `03533d2` into `56c5bcd`; `b37cf7e` and `79c25e7` into
+  `94d8c73`; `093caac` into `6a57c37`; `6729f98`, `9d831fc` and `6193c78`
+  into `c9841cd`. A follow-up's message is kept under "Folded in".
+- **Split:** `198f405` as on `split/198f405`, the fix among the fixes
+  and `-mc` among the additions.
+- **Dropped:** `18aa725`, and its revert from `d7ee0bd`.
+- **Documentation** travels inside the patch it describes: `246880f`
+  with `d5e2177`, `baf7fcd` with `d150ace`, `f0528ad` with `80f74d0`,
+  `91f79bb` with `a3ce67a`, `1131948` with `5c4207e`.
+- **astest is the last patch**, carrying every case, because most cases
+  test a fix or an addition and fail without it. The astest parts of
+  the fix commits move into it.
+- **Fork-only files** (`VENDOR.md`, `GC-SECTIONS-FEASIBILITY.md`) are
+  not in it.
+
+Verified:
+
+- The series' final tree is identical to `master`'s apart from the two
+  fork-only files.
+- Every one of the 51 commits builds from clean (`aslink`, `as8085`,
+  `ascheck`, `asst8` and any assembler the commit touches) with no
+  warning beyond upstream's five `-Wold-style-definition` in `as68k`,
+  `asavr` and `asst9`.
+- Against the tools built at the last fix, `e801f50`, astest passes 29
+  of 55 and every failure needs an addition (`astest/patches.txt`,
+  "AGAINST THE FIXES ALONE"). At the tip it passes 55 of 55.
+
+`git format-patch 903242b..submit/series` writes the series out. When
+`master` gains a commit, the series gains the matching patch in the
+same shape, and the tree comparison above is the check that nothing
+was lost.
 
 ### The astest expected files: measured, and not an obstacle
 
