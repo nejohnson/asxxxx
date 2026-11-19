@@ -264,7 +264,7 @@ exitchk(void)
 static int
 runtool(char *tool, char *args, char *out, int expect)
 {
-	char cmd[NPATH+NPATH+NLINE];
+	char cmd[NPATH+NARGS+NPATH+NPATH+8];
 	char path[NPATH];
 	char redir[NPATH];
 	int st;
@@ -800,9 +800,10 @@ readtst(char *path)
 	return (1);
 }
 
-/*)Function	void	subst(dst, src)
+/*)Function	int	subst(dst, size, src)
  *
  *		char *	dst		result
+ *		int	size		size of dst
  *		char *	src		text to substitute into
  *
  *	The function subst() replaces %w with the working directory
@@ -812,24 +813,50 @@ readtst(char *path)
  *	relative to that file.  An assembler -i line that names a
  *	file is the same:  a path in it is taken from the directory
  *	the assembler runs in.
+ *
+ *	Returns 0 if the result does not fit in size bytes.
  */
 
-static void
-subst(char *dst, char *src)
+static int
+subst(char *dst, int size, char *src)
 {
-	char *q;
+	char *q, *r;
+	int n;
 
 	q = dst;
 	while (*src) {
 		if (src[0] == '%' && (src[1] == 'w' || src[1] == 's')) {
-			strcpy(q, (src[1] == 'w') ? workdir : srcdir);
-			q += strlen(q);
+			r = (src[1] == 'w') ? workdir : srcdir;
+			n = strlen(r);
 			src += 2;
 		} else {
-			*q++ = *src++;
+			r = src;
+			n = 1;
+			src += 1;
 		}
+		if ((q - dst) + n >= size) {
+			return (0);
+		}
+		memcpy(q, r, n);
+		q += n;
 	}
 	*q = 0;
+	return (1);
+}
+
+/*)Function	int	toolong(what)
+ *
+ *		char *	what		the text that did not fit
+ *
+ *	The function toolong() reports a line of a test script that
+ *	would not fit the buffer it is built into, and returns R_FAIL.
+ */
+
+static int
+toolong(char *what)
+{
+	fprintf(stdout, "astest:          %s is too long\n", what);
+	return (R_FAIL);
 }
 
 /*)Function	void	mkwork(id)
@@ -868,8 +895,8 @@ mkwork(char *id)
 static int
 runcase(char *id)
 {
-	char path[NPATH+NLINE], gpath[NPATH+NLINE], args[NLINE+NPATH+NPATH];
-	char lnk[NPATH], base[NNAME], opts[NLINE+NPATH];
+	char path[NPATH+NLINE], gpath[NPATH+NLINE], args[NARGS];
+	char lnk[NPATH], base[NNAME], opts[NOPTS];
 	char *p, *q;
 	FILE *fp;
 	int i, nout;
@@ -930,13 +957,18 @@ runcase(char *id)
 			while (q > p && *(q-1) != ' ' && *(q-1) != '\t') {
 				q -= 1;
 			}
+			if (strlen(q) >= sizeof(base)) {
+				return (toolong("asm file name"));
+			}
 			strcpy(base, q);
 			if (q > p) {
 				*(q-1) = 0;
 			} else {
 				*p = 0;
 			}
-			subst(opts, p);
+			if (!subst(opts, sizeof(opts), p)) {
+				return (toolong("asm options"));
+			}
 			sprintf(args, "%s -o+%s/%s %s/%s",
 				opts, workdir, base, srcdir, base);
 			nativepath(args + strlen(opts) + 1);
@@ -967,7 +999,9 @@ runcase(char *id)
 			 * together:  aslink reads '-a name=expr' as one
 			 * line, not as two.
 			 */
-			subst(args, p);
+			if (!subst(args, sizeof(args), p)) {
+				return (toolong("link line"));
+			}
 			q = args;
 			while (*q) {
 				char word[NLINE];
@@ -1009,6 +1043,9 @@ runcase(char *id)
 			while (q > p && *(q-1) != ' ' && *(q-1) != '\t') {
 				q -= 1;
 			}
+			if (strlen(q) >= sizeof(base)) {
+				return (toolong("scan file name"));
+			}
 			strcpy(base, q);
 			if (q > p) {
 				*(q-1) = 0;
@@ -1016,7 +1053,7 @@ runcase(char *id)
 				*p = 0;
 			}
 			sprintf(args, "%s %s/%s", p, workdir, base);
-			nativepath(args + strlen(opts) + 1);
+			nativepath(args + strlen(p) + 1);
 			sprintf(path, "%s/scan%d.out", workdir, nout++);
 			if (!runtool("asxscn", args, path, steps[i].s_expect)) {
 				return (R_FAIL);
