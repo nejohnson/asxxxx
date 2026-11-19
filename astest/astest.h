@@ -102,6 +102,8 @@
 #define	NLINE	512		/* Text line length */
 #define	NPATH	256		/* Path length */
 #define	NNAME	64		/* Case id / file name length */
+#define	NOPTS	(NLINE+NPATH)	/* Options after %w and %s substitution */
+#define	NARGS	(NOPTS+2*NPATH+2*NNAME+8)	/* asm: options, two paths, two names */
 #define	NSTEP	64		/* Steps per test case */
 #define	NCASE	256		/* Cases in the manifest */
 
